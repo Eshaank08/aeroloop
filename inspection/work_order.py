@@ -19,6 +19,7 @@ class WorkOrder:
         seed: int = 606076,
         wind_scale: float = 1.0,
         selected_waypoints: list[tuple[float, float, float]] | None = None,
+        selected_waypoint_indexes: list[int] | None = None,
         sector: str = "",
     ):
         self.label = label
@@ -27,6 +28,7 @@ class WorkOrder:
         self.seed = seed
         self.wind_scale = wind_scale
         self.selected_waypoints = selected_waypoints
+        self.selected_waypoint_indexes = selected_waypoint_indexes
         self.sector = sector
 
     def to_dict(self) -> dict:
@@ -36,6 +38,7 @@ class WorkOrder:
             "wind_scale": self.wind_scale,
             "sector": self.sector,
             "selected_waypoints": [list(wp) for wp in self.selected_waypoints] if self.selected_waypoints else [],
+            "selected_waypoint_indexes": list(self.selected_waypoint_indexes) if self.selected_waypoint_indexes else [],
             "nacelle": {
                 "axis_start": list(self.nacelle.axis_start),
                 "axis_end": list(self.nacelle.axis_end),
@@ -91,7 +94,7 @@ def _without_seed(text: str) -> str:
 
 
 def _parse_selection(text: str, nacelle: Nacelle):
-    """Return (selected waypoints, sector label) if text targets a side or ring, else (None, '')."""
+    """Return (selected waypoints, selected indexes, sector label) if text targets a side or ring."""
     cleansed = _without_seed(_text_for_job(text))
     lowered = cleansed.lower()
     waypoints = nacelle.waypoints()
@@ -102,14 +105,16 @@ def _parse_selection(text: str, nacelle: Nacelle):
         if ring_numbers:
             invalid = [value for value in ring_numbers if not 1 <= value <= nacelle.rings]
             if invalid:
-                return None, ""
+                return None, None, ""
             selected = []
+            selected_indexes = []
             per_ring = nacelle.per_ring
             for ring in ring_numbers:
                 begin = (ring - 1) * per_ring
                 selected.extend(waypoints[begin : begin + per_ring])
+                selected_indexes.extend(range(begin, begin + per_ring))
             label = "Ring " + ", ".join(str(value) for value in ring_numbers)
-            return selected, label
+            return selected, selected_indexes, label
 
     side_match = re.search(r"\b(top|bottom|left|right|front|aft)(?:\s+side)?\b", lowered)
     if side_match and re.search(r"\binspect\b", lowered):
@@ -117,22 +122,25 @@ def _parse_selection(text: str, nacelle: Nacelle):
         axis_z = (nacelle.axis_start[2] + nacelle.axis_end[2]) / 2.0
         axis_x = (nacelle.axis_start[0] + nacelle.axis_end[0]) / 2.0
         epsilon = 1e-9
+        indexed = []
         if side == "top":
-            selected = [wp for wp in waypoints if wp[2] > axis_z + epsilon]
+            indexed = [(i, wp) for i, wp in enumerate(waypoints) if wp[2] > axis_z + epsilon]
         elif side == "bottom":
-            selected = [wp for wp in waypoints if wp[2] < axis_z - epsilon]
+            indexed = [(i, wp) for i, wp in enumerate(waypoints) if wp[2] < axis_z - epsilon]
         elif side == "left":
-            selected = [wp for wp in waypoints if wp[1] > epsilon]
+            indexed = [(i, wp) for i, wp in enumerate(waypoints) if wp[1] > epsilon]
         elif side == "right":
-            selected = [wp for wp in waypoints if wp[1] < -epsilon]
+            indexed = [(i, wp) for i, wp in enumerate(waypoints) if wp[1] < -epsilon]
         elif side == "front":
-            selected = [wp for wp in waypoints if wp[0] < axis_x - epsilon]
+            indexed = [(i, wp) for i, wp in enumerate(waypoints) if wp[0] < axis_x - epsilon]
         else:
-            selected = [wp for wp in waypoints if wp[0] > axis_x + epsilon]
-        if selected:
-            return selected, side.title() + " side"
+            indexed = [(i, wp) for i, wp in enumerate(waypoints) if wp[0] > axis_x + epsilon]
+        if indexed:
+            selected = [wp for i, wp in indexed]
+            selected_indexes = [i for i, wp in indexed]
+            return selected, selected_indexes, side.title() + " side"
 
-    return None, ""
+    return None, None, ""
 
 
 def _parse_job(text: str) -> tuple[Nacelle, Limits]:
@@ -171,7 +179,7 @@ def parse_work_order(text: str) -> WorkOrder:
     wind_scale = _parse_wind(text)
     nacelle, limits = _parse_job(text)
     seed = _parse_seed(text) or 606076
-    selected, sector = _parse_selection(text, nacelle)
+    selected, selected_indexes, sector = _parse_selection(text, nacelle)
     return WorkOrder(
         label=text,
         nacelle=nacelle,
@@ -179,5 +187,6 @@ def parse_work_order(text: str) -> WorkOrder:
         seed=seed,
         wind_scale=wind_scale,
         selected_waypoints=selected,
+        selected_waypoint_indexes=selected_indexes,
         sector=sector,
     )

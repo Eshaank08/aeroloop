@@ -84,6 +84,7 @@ def fly(mission, nacelle=DEFAULT_NACELLE, limits=DEFAULT_LIMITS, stride=2, start
         "base_wind": [round(value, 4) for value in scenario.base],
         "frames": frames,
         "waypoints": list(waypoints),
+        "waypoint_indexes": list(mission.waypoint_indexes) if mission.waypoint_indexes is not None else list(range(len(waypoints))),
         "label": mission.label,
         "kind": mission.kind,
         "wind_scale": mission.wind_scale,

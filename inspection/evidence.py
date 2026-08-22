@@ -136,7 +136,11 @@ def derive_captures(
     tolerance = nacelle.waypoint_tolerance
     captures = []
 
-    for index, waypoint in enumerate(waypoints):
+    global_indexes = trace.get("waypoint_indexes")
+    if global_indexes is None or len(global_indexes) != len(waypoints):
+        global_indexes = list(range(len(waypoints)))
+
+    for local_i, (waypoint, index) in enumerate(zip(waypoints, global_indexes)):
         frame_indexes = [
             i for i, frame in enumerate(frames)
             if math.dist(frame["p"], waypoint) <= tolerance

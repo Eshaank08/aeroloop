@@ -32,6 +32,12 @@ def test_top_side_selects_top_waypoints():
     assert wo.selected_waypoints is not None
     assert len(wo.selected_waypoints) == 9
     assert all(wp[2] > 0 for wp in wo.selected_waypoints)
+    assert wo.selected_waypoint_indexes is not None
+    assert len(wo.selected_waypoint_indexes) == 9
+    all_waypoints = list(wo.nacelle.waypoints())
+    indexes = {all_waypoints.index(wp) for wp in wo.selected_waypoints}
+    assert set(wo.selected_waypoint_indexes) == indexes
+    assert all(all_waypoints[i][2] > 0 for i in wo.selected_waypoint_indexes)
 
 
 def test_ring_selection_selects_ring_waypoints():
@@ -39,3 +45,7 @@ def test_ring_selection_selects_ring_waypoints():
     assert "Ring 2" in wo.sector
     assert wo.selected_waypoints is not None
     assert len(wo.selected_waypoints) == 8
+    assert wo.selected_waypoint_indexes is not None
+    assert wo.selected_waypoint_indexes == list(range(8, 16))
+    all_waypoints = list(wo.nacelle.waypoints())
+    assert all(all_waypoints[i] == wp for i, wp in zip(wo.selected_waypoint_indexes, wo.selected_waypoints))

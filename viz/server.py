@@ -123,6 +123,7 @@ class CommandHandler(SimpleHTTPRequestHandler):
                 seed=work_order.seed,
                 wind_scale=work_order.wind_scale,
                 selected_waypoints=work_order.selected_waypoints,
+                selected_waypoint_indexes=work_order.selected_waypoint_indexes,
             )
             artifact = build_artifact(result, nacelle=work_order.nacelle, limits=work_order.limits)
             trace = self._combine_for_display(result)

@@ -81,11 +81,20 @@ class AdaptiveRunner:
         seed: int,
         wind_scale: float,
         selected_waypoints: list[tuple[float, float, float]] | None = None,
+        selected_waypoint_indexes: list[int] | None = None,
     ) -> Mission:
-        waypoints = selected_waypoints if selected_waypoints else list(nacelle.waypoints())
+        if selected_waypoints:
+            waypoints = selected_waypoints
+            if selected_waypoint_indexes is None:
+                all_waypoints = list(nacelle.waypoints())
+                selected_waypoint_indexes = [all_waypoints.index(wp) for wp in waypoints]
+        else:
+            waypoints = list(nacelle.waypoints())
+            selected_waypoint_indexes = list(range(len(waypoints)))
         return Mission(
             kind="sweep",
             waypoints=waypoints,
+            waypoint_indexes=selected_waypoint_indexes,
             start=(0.0, 0.0, 6.0),
             wind_seed=seed,
             wind_scale=wind_scale,
@@ -153,8 +162,11 @@ class AdaptiveRunner:
         seed: int = 606076,
         wind_scale: float = 1.0,
         selected_waypoints: list[tuple[float, float, float]] | None = None,
+        selected_waypoint_indexes: list[int] | None = None,
     ) -> AdaptiveResult:
-        initial_mission = self._build_initial_mission(work_order, nacelle, seed, wind_scale, selected_waypoints)
+        initial_mission = self._build_initial_mission(
+            work_order, nacelle, seed, wind_scale, selected_waypoints, selected_waypoint_indexes
+        )
         initial = self._build_initial_flight(initial_mission, nacelle, limits)
 
         collision = bool(initial.trace.get("collisions", 0))

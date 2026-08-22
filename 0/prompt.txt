@@ -1,0 +1,29 @@
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: https://github.com/Eshaank08/aeroloop/blob/master/docs/REAL_WORLD_ROADMAP.md
+</in-app-browser-context>
+
+## My request:
+this is what devin says My honest read: the roadmap is the right document and the wrong thing to build tonight. Almost all of it needs hardware or real data. But one slice of it is buildable on what we already have, and it is exactly the part judges will care about: the closed loop where a backend looks at evidence, decides it is not good enough, and changes what the drone flies.
+
+We already have every piece of that loop, unconnected:
+
+- `sim/jobs.py` turns a plain-language request into geometry and limits (work-order connector).
+- `viz/mission.py` already parses bounded primitives, and they map 1:1 to the roadmap's allow-list: `hold at x y z` is `quiet_hover`, `inspect ring 2` / `inspect the top side` are `capture_orbit`, a `fly to` is `capture_closeup`.
+- `viz/flightlab.py` flies any of those through the real controller and returns a trace.
+- `sim/report.py` already hashes a verification artifact.
+
+So the vertical slice is: work order in, sweep flown, per-waypoint evidence scored, gaps found, a follow-up capture requested, and the drone re-flies it in the view you are already looking at. Concretely, four additions:
+
+1. **Evidence pipeline.** For each waypoint, derive a synthetic capture record from the trace: standoff distance, view angle to the surface normal, dwell time, wind at capture, clearance, timestamp, plus a hash. Label it synthetic, since honesty about that is worth more than pretending we have cameras.
+2. **Quality gate.** A deterministic scorer that marks a capture `good` / `marginal` / `missing` from that record, e.g. blur proxy from speed at capture, view angle outside tolerance, gust above threshold during dwell. This is where the wind actually starts to mean something instead of being decoration.
+3. **Policy validator plus adaptive re-capture.** Gaps become a `requested_capture` in the roadmap's own JSON contract, the validator converts it into one allowed primitive, and the sim re-flies just that. The result is visible in the flight view: the same run, coverage 24/24 but 3 captures marginal, then a targeted re-capture that clears them.
+4. **Inspection artifact.** One signed JSON with the work order, both traces, per-capture evidence, the gap decisions and the disposition, ending at `INSUFFICIENT_EVIDENCE` or handing off to `scripts/approve.py`. That plugs straight into the existing approval gate.
+
+Connectors, in order of payoff for the pitch: Devin session (already have `trigger_devin.py`, add the structured `requested_capture` contract so Devin is the thing choosing the follow-up), then a work-order file or Linear issue as the input, then Slack for the artifact drop. I would skip S3, real OCR and thermal entirely; they are Phase 2 and unfakeable in a demo.
+
+One warning: step 3 is where it gets genuinely interesting and also where we can overclaim. The re-capture decision must be a deterministic rule over measurable quantities, with Devin choosing among allowed primitives, not a language model inventing a trajectory. Otherwise it stops being defensible.
+
+Want me to build 1 to 3 with a hardcoded rule engine first, so the loop is visible in the flight view, and wire Devin in as the decider after that? Or go straight to the Devin-in-the-loop version?

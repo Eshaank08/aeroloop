@@ -196,6 +196,98 @@ class DevinClient:
             session = self.transport("GET", status_url, self.api_key, None, self.request_timeout_s)
 
 
+class DevinMissionSession:
+    """A resumable Devin session that answers many observations in one mission.
+
+    One session per mission keeps the agent's reasoning continuous across the
+    flight, which is the point: later actions should reflect what earlier ones
+    revealed. Each answer must name the observation it responds to, so a stale or
+    replayed decision can never be executed.
+    """
+
+    def __init__(
+        self,
+        client: DevinClient,
+        schema: dict,
+        *,
+        title: str,
+        tags: list[str] | None = None,
+        max_acu_limit: int | None = None,
+    ):
+        self.client = client
+        self.schema = schema
+        self.title = title
+        self.tags = tags or ["aeroloop", "autonomous-mission"]
+        self.max_acu_limit = max_acu_limit
+        self.session_id = ""
+        self.session_url = ""
+        self.status = ""
+
+    @property
+    def started(self) -> bool:
+        return bool(self.session_id)
+
+    def _status_url(self) -> str:
+        return f"{self.client.sessions_url}/{self.session_id}"
+
+    def start(self, prompt: str) -> None:
+        payload: dict[str, Any] = {
+            "prompt": prompt,
+            "title": self.title,
+            "resumable": True,
+            "structured_output_required": True,
+            "structured_output_schema": self.schema,
+            "tags": self.tags,
+        }
+        if self.max_acu_limit is not None:
+            payload["max_acu_limit"] = self.max_acu_limit
+        session = self.client.transport(
+            "POST", self.client.sessions_url, self.client.api_key, payload,
+            self.client.request_timeout_s,
+        )
+        session_id = session.get("session_id") or session.get("id")
+        if not isinstance(session_id, str) or not session_id:
+            raise DevinAPIError("Devin did not return a session ID")
+        self.session_id = session_id
+        self.session_url = session.get("url") if isinstance(session.get("url"), str) else ""
+        self.status = str(session.get("status") or "new")
+
+    def send(self, message: str) -> None:
+        self.client.transport(
+            "POST", f"{self._status_url()}/messages", self.client.api_key,
+            {"message": message}, self.client.request_timeout_s,
+        )
+
+    def await_output(self, matches) -> dict:
+        """Poll until structured output satisfying `matches` appears."""
+        deadline = self.client.clock() + self.client.timeout_s
+        while True:
+            session = self.client.transport(
+                "GET", self._status_url(), self.client.api_key, None,
+                self.client.request_timeout_s,
+            )
+            self.status = str(session.get("status") or "unknown")
+            detail = str(session.get("status_detail") or "")
+            output = session.get("structured_output")
+            if isinstance(output, dict) and matches(output):
+                return output
+            if self.status == "error" or detail in TERMINAL_FAILURE_DETAILS:
+                raise DevinAPIError(
+                    f"Devin session stopped without a usable decision ({detail or self.status})"
+                )
+            if self.client.clock() >= deadline:
+                raise DevinAPIError("Devin did not answer within the mission decision timeout")
+            self.client.sleeper(self.client.poll_interval_s)
+
+    def decide(self, prompt: str, message: str, matches) -> dict:
+        """Start the session or continue it, then wait for the next decision."""
+        if not self.started:
+            self.start(prompt)
+        else:
+            self.send(message)
+        return self.await_output(matches)
+
+
 def _quality_to_dict(result: QualityResult) -> dict:
     return {
         "capture_id": result.capture_id,

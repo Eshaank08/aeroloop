@@ -260,11 +260,15 @@ The next action must not be precomputed by the backend.
 
 ### Milestone 1 — interactive simulator protocol
 
-- [ ] Refactor the one-shot flight run into `reset`, `observe`, `act` and `verify`.
-- [ ] Advance physics for one bounded action rather than completing an entire sweep.
-- [ ] Add action IDs, observation IDs, deadlines and replay protection.
-- [ ] Add hidden seeded obstacle, visual-quality and audio-noise events.
-- [ ] Prove that no scenario truth leaks into the observation packet.
+- [x] Refactor the one-shot flight run into `reset`, `observe`, `act` and `verify`
+      (`mission/episode.py`, over simulator v2).
+- [x] Advance physics for one bounded action rather than completing an entire sweep.
+- [x] Add action IDs, observation IDs, deadlines and replay protection
+      (`mission/safety.py`).
+- [ ] Add hidden seeded obstacle, visual-quality and audio-noise events. Wind and
+      camera-gate failures are live; obstacles and audio are not.
+- [x] Prove that no scenario truth leaks into the observation packet
+      (`tests/test_mission_contract.py`).
 
 ### Milestone 2 — Devin-required mission agent
 
@@ -281,8 +285,13 @@ The next action must not be precomputed by the backend.
 - [x] Bound every planner action to the sector the work order authorised. The policy
       validator rejects waypoints outside the authorised set instead of only checking
       them against the full 24-waypoint nacelle.
-- [ ] Extend the first one-round API slice into the complete observation/action mission
-      loop from Milestone 1.
+- [x] Extend the first one-round API slice into the complete observation/action mission
+      loop from Milestone 1 (`mission/agent.py`, `scripts/run_autonomous_mission.py`).
+      One resumable Devin session answers every observation of a mission, each answer
+      must name the observation it responds to, and rejected actions are returned to
+      Devin rather than replaced locally.
+- [x] Safe stop on agent loss: an unreachable agent or three consecutive unsafe actions
+      trigger a bounded return toward home and can never report PASS.
 - [ ] Show the session URL, current reasoning, proposed action and validator result in
       the flight view.
 

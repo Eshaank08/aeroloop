@@ -1,0 +1,1 @@
+the buttons on the website is not working, when i click on send to api or soemthing it doe snot work, it should starta a new route irght? and also the devin decisonis on the sid edont udpate?

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>AeroLoop flight view</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: rgba(16, 22, 32, 0.88);
+    --line: #1f2a3a;
+    --text: #e6edf6;
+    --dim: #7d8da5;
+    --pass: #35d07f;
+    --fail: #ff5d66;
+    --accent: #4ea1ff;
+    --visited: #35d07f;
+    --pending: #55647d;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow: hidden; }
+  #stage { position: fixed; inset: 0; }
+  .panel { position: fixed; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; backdrop-filter: blur(6px); }
+  #hud { top: 16px; left: 16px; min-width: 260px; }
+  #hud h1 { margin: 0 0 2px; font-size: 15px; letter-spacing: 0.04em; }
+  #hud .sub { color: var(--dim); font-size: 11px; margin-bottom: 10px; }
+  .row { display: flex; justify-content: space-between; gap: 18px; padding: 2px 0; }
+  .row span:first-child { color: var(--dim); }
+  .big { font-size: 22px; letter-spacing: 0.06em; margin-top: 8px; padding-top: 8px;
+    border-top: 1px solid var(--line); }
+  .ok { color: var(--pass); } .bad { color: #ff5d66; }
+  #grid { top: 16px; right: 16px; width: 250px; }
+  #grid .title { color: var(--dim); font-size: 11px; margin-bottom: 8px; }
+  #cells { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+  .cell { aspect-ratio: 1; border-radius: 3px; background: var(--pass); opacity: 0.85;
+    cursor: pointer; }
+  .cell.fail { background: #ff5d66; }
+  .cell.active { outline: 2px solid var(--accent); outline-offset: 1px; opacity: 1; }
+  #tip { color: var(--dim); font-size: 11px; margin-top: 8px; min-height: 30px; }
+  #controls { bottom: 16px; left: 16px; right: 16px; display: flex; align-items: center;
+    gap: 14px; }
+  button { background: #16202e; color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.on { border-color: var(--accent); color: var(--accent); }
+  #scrub { flex: 1; accent-color: var(--accent); }
+  #clock { color: var(--dim); min-width: 132px; text-align: right; }
+  #legend { position: fixed; bottom: 74px; left: 16px; color: var(--dim); font-size: 11px; }
+  .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px;
+    margin: 0 5px 0 14px; vertical-align: middle; }
+  #legend .swatch:first-child { margin-left: 0; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<div id="hud" class="panel">
+  <h1>AeroLoop</h1>
+  <div class="sub">nacelle inspection sweep, seed <b id="seed">-</b></div>
+  <div class="row"><span>coverage</span><b id="coverage">-</b></div>
+  <div class="row"><span>waypoints</span><b id="wps">-</b></div>
+  <div class="row"><span>elapsed / budget</span><b id="time">-</b></div>
+  <div class="row"><span>speed</span><b id="speed">-</b></div>
+  <div class="row"><span>clearance to keep-out</span><b id="clearance">-</b></div>
+  <div class="row"><span>wind</span><b id="wind">-</b></div>
+  <div class="row"><span>collisions</span><b id="collisions">-</b></div>
+  <div class="big" id="verdict">-</div>
+</div>
+
+<div id="grid" class="panel">
+  <div class="title">verification batch, base seed <b id="batchseed">-</b></div>
+  <div id="cells"></div>
+  <div id="tip">hover a scenario</div>
+  <div class="row" style="margin-top:6px"><span>scenarios passed</span><b id="bpass">-</b></div>
+  <div class="row"><span>mean coverage</span><b id="bcov">-</b></div>
+  <div class="row"><span>total collisions</span><b id="bcol">-</b></div>
+  <div class="big" id="bverdict">-</div>
+</div>
+
+<div id="legend">
+  <span class="swatch" style="background:#35d07f"></span>visited
+  <span class="swatch" style="background:#55647d"></span>pending
+  <span class="swatch" style="background:#ff5d66;opacity:.45"></span>keep-out shell
+  <span class="swatch" style="background:#4ea1ff"></span>drone
+</div>
+
+<div id="controls" class="panel">
+  <button id="play">pause</button>
+  <button id="restart">restart</button>
+  <button class="rate" data-rate="1">1x</button>
+  <button class="rate on" data-rate="4">4x</button>
+  <button class="rate" data-rate="12">12x</button>
+  <button id="gust">jump to gust</button>
+  <input id="scrub" type="range" min="0" max="100" value="0" step="1" />
+  <span id="clock">0.00s</span>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="data/data.js"></script>
+<script>
+(function () {
+  const data = window.AEROLOOP;
+  if (!data) {
+    document.body.innerHTML = '<p style="padding:32px">No trace found. Run '
+      + '<code>python -m viz.replay</code> first.</p>';
+    return;
+  }
+  const scene_ = data.scene, trace = data.trace, batch = data.batch;
+  const nac = scene_.nacelle, lim = scene_.limits, frames = trace.frames;
+
+  // three.js is y-up, the simulator is x-along-nacelle, so map sim (x,y,z) -> (y,z,x).
+  const V = (p) => new THREE.Vector3(p[1], p[2], p[0]);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  const stage = document.getElementById('stage');
+  renderer.setSize(stage.clientWidth, stage.clientHeight);
+  stage.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0e14);
+  scene.fog = new THREE.Fog(0x0a0e14, 18, 46);
+
+  const camera = new THREE.PerspectiveCamera(50, stage.clientWidth / stage.clientHeight, 0.1, 200);
+  camera.position.set(9, 7, 12);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 0, (nac.axis_start[0] + nac.axis_end[0]) / 2);
+  controls.enableDamping = true;
+
+  scene.add(new THREE.AmbientLight(0x8899bb, 0.7));
+  const key = new THREE.DirectionalLight(0xffffff, 0.8);
+  key.position.set(6, 10, 8);
+  scene.add(key);
+
+  const grid = new THREE.GridHelper(40, 40, 0x1b2534, 0x121a26);
+  grid.position.y = -5;
+  scene.add(grid);
+
+  const length = nac.axis_end[0] - nac.axis_start[0];
+  const mid = (nac.axis_start[0] + nac.axis_end[0]) / 2;
+
+  function cylinder(radius, material, openEnded) {
+    const geo = new THREE.CylinderGeometry(radius, radius, length, 64, 1, !!openEnded);
+    const mesh = new THREE.Mesh(geo, material);
+    mesh.rotation.x = Math.PI / 2;   // align the cylinder axis with sim +x
+    mesh.position.set(0, 0, mid);
+    return mesh;
+  }
+
+  scene.add(cylinder(nac.radius, new THREE.MeshStandardMaterial({
+    color: 0x8fa3bd, metalness: 0.65, roughness: 0.35 })));
+  const keepOut = cylinder(nac.keep_out_radius, new THREE.MeshBasicMaterial({
+    color: 0xff5d66, transparent: true, opacity: 0.07, side: THREE.DoubleSide,
+    depthWrite: false }), true);
+  scene.add(keepOut);
+  const keepOutEdges = new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.CylinderGeometry(
+      nac.keep_out_radius, nac.keep_out_radius, length, 32, 1, true)),
+    new THREE.LineBasicMaterial({ color: 0xff5d66, transparent: true, opacity: 0.28 })
+  );
+  keepOutEdges.rotation.x = Math.PI / 2;
+  keepOutEdges.position.set(0, 0, mid);
+  scene.add(keepOutEdges);
+
+  // inspection shell the controller flies on, drawn as three faint rings
+  const ringMat = new THREE.LineBasicMaterial({ color: 0x2f4a6b });
+  const xs = [...new Set(scene_.waypoints.map((w) => w[0]))];
+  xs.forEach((x) => {
+    const pts = [];
+    for (let i = 0; i <= 96; i++) {
+      const a = (i / 96) * Math.PI * 2;
+      pts.push(new THREE.Vector3(Math.cos(a) * nac.inspection_radius,
+        Math.sin(a) * nac.inspection_radius, x));
+    }
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), ringMat));
+  });
+
+  const wpGeo = new THREE.SphereGeometry(nac.waypoint_tolerance * 0.55, 18, 12);
+  const wpMeshes = scene_.waypoints.map((w) => {
+    const m = new THREE.Mesh(wpGeo, new THREE.MeshStandardMaterial({
+      color: 0x55647d, emissive: 0x0a1018, roughness: 0.5 }));
+    m.position.copy(V(w));
+    scene.add(m);
+    return m;
+  });
+
+  const drone = new THREE.Mesh(
+    new THREE.SphereGeometry(0.22, 20, 14),
+    new THREE.MeshStandardMaterial({ color: 0x4ea1ff, emissive: 0x0d2a4d, roughness: 0.3 })
+  );
+  scene.add(drone);
+  const halo = new THREE.Mesh(
+    new THREE.SphereGeometry(0.42, 20, 14),
+    new THREE.MeshBasicMaterial({ color: 0x4ea1ff, transparent: true, opacity: 0.14 })
+  );
+  scene.add(halo);
+
+  const trailGeo = new THREE.BufferGeometry();
+  trailGeo.setAttribute('position', new THREE.BufferAttribute(
+    new Float32Array(frames.length * 3), 3));
+  const trail = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ color: 0x4ea1ff }));
+  scene.add(trail);
+
+  const windArrow = new THREE.ArrowHelper(
+    new THREE.Vector3(0, 1, 0), new THREE.Vector3(), 1, 0xffb347, 0.3, 0.18);
+  scene.add(windArrow);
+
+  // waypoint ordering is the controller's business, so credit them the way the
+  // verifier does: by proximity, in trace order
+  const visitedAt = new Array(wpMeshes.length).fill(Infinity);
+  (function precompute() {
+    const hit = new Array(wpMeshes.length).fill(false);
+    frames.forEach((f) => {
+      scene_.waypoints.forEach((w, i) => {
+        if (hit[i]) return;
+        const d = Math.hypot(f.p[0] - w[0], f.p[1] - w[1], f.p[2] - w[2]);
+        if (d <= nac.waypoint_tolerance) { hit[i] = true; visitedAt[i] = f.t; }
+      });
+    });
+  })();
+
+  const el = (id) => document.getElementById(id);
+  el('seed').textContent = trace.seed;
+  el('batchseed').textContent = batch.base_seed;
+  el('bpass').textContent = batch.passed + '/' + batch.scenarios;
+  el('bcov').textContent = (batch.mean_coverage * 100).toFixed(1) + '%';
+  el('bcol').textContent = batch.total_collisions;
+  el('bverdict').textContent = batch.result;
+  el('bverdict').className = 'big ' + (batch.result === 'PASS' ? 'ok' : 'bad');
+
+  const cells = el('cells');
+  batch.runs.forEach((r) => {
+    const c = document.createElement('div');
+    c.className = 'cell' + (r.passed ? '' : ' fail');
+    if (r.seed === trace.seed) c.classList.add('active');
+    c.title = 'seed ' + r.seed;
+    c.onmouseenter = () => {
+      el('tip').innerHTML = 'seed ' + r.seed + ' &middot; ' + (r.passed ? 'PASS' : 'FAIL')
+        + '<br>coverage ' + (r.coverage * 100).toFixed(1) + '%, collisions ' + r.collisions
+        + ', ' + r.elapsed_s.toFixed(1) + 's';
+    };
+    cells.appendChild(c);
+  });
+
+  let index = 0, playing = true, rate = 4;
+  const budget = lim.time_budget_s;
+  el('scrub').max = frames.length - 1;
+
+  function draw() {
+    const f = frames[index];
+    drone.position.copy(V(f.p));
+    halo.position.copy(drone.position);
+
+    const pos = trailGeo.attributes.position;
+    for (let i = 0; i <= index; i++) {
+      const p = frames[i].p;
+      pos.setXYZ(i, p[1], p[2], p[0]);
+    }
+    trailGeo.setDrawRange(0, index + 1);
+    pos.needsUpdate = true;
+
+    const w = new THREE.Vector3(f.wind[1], f.wind[2], f.wind[0]);
+    const mag = w.length();
+    windArrow.position.copy(drone.position);
+    if (mag > 1e-3) {
+      windArrow.setDirection(w.clone().normalize());
+      windArrow.setLength(0.7 + mag * 0.45, 0.28, 0.16);
+      windArrow.visible = true;
+    } else {
+      windArrow.visible = false;
+    }
+
+    let hits = 0;
+    wpMeshes.forEach((m, i) => {
+      const on = visitedAt[i] <= f.t;
+      if (on) hits++;
+      m.material.color.setHex(on ? 0x35d07f : 0x55647d);
+      m.material.emissive.setHex(on ? 0x0d3a24 : 0x0a1018);
+    });
+
+    const breached = f.clearance < 0;
+    keepOut.material.opacity = breached ? 0.32 : 0.1;
+
+    el('coverage').textContent = (hits / wpMeshes.length * 100).toFixed(1) + '%';
+    el('wps').textContent = hits + ' / ' + wpMeshes.length;
+    el('time').textContent = f.t.toFixed(2) + 's / ' + budget.toFixed(0) + 's';
+    el('speed').textContent = Math.hypot(f.v[0], f.v[1], f.v[2]).toFixed(2)
+      + ' / ' + lim.max_speed.toFixed(1) + ' m/s';
+    el('clearance').textContent = f.clearance.toFixed(2) + ' m';
+    el('clearance').className = breached ? 'bad' : (f.clearance < 0.3 ? '' : 'ok');
+    el('wind').textContent = mag.toFixed(2) + ' m/s^2';
+    el('collisions').textContent = breached ? 1 : 0;
+
+    const done = index === frames.length - 1;
+    const verdict = done
+      ? (trace.passed ? 'PASS' : 'FAIL')
+      : 'flying';
+    el('verdict').textContent = verdict;
+    el('verdict').className = 'big ' + (done ? (trace.passed ? 'ok' : 'bad') : '');
+    el('clock').textContent = f.t.toFixed(2) + 's  frame ' + (index + 1) + '/' + frames.length;
+    el('scrub').value = index;
+  }
+
+  el('play').onclick = () => {
+    playing = !playing;
+    el('play').textContent = playing ? 'pause' : 'play';
+  };
+  el('restart').onclick = () => { index = 0; playing = true; el('play').textContent = 'pause'; };
+  document.querySelectorAll('.rate').forEach((b) => {
+    b.onclick = () => {
+      rate = Number(b.dataset.rate);
+      document.querySelectorAll('.rate').forEach((o) => o.classList.remove('on'));
+      b.classList.add('on');
+    };
+  });
+  const lastT = frames[frames.length - 1].t;
+  if (trace.gust.start_s > lastT) {
+    el('gust').disabled = true;
+    el('gust').textContent = 'gust after sweep';
+    el('gust').title = 'the gust for this seed starts at '
+      + trace.gust.start_s.toFixed(1) + 's, after the sweep finished';
+  }
+  el('gust').onclick = () => {
+    const target = trace.gust.start_s;
+    let best = 0;
+    frames.forEach((f, i) => {
+      if (Math.abs(f.t - target) < Math.abs(frames[best].t - target)) best = i;
+    });
+    index = best;
+    draw();
+  };
+  el('scrub').oninput = (e) => { index = Number(e.target.value); draw(); };
+
+  window.addEventListener('resize', () => {
+    camera.aspect = stage.clientWidth / stage.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(stage.clientWidth, stage.clientHeight);
+  });
+
+  let last = performance.now(), acc = 0;
+  const frameDt = frames.length > 1 ? frames[1].t - frames[0].t : lim.dt;
+  function loop(now) {
+    const dt = (now - last) / 1000;
+    last = now;
+    if (playing && index < frames.length - 1) {
+      acc += dt * rate;
+      while (acc >= frameDt && index < frames.length - 1) { acc -= frameDt; index++; }
+      draw();
+    }
+    controls.update();
+    renderer.render(scene, camera);
+    requestAnimationFrame(loop);
+  }
+  draw();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

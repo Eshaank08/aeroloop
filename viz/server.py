@@ -1,6 +1,7 @@
 """Local HTTP command server for the AeroLoop flight view."""
 
 import argparse
+from dataclasses import replace
 from functools import partial
 import json
 import os
@@ -17,6 +18,7 @@ from inspection.work_order import parse_work_order
 from mission.agent import DevinMissionPlanner, ScriptedPilot, run_mission
 from mission.contract import ACTION_SCHEMA
 from mission.episode import MissionEpisode
+from mission.intent import parse_mission_intent
 from viz.flightlab import fly
 from viz.mission import CommandError, EXAMPLES, help_text, parse
 from viz.replay import scene
@@ -254,18 +256,24 @@ class CommandHandler(SimpleHTTPRequestHandler):
         """Run one autonomous simulator v2 mission and return it for replay."""
         try:
             request = self._read_json() or {}
-            seed = int(request.get("seed", 1000))
-            sector = str(request.get("sector", "all"))
             planner_name = str(request.get("planner", "baseline")).lower()
-            max_actions = int(request.get("max_actions", 12))
+            # A plain sentence is the primary interface. Seed and sector remain
+            # accepted so the CLI and the tests can pin an exact scenario.
+            text = str(request.get("text", "") or "").strip()
+            intent = parse_mission_intent(text or "inspect the whole nacelle")
+            if request.get("seed") is not None:
+                intent = replace(intent, seed=int(request["seed"]), seed_was_random=False)
+            if request.get("sector") in SECTORS and SECTORS[request["sector"]] is not None:
+                intent = replace(intent, authorised_indexes=SECTORS[request["sector"]])
+            if request.get("max_actions") is not None:
+                intent = replace(intent, max_actions=int(request["max_actions"]))
         except Exception as error:
             self._send_json(400, {"ok": False, "reply": f"Bad mission request: {error}"})
             return
 
-        authorised = SECTORS.get(sector)
-        if sector not in SECTORS:
-            self._send_json(400, {"ok": False, "reply": f"Unknown sector {sector!r}"})
-            return
+        seed = intent.seed
+        authorised = intent.authorised_indexes
+        max_actions = intent.max_actions
 
         try:
             if planner_name == "devin":
@@ -277,7 +285,7 @@ class CommandHandler(SimpleHTTPRequestHandler):
                     title=f"AeroLoop autonomous mission seed {seed}",
                     max_acu_limit=int(max_acu_text) if max_acu_text else None,
                 )
-                planner = DevinMissionPlanner(session)
+                planner = DevinMissionPlanner(session, work_order=intent.text)
             elif planner_name == "baseline":
                 planner = ScriptedPilot()
             else:
@@ -295,11 +303,13 @@ class CommandHandler(SimpleHTTPRequestHandler):
             self._send_json(200, {
                 "ok": True,
                 "reply": (
-                    f"{run.planner_name} flew {run.verification['inspected_count']}"
-                    f"/{run.verification['waypoint_count']} waypoints: {run.disposition}"
+                    f"{run.planner_name} inspected {run.verification['inspected_count']}"
+                    f"/{run.verification['waypoint_count']} waypoints of {intent.region}"
+                    f" on seed {seed}: {run.disposition}"
                 ),
                 "seed": seed,
-                "sector": sector,
+                "intent": intent.to_dict(),
+                "sector": intent.region,
                 "waypoints": [list(point) for point in episode.waypoints],
                 "authorised_indexes": episode.authorised_indexes,
                 "frames": episode.frames,

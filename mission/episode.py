@@ -217,11 +217,14 @@ class MissionEpisode:
 
     def _fly(self, targets: list[int], duration_s: float, stop_when_inspected: bool) -> str | None:
         """Advance physics under Devin's controller for one bounded action."""
-        controller = self.controller_cls(
-            [self.waypoints[index] for index in targets],
-            self.nacelle,
-            self.params,
-        )
+        try:
+            controller = self.controller_cls(
+                [self.waypoints[index] for index in targets],
+                self.nacelle,
+                self.params,
+            )
+        except Exception as exc:  # the controller is under test, not trusted
+            return f"controller_exception: {type(exc).__name__}: {exc}"
         # Tick counting rather than float comparison, so an action can never
         # accumulate its way past the graded time budget.
         deadline = min(self.t + duration_s, self.params.time_budget_s)

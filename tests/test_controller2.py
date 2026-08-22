@@ -4,8 +4,6 @@ import math
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from controller2 import Controller  # noqa: E402
@@ -16,10 +14,6 @@ from sim2.quad_dynamics import QuadDrone  # noqa: E402
 from sim2.run_verifier import verify  # noqa: E402
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="controller2.py is a stub until the agent writes it",
-)
 def test_controller2_passes_verification():
     ok, results = verify(Controller, count=30, base_seed=1000, verbose=True)
     n_pass = sum(result.passed for result in results)

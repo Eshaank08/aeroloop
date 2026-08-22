@@ -9,8 +9,35 @@ August 2026.
 For the implementation path beyond simulation—including multimodal perception,
 real-drone integration, safety boundaries, regulatory implications and the complete
 engineering backlog—see [Real-world multimodal inspection roadmap](docs/REAL_WORLD_ROADMAP.md).
+The next deployable milestone—where Devin becomes the required runtime mission agent—is
+defined in [Devin autonomy deployment roadmap](docs/DEVIN_AUTONOMY_ROADMAP.md).
 The immediate judge-facing build is specified in
 [Adaptive evidence loop](docs/ADAPTIVE_EVIDENCE_BUILD.md).
+
+### Run the Devin inspection slice
+
+The deterministic baseline needs no API credentials:
+
+```bash
+python -m viz.server
+```
+
+For a live Devin session that chooses the bounded re-capture actions:
+
+```bash
+export DEVIN_API_KEY=cog_...
+export DEVIN_ORG_ID=org_...
+python scripts/run_devin_mission.py \
+  --work-order "inspect top side, light wind seed 606076"
+```
+
+Or run the browser backend with Devin selected:
+
+```bash
+AEROLOOP_INSPECTION_PLANNER=devin python -m viz.server
+```
+
+Credentials stay in the backend environment. They are never entered in the browser.
 
 ---
 

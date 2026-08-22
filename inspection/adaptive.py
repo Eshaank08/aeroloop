@@ -145,13 +145,15 @@ class AdaptiveRunner:
         initial_by_index = {c.waypoint_index: c for c in initial_captures}
         followup_by_index = {c.waypoint_index: c for c in followup_captures}
         final = []
-        all_indexes = set(initial_by_index) | set(followup_by_index)
-        for idx in sorted(all_indexes):
+        # The initial mission defines the required evidence set. A sector mission
+        # must not inherit unselected nacelle waypoints merely because follow-up
+        # trace derivation used the full geometry for index alignment.
+        for idx in sorted(initial_by_index):
             followup = followup_by_index.get(idx)
             if followup and followup.captured_at_s is not None:
                 final.append(followup)
             else:
-                final.append(initial_by_index.get(idx, followup or Capture()))
+                final.append(initial_by_index[idx])
         return final
 
     def run(
@@ -189,11 +191,24 @@ class AdaptiveRunner:
             "seed": seed,
             "request_prefix": "recap",
             "capture_to_index": capture_to_index,
+            "allowed_waypoint_indexes": sorted(capture_to_index.values()),
+            "work_order": work_order,
         }
-        requested = self.planner.plan(gaps, context)
+        allowed_waypoint_indexes = set(capture_to_index.values())
+        policy_violations: list[str] = []
+        planner_failed = False
+        try:
+            requested = self.planner.plan(gaps, context)
+        except Exception as exc:
+            # A remote planner failure must stop adaptation rather than silently
+            # falling back to locally selected actions. The mission also cannot
+            # claim a disposition, because the authority that decides whether the
+            # evidence is complete never answered.
+            requested = []
+            planner_failed = True
+            policy_violations.append(f"planner failure: {exc}")
 
         accepted_legs: list[FlightResult] = []
-        policy_violations: list[str] = []
         current_t = initial.trace.get("elapsed_s", 0.0)
         start_position = tuple(initial.trace["frames"][-1]["p"])
         accepted_requests: list[RequestedCapture] = []
@@ -215,6 +230,7 @@ class AdaptiveRunner:
                     wind_scale,
                     remaining_time,
                     collision=False,
+                    allowed_waypoint_indexes=allowed_waypoint_indexes,
                 )
             except Exception as exc:
                 policy_violations.append(str(exc))
@@ -254,16 +270,6 @@ class AdaptiveRunner:
         for c in followup_captures:
             if c.waypoint_index in requested_indexes:
                 blanked_followup.append(c)
-            else:
-                blanked_followup.append(Capture(
-                    capture_id="followup-blank-" + c.capture_id,
-                    waypoint_index=c.waypoint_index,
-                    waypoint=c.waypoint,
-                    source="synthetic_trace",
-                    synthetic=True,
-                    trace_frame_indexes=[],
-                    sha256="",
-                ))
         followup_quality = self.oracle.assess_all(blanked_followup) if self.oracle else []
 
         final_captures = self._select_final_captures(initial.captures, blanked_followup)
@@ -271,6 +277,10 @@ class AdaptiveRunner:
 
         if collision:
             final_disposition = DISPOSITION_ABORTED
+        elif planner_failed:
+            # Fail closed: never report PASS for a mission whose planner was
+            # unreachable, even when the initial sweep happened to be clean.
+            final_disposition = DISPOSITION_INSUFFICIENT
         elif all(q.status == CAPTURE_STATUS_GOOD for q in final_quality):
             final_disposition = DISPOSITION_PASS
         else:
@@ -296,6 +306,8 @@ class AdaptiveRunner:
             final_disposition=final_disposition,
             collision=collision,
             planner=self.planner.__class__.__name__,
+            planner_metadata=dict(getattr(self.planner, "metadata", {})),
+            planner_failed=planner_failed,
             threshold_version=getattr(self.oracle, "version", "synthetic-v1"),
             threshold_values=(self.oracle.thresholds if self.oracle else {}),
             run_label=work_order,

@@ -32,6 +32,25 @@ def test_sector_inspection_keeps_global_indexes():
 
     if result.followup_result:
         for capture in result.followup_result.captures:
-            if capture.capture_id.startswith("followup-blank"):
-                continue
             assert capture.waypoint_index in selected_indexes, "follow-up capture used a non-sector index"
+
+    assert len(result.final_captures) == len(wo.selected_waypoint_indexes)
+    assert len(result.final_quality) == len(wo.selected_waypoint_indexes)
+    assert {capture.waypoint_index for capture in result.final_captures} == selected_indexes
+
+
+def test_ring_inspection_scores_only_selected_ring():
+    wo = parse_work_order("inspect ring 2, calm seed 200")
+    result = AdaptiveRunner(oracle=QualityOracle()).run(
+        wo.label,
+        wo.nacelle,
+        wo.limits,
+        seed=wo.seed,
+        wind_scale=wo.wind_scale,
+        selected_waypoints=wo.selected_waypoints,
+        selected_waypoint_indexes=wo.selected_waypoint_indexes,
+    )
+
+    assert len(result.final_captures) == 8
+    assert len(result.final_quality) == 8
+    assert {capture.waypoint_index for capture in result.final_captures} == set(range(8, 16))

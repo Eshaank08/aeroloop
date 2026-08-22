@@ -60,6 +60,7 @@ class PolicyValidator:
         wind_scale: float,
         remaining_time_s: float,
         collision: bool = False,
+        allowed_waypoint_indexes: set[int] | None = None,
     ) -> MissionLeg:
         if collision:
             raise PolicyViolation("cannot re-capture after a collision")
@@ -75,6 +76,15 @@ class PolicyValidator:
         for idx in request.waypoint_indexes:
             if not (0 <= idx < total):
                 raise PolicyViolation(f"waypoint index {idx} is outside [0, {total})")
+
+        # Mission authority is the human's. A planner may only act inside the
+        # sector the work order authorised, never across the whole nacelle.
+        if allowed_waypoint_indexes is not None:
+            for idx in request.waypoint_indexes:
+                if idx not in allowed_waypoint_indexes:
+                    raise PolicyViolation(
+                        f"waypoint index {idx} is outside the authorised mission sector"
+                    )
 
         # Retry budget: one follow-up attempt per waypoint in this milestone.
         # return_home does not consume a waypoint retry.

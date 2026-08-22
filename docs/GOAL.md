@@ -67,6 +67,6 @@ was never used during development.
 1. A live Devin session, triggered by script, produces a passing `controller.py` on an
    unseen seed. Nothing else matters if this does not work.
 2. The verifier report is legible in under ten seconds on a projector.
-3. The pitch lands the industry evidence (FAA/EASA approval, 99.1% vs 78%) in the first
-   thirty seconds.
+3. The pitch lands the industry evidence (Airbus wrote drone inspection into the A320
+   maintenance manual, Boeing into the 737's) in the first thirty seconds.
 4. The approval gate reads as obviously correct engineering, not as a hedge.

@@ -9,6 +9,7 @@ import sys
 
 from .aircraft_geometry import DEFAULT_NACELLE, Nacelle
 from .drone_dynamics import Drone
+from .jobs import DEFAULT_JOB, JOBS, get_job
 from .limits import DEFAULT_LIMITS, Limits
 from .scenarios import make_scenarios
 
@@ -109,12 +110,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenarios", type=int, default=30)
     ap.add_argument("--seed", type=int, default=1000, help="base seed for the batch")
+    ap.add_argument("--job", default=DEFAULT_JOB, choices=sorted(JOBS),
+                    help="which inspection job to grade against")
     ap.add_argument("--verbose", action="store_true")
     args = ap.parse_args()
 
     from controller import Controller  # noqa: E402
 
-    ok, _ = verify(Controller, count=args.scenarios, base_seed=args.seed, verbose=True)
+    job = get_job(args.job)
+    print(f"job: {job.name}\n  {job.summary}")
+    ok, _ = verify(Controller, count=args.scenarios, base_seed=args.seed,
+                   nacelle=job.nacelle, limits=job.limits, verbose=True)
     sys.exit(0 if ok else 1)
 
 

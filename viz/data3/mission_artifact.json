@@ -1,0 +1,2568 @@
+{
+  "agent_claim": "complete",
+  "final_disposition": "PASS",
+  "integrity_digest": "4af2cb3ae5dcedb74fb4e24ca05cd52bfb7732d17c89b7fdefbe341bcee0bc63",
+  "mission_id": "mission-1000",
+  "planner": "devin",
+  "planner_failed": false,
+  "planner_failures": [],
+  "planner_metadata": {
+    "provider": "devin",
+    "session_id": "0f34f963d5534c08a748e2d3eacc09eb",
+    "session_url": "https://app.devin.ai/sessions/0f34f963d5534c08a748e2d3eacc09eb",
+    "status": "running"
+  },
+  "rejections": [
+    "quiet_hover needs at least one waypoint index"
+  ],
+  "safe_stop": false,
+  "schema_version": 1,
+  "seed": 1000,
+  "steps": [
+    {
+      "action": {
+        "action_id": "act-001-batch-a",
+        "chosen_by": "devin",
+        "claim": "",
+        "confidence": 0.6,
+        "constraints": {
+          "duration_s": 40.0,
+          "max_speed_mps": 2.5
+        },
+        "expected_evidence": [
+          "waypoints 0-7 inspected with in-tolerance aim and steady shot",
+          "updated wind estimate for planning later batches"
+        ],
+        "observation_id": 1,
+        "primitive": "inspect_waypoints",
+        "reason": "Wind is calm and clearance is good, so start with the largest allowed batch (8 targets) at a speed capped below the 2.5 m/s steadiness limit to bank evidence efficiently; 24 waypoints in 3 full batches leaves spare actions for retries.",
+        "schema_version": 1,
+        "waypoint_indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      "action_digest": "cfd69dbc66d520ba4597bde8beed65ac4457dd7b04ea2916a4613300b27ce152",
+      "decision": {
+        "action_id": "act-001-batch-a",
+        "decision": "accepted",
+        "duration_s": 40.0,
+        "policy_version": "mission-envelope-v1",
+        "primitive": "inspect_waypoints",
+        "reason": "within envelope",
+        "waypoint_indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      "observation": {
+        "allowed_primitives": [
+          "inspect_waypoints",
+          "quiet_hover",
+          "return_home",
+          "complete",
+          "abort"
+        ],
+        "available_targets": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "budget": {
+          "actions_remaining": 12,
+          "actions_used": 0
+        },
+        "events": [],
+        "evidence": [
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 0
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 1
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 2
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 3
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 4
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 5
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 6
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 7
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 8
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 9
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 10
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 11
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 12
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 13
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 14
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 15
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 16
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 17
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 18
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 19
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 20
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 21
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 22
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "not_visited"
+            ],
+            "inspected": false,
+            "waypoint_index": 23
+          }
+        ],
+        "flight": {
+          "clearance_m": 3.9,
+          "wind_estimate_mps2": 0.0
+        },
+        "last_outcome": null,
+        "limits": {
+          "attempts_used": {},
+          "default_action_duration_s": 20.0,
+          "max_action_duration_s": 40.0,
+          "max_attempts_per_waypoint": 3,
+          "max_speed_mps": 8.0,
+          "max_targets_per_action": 8,
+          "mission_time_remaining_s": 150.0,
+          "policy_version": "mission-envelope-v1"
+        },
+        "mission_id": "mission-1000",
+        "observation_id": 1,
+        "pose": {
+          "body_rate_rps": 0.0,
+          "position_m": [
+            0.0,
+            0.0,
+            6.0
+          ],
+          "speed_mps": 0.0,
+          "tilt_deg": 0.0,
+          "velocity_mps": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "previous_action_id": "",
+        "schema_version": 1,
+        "time_remaining_s": 150.0,
+        "time_s": 0.0
+      },
+      "observation_digest": "9f1f59e685b62e077a4494a0345d670f000b8ffb582101da67f460c89fa385c8",
+      "observation_id": 1,
+      "outcome": {
+        "action_id": "act-001-batch-a",
+        "duration_s": 21.82,
+        "end_position_m": [
+          1.1204,
+          -2.8669,
+          0.4819
+        ],
+        "executed": true,
+        "failure": null,
+        "newly_inspected": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "notes": [],
+        "still_missing": [
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ]
+      }
+    },
+    {
+      "action": {
+        "action_id": "act-002-settle",
+        "chosen_by": "devin",
+        "claim": "",
+        "confidence": 0.65,
+        "constraints": {
+          "duration_s": 10.0,
+          "max_speed_mps": 1.0
+        },
+        "expected_evidence": [
+          "clearance recovered above ~1 m with near-zero body rate and speed",
+          "updated wind estimate before committing to waypoints 8-15"
+        ],
+        "observation_id": 2,
+        "primitive": "quiet_hover",
+        "reason": "Waypoints 0-7 are inspected, but the drone ended at 0.48 m altitude with only 0.81 m clearance, still descending at 1.14 m/s, and wind has risen to ~1.06 m/s2. Settling first protects the vehicle and the steadiness criterion before the next 8-target batch; time budget (128 s, 11 actions) easily absorbs a 10 s hover.",
+        "schema_version": 1,
+        "waypoint_indexes": []
+      },
+      "action_digest": "a009a6354b72e9eec06d6da00ba3adc076470ae2eb0f5282f103504e3af86d72",
+      "decision": {
+        "action_id": "act-002-settle",
+        "decision": "rejected",
+        "duration_s": 0.0,
+        "policy_version": "mission-envelope-v1",
+        "primitive": "quiet_hover",
+        "reason": "quiet_hover needs at least one waypoint index",
+        "waypoint_indexes": []
+      },
+      "observation": {
+        "allowed_primitives": [
+          "inspect_waypoints",
+          "quiet_hover",
+          "return_home",
+          "complete",
+          "abort"
+        ],
+        "available_targets": [
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "budget": {
+          "actions_remaining": 11,
+          "actions_used": 1
+        },
+        "events": [],
+        "evidence": [
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 0
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 1
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 2
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 3
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 4
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 5
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 6
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 7
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 8
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 9
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 10
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 11
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 12
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 13
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 14
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 15
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 16
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 17
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 18
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 19
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 20
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 21
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 22
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 23
+          }
+        ],
+        "flight": {
+          "clearance_m": 0.8071,
+          "wind_estimate_mps2": 1.0576
+        },
+        "last_outcome": {
+          "action_id": "act-001-batch-a",
+          "duration_s": 21.82,
+          "end_position_m": [
+            1.1204,
+            -2.8669,
+            0.4819
+          ],
+          "executed": true,
+          "failure": null,
+          "newly_inspected": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "notes": [],
+          "still_missing": [
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23
+          ]
+        },
+        "limits": {
+          "attempts_used": {
+            "0": 1,
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 1,
+            "6": 1,
+            "7": 1
+          },
+          "default_action_duration_s": 20.0,
+          "max_action_duration_s": 40.0,
+          "max_attempts_per_waypoint": 3,
+          "max_speed_mps": 8.0,
+          "max_targets_per_action": 8,
+          "mission_time_remaining_s": 128.18,
+          "policy_version": "mission-envelope-v1"
+        },
+        "mission_id": "mission-1000",
+        "observation_id": 2,
+        "pose": {
+          "body_rate_rps": 0.0215,
+          "position_m": [
+            1.1204,
+            -2.8669,
+            0.4819
+          ],
+          "speed_mps": 1.1993,
+          "tilt_deg": 2.97,
+          "velocity_mps": [
+            0.0001,
+            -0.3631,
+            -1.143
+          ]
+        },
+        "previous_action_id": "act-001-batch-a",
+        "schema_version": 1,
+        "time_remaining_s": 128.18,
+        "time_s": 21.82
+      },
+      "observation_digest": "e732c66b65546784b2bf53d4f999039b5ce7ef567877eaff15ec14d6579d6f08",
+      "observation_id": 2
+    },
+    {
+      "action": {
+        "action_id": "act-003-settle-b",
+        "chosen_by": "devin",
+        "claim": "",
+        "confidence": 0.6,
+        "constraints": {
+          "duration_s": 8.0,
+          "max_speed_mps": 1.0
+        },
+        "expected_evidence": [
+          "body rate and speed near zero with clearance recovered before approaching waypoints 8-15",
+          "refreshed wind estimate"
+        ],
+        "observation_id": 3,
+        "primitive": "quiet_hover",
+        "reason": "Previous hover was rejected for missing waypoint indexes, so re-issue it scoped to the next batch (8-15). Clearance is only 0.81 m with a 1.14 m/s descent and wind at ~1.06 m/s2; settling first protects the vehicle and the steadiness criterion, and the budget (128 s, 11 actions for 16 waypoints) absorbs it easily.",
+        "schema_version": 1,
+        "waypoint_indexes": [
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      },
+      "action_digest": "041c37a3ae71e54ac3f3a6bf8ac0662da00f14d79700930a86a26ee73d281454",
+      "decision": {
+        "action_id": "act-003-settle-b",
+        "decision": "accepted",
+        "duration_s": 8.0,
+        "policy_version": "mission-envelope-v1",
+        "primitive": "quiet_hover",
+        "reason": "within envelope",
+        "waypoint_indexes": [
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      },
+      "observation": {
+        "allowed_primitives": [
+          "inspect_waypoints",
+          "quiet_hover",
+          "return_home",
+          "complete",
+          "abort"
+        ],
+        "available_targets": [
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "budget": {
+          "actions_remaining": 11,
+          "actions_used": 1
+        },
+        "events": [],
+        "evidence": [
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 0
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 1
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 2
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 3
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 4
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 5
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 6
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 7
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 8
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 9
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 10
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 11
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 12
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 13
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 14
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 15
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 16
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 17
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 18
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 19
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 20
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 21
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 22
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 23
+          }
+        ],
+        "flight": {
+          "clearance_m": 0.8071,
+          "wind_estimate_mps2": 1.0576
+        },
+        "last_outcome": {
+          "action_id": "act-001-batch-a",
+          "duration_s": 21.82,
+          "end_position_m": [
+            1.1204,
+            -2.8669,
+            0.4819
+          ],
+          "executed": true,
+          "failure": null,
+          "newly_inspected": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "notes": [],
+          "still_missing": [
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23
+          ]
+        },
+        "limits": {
+          "attempts_used": {
+            "0": 1,
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 1,
+            "6": 1,
+            "7": 1
+          },
+          "default_action_duration_s": 20.0,
+          "max_action_duration_s": 40.0,
+          "max_attempts_per_waypoint": 3,
+          "max_speed_mps": 8.0,
+          "max_targets_per_action": 8,
+          "mission_time_remaining_s": 128.18,
+          "policy_version": "mission-envelope-v1"
+        },
+        "mission_id": "mission-1000",
+        "observation_id": 3,
+        "pose": {
+          "body_rate_rps": 0.0215,
+          "position_m": [
+            1.1204,
+            -2.8669,
+            0.4819
+          ],
+          "speed_mps": 1.1993,
+          "tilt_deg": 2.97,
+          "velocity_mps": [
+            0.0001,
+            -0.3631,
+            -1.143
+          ]
+        },
+        "previous_action_id": "act-001-batch-a",
+        "schema_version": 1,
+        "time_remaining_s": 128.18,
+        "time_s": 21.82
+      },
+      "observation_digest": "3e1c0fc1fe52f9247acbd8658f90b1107fab87fcb967c0bcfd085a3263ba34e2",
+      "observation_id": 3,
+      "outcome": {
+        "action_id": "act-003-settle-b",
+        "duration_s": 8.0,
+        "end_position_m": [
+          2.294,
+          0.6019,
+          -3.0601
+        ],
+        "executed": true,
+        "failure": null,
+        "newly_inspected": [
+          13,
+          14
+        ],
+        "notes": [
+          "waypoint 8: too_far",
+          "waypoint 9: too_far",
+          "waypoint 10: too_far",
+          "waypoint 11: too_far",
+          "waypoint 12: too_far",
+          "waypoint 15: too_far"
+        ],
+        "still_missing": [
+          8,
+          9,
+          10,
+          11,
+          12,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ]
+      }
+    },
+    {
+      "action": {
+        "action_id": "act-004-batch-b",
+        "chosen_by": "devin",
+        "claim": "",
+        "confidence": 0.55,
+        "constraints": {
+          "duration_s": 40.0,
+          "max_speed_mps": 2.0
+        },
+        "expected_evidence": [
+          "waypoints 8-12 and 15-17 approached within 0.5 m and inspected",
+          "confirmation of whether the 2.0 m/s cap keeps body rate under 1.5 rad/s at capture"
+        ],
+        "observation_id": 4,
+        "primitive": "inspect_waypoints",
+        "reason": "The hover recovered clearance (1.02 m) and picked up 13 and 14, but the remaining gaps are all 'too_far', so distance, not steadiness, is the binding problem: hovering again would only burn attempts. Take the full 8-target batch with the longest allowed duration and a conservative 2.0 m/s cap (body rate is currently 2.46 rad/s, above the 1.5 limit, and wind is rising to 1.41 m/s2) so the controller has time to settle at each stop.",
+        "schema_version": 1,
+        "waypoint_indexes": [
+          8,
+          9,
+          10,
+          11,
+          12,
+          15,
+          16,
+          17
+        ]
+      },
+      "action_digest": "f54d72b42ce6142afd453b94417ec52d57503e40dbc1f74aa3b36d97b345c72c",
+      "decision": {
+        "action_id": "act-004-batch-b",
+        "decision": "accepted",
+        "duration_s": 40.0,
+        "policy_version": "mission-envelope-v1",
+        "primitive": "inspect_waypoints",
+        "reason": "within envelope",
+        "waypoint_indexes": [
+          8,
+          9,
+          10,
+          11,
+          12,
+          15,
+          16,
+          17
+        ]
+      },
+      "observation": {
+        "allowed_primitives": [
+          "inspect_waypoints",
+          "quiet_hover",
+          "return_home",
+          "complete",
+          "abort"
+        ],
+        "available_targets": [
+          8,
+          9,
+          10,
+          11,
+          12,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "budget": {
+          "actions_remaining": 10,
+          "actions_used": 2
+        },
+        "events": [],
+        "evidence": [
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 0
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 1
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 2
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 3
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 4
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 5
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 6
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 7
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 8
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 9
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 10
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 11
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 12
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 13
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 14
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 15
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 16
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 17
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 18
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 19
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 20
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 21
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 22
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 23
+          }
+        ],
+        "flight": {
+          "clearance_m": 1.0187,
+          "wind_estimate_mps2": 1.4078
+        },
+        "last_outcome": {
+          "action_id": "act-003-settle-b",
+          "duration_s": 8.0,
+          "end_position_m": [
+            2.294,
+            0.6019,
+            -3.0601
+          ],
+          "executed": true,
+          "failure": null,
+          "newly_inspected": [
+            13,
+            14
+          ],
+          "notes": [
+            "waypoint 8: too_far",
+            "waypoint 9: too_far",
+            "waypoint 10: too_far",
+            "waypoint 11: too_far",
+            "waypoint 12: too_far",
+            "waypoint 15: too_far"
+          ],
+          "still_missing": [
+            8,
+            9,
+            10,
+            11,
+            12,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23
+          ]
+        },
+        "limits": {
+          "attempts_used": {
+            "0": 1,
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 1,
+            "6": 1,
+            "7": 1,
+            "8": 1,
+            "9": 1,
+            "10": 1,
+            "11": 1,
+            "12": 1,
+            "13": 1,
+            "14": 1,
+            "15": 1
+          },
+          "default_action_duration_s": 20.0,
+          "max_action_duration_s": 40.0,
+          "max_attempts_per_waypoint": 3,
+          "max_speed_mps": 8.0,
+          "max_targets_per_action": 8,
+          "mission_time_remaining_s": 120.18,
+          "policy_version": "mission-envelope-v1"
+        },
+        "mission_id": "mission-1000",
+        "observation_id": 4,
+        "pose": {
+          "body_rate_rps": 2.4571,
+          "position_m": [
+            2.294,
+            0.6019,
+            -3.0601
+          ],
+          "speed_mps": 1.1025,
+          "tilt_deg": 4.61,
+          "velocity_mps": [
+            -0.0461,
+            0.8633,
+            0.6842
+          ]
+        },
+        "previous_action_id": "act-003-settle-b",
+        "schema_version": 1,
+        "time_remaining_s": 120.18,
+        "time_s": 29.82
+      },
+      "observation_digest": "a44cac416d90532831692d75df83028d8fe9ef3d52a072f8a21fa4b96ecf766a",
+      "observation_id": 4,
+      "outcome": {
+        "action_id": "act-004-batch-b",
+        "duration_s": 18.06,
+        "end_position_m": [
+          2.2435,
+          2.3397,
+          -1.6733
+        ],
+        "executed": true,
+        "failure": null,
+        "newly_inspected": [
+          8,
+          9,
+          10,
+          11,
+          12,
+          15,
+          16,
+          17
+        ],
+        "notes": [],
+        "still_missing": [
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ]
+      }
+    },
+    {
+      "action": {
+        "action_id": "act-005-batch-c",
+        "chosen_by": "devin",
+        "claim": "",
+        "confidence": 0.7,
+        "constraints": {
+          "duration_s": 40.0,
+          "max_speed_mps": 2.0
+        },
+        "expected_evidence": [
+          "waypoints 18-23 approached within 0.5 m and inspected",
+          "still_missing empty, enabling a complete claim"
+        ],
+        "observation_id": 5,
+        "primitive": "inspect_waypoints",
+        "reason": "Batch B captured all 8 targets with the 2.0 m/s cap, so reuse the same profile for the final six 'too_far' waypoints (18-23) in one action. Budget is comfortable (102 s, 9 actions) and 18-23 still have all 3 attempts, so retries remain available if wind (1.05 m/s2) or the 0.78 m clearance spoils a shot.",
+        "schema_version": 1,
+        "waypoint_indexes": [
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ]
+      },
+      "action_digest": "ca9edb605b5aa74c026c4af96d614bdd789d3f23c605c7f9a11bc4ff52cbc08d",
+      "decision": {
+        "action_id": "act-005-batch-c",
+        "decision": "accepted",
+        "duration_s": 40.0,
+        "policy_version": "mission-envelope-v1",
+        "primitive": "inspect_waypoints",
+        "reason": "within envelope",
+        "waypoint_indexes": [
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ]
+      },
+      "observation": {
+        "allowed_primitives": [
+          "inspect_waypoints",
+          "quiet_hover",
+          "return_home",
+          "complete",
+          "abort"
+        ],
+        "available_targets": [
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "budget": {
+          "actions_remaining": 9,
+          "actions_used": 3
+        },
+        "events": [],
+        "evidence": [
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 0
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 1
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 2
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 3
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 4
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 5
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 6
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 7
+          },
+          {
+            "approached": false,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 8
+          },
+          {
+            "approached": false,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 9
+          },
+          {
+            "approached": true,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 10
+          },
+          {
+            "approached": true,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 11
+          },
+          {
+            "approached": false,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 12
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 13
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 14
+          },
+          {
+            "approached": false,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 15
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 16
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 17
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 18
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 19
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 20
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 21
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 22
+          },
+          {
+            "approached": false,
+            "attempts": 0,
+            "gap_reasons": [
+              "too_far"
+            ],
+            "inspected": false,
+            "waypoint_index": 23
+          }
+        ],
+        "flight": {
+          "clearance_m": 0.7765,
+          "wind_estimate_mps2": 1.0475
+        },
+        "last_outcome": {
+          "action_id": "act-004-batch-b",
+          "duration_s": 18.06,
+          "end_position_m": [
+            2.2435,
+            2.3397,
+            -1.6733
+          ],
+          "executed": true,
+          "failure": null,
+          "newly_inspected": [
+            8,
+            9,
+            10,
+            11,
+            12,
+            15,
+            16,
+            17
+          ],
+          "notes": [],
+          "still_missing": [
+            18,
+            19,
+            20,
+            21,
+            22,
+            23
+          ]
+        },
+        "limits": {
+          "attempts_used": {
+            "0": 1,
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 1,
+            "6": 1,
+            "7": 1,
+            "8": 2,
+            "9": 2,
+            "10": 2,
+            "11": 2,
+            "12": 2,
+            "13": 1,
+            "14": 1,
+            "15": 2,
+            "16": 1,
+            "17": 1
+          },
+          "default_action_duration_s": 20.0,
+          "max_action_duration_s": 40.0,
+          "max_attempts_per_waypoint": 3,
+          "max_speed_mps": 8.0,
+          "max_targets_per_action": 8,
+          "mission_time_remaining_s": 102.12,
+          "policy_version": "mission-envelope-v1"
+        },
+        "mission_id": "mission-1000",
+        "observation_id": 5,
+        "pose": {
+          "body_rate_rps": 0.021,
+          "position_m": [
+            2.2435,
+            2.3397,
+            -1.6733
+          ],
+          "speed_mps": 1.2159,
+          "tilt_deg": 3.46,
+          "velocity_mps": [
+            0.007,
+            -0.4817,
+            -1.1164
+          ]
+        },
+        "previous_action_id": "act-004-batch-b",
+        "schema_version": 1,
+        "time_remaining_s": 102.12,
+        "time_s": 47.88
+      },
+      "observation_digest": "2a0f5b28a7fe724c0015f8def86f5a13a7716ba790af8a8bfe17c42a76f272c2",
+      "observation_id": 5,
+      "outcome": {
+        "action_id": "act-005-batch-c",
+        "duration_s": 14.38,
+        "end_position_m": [
+          3.3686,
+          -2.3379,
+          -1.6827
+        ],
+        "executed": true,
+        "failure": null,
+        "newly_inspected": [
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "notes": [],
+        "still_missing": []
+      }
+    },
+    {
+      "action": {
+        "action_id": "act-006-rth",
+        "chosen_by": "devin",
+        "claim": "complete",
+        "confidence": 0.85,
+        "constraints": {
+          "max_speed_mps": 2.5
+        },
+        "expected_evidence": [
+          "vehicle back at the home position, stationary and clear of obstacles",
+          "confirmation that the evidence set is unchanged and complete"
+        ],
+        "observation_id": 6,
+        "primitive": "return_home",
+        "reason": "All 24 authorised waypoints are inspected with no remaining gaps (still_missing empty), so no further evidence is needed. Clearance is low at 0.78 m with wind ~1.05 m/s2, so bring the vehicle home at a moderate speed before declaring the mission complete rather than loitering.",
+        "schema_version": 1,
+        "waypoint_indexes": []
+      },
+      "action_digest": "2d0ba19e2f2d8637e4654e2f225aa77d2cfcc1847da4999a909b21c368868714",
+      "decision": {
+        "action_id": "act-006-rth",
+        "decision": "accepted",
+        "duration_s": 20.0,
+        "policy_version": "mission-envelope-v1",
+        "primitive": "return_home",
+        "reason": "within envelope",
+        "waypoint_indexes": []
+      },
+      "observation": {
+        "allowed_primitives": [
+          "inspect_waypoints",
+          "quiet_hover",
+          "return_home",
+          "complete",
+          "abort"
+        ],
+        "available_targets": [],
+        "budget": {
+          "actions_remaining": 8,
+          "actions_used": 4
+        },
+        "events": [],
+        "evidence": [
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 0
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 1
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 2
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 3
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 4
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 5
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 6
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 7
+          },
+          {
+            "approached": false,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 8
+          },
+          {
+            "approached": false,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 9
+          },
+          {
+            "approached": true,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 10
+          },
+          {
+            "approached": true,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 11
+          },
+          {
+            "approached": false,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 12
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 13
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 14
+          },
+          {
+            "approached": false,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 15
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 16
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 17
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 18
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 19
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 20
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 21
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 22
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 23
+          }
+        ],
+        "flight": {
+          "clearance_m": 0.7805,
+          "wind_estimate_mps2": 1.0473
+        },
+        "last_outcome": {
+          "action_id": "act-005-batch-c",
+          "duration_s": 14.38,
+          "end_position_m": [
+            3.3686,
+            -2.3379,
+            -1.6827
+          ],
+          "executed": true,
+          "failure": null,
+          "newly_inspected": [
+            18,
+            19,
+            20,
+            21,
+            22,
+            23
+          ],
+          "notes": [],
+          "still_missing": []
+        },
+        "limits": {
+          "attempts_used": {
+            "0": 1,
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 1,
+            "6": 1,
+            "7": 1,
+            "8": 2,
+            "9": 2,
+            "10": 2,
+            "11": 2,
+            "12": 2,
+            "13": 1,
+            "14": 1,
+            "15": 2,
+            "16": 1,
+            "17": 1,
+            "18": 1,
+            "19": 1,
+            "20": 1,
+            "21": 1,
+            "22": 1,
+            "23": 1
+          },
+          "default_action_duration_s": 20.0,
+          "max_action_duration_s": 40.0,
+          "max_attempts_per_waypoint": 3,
+          "max_speed_mps": 8.0,
+          "max_targets_per_action": 8,
+          "mission_time_remaining_s": 87.74,
+          "policy_version": "mission-envelope-v1"
+        },
+        "mission_id": "mission-1000",
+        "observation_id": 6,
+        "pose": {
+          "body_rate_rps": 0.0214,
+          "position_m": [
+            3.3686,
+            -2.3379,
+            -1.6827
+          ],
+          "speed_mps": 1.2081,
+          "tilt_deg": 3.36,
+          "velocity_mps": [
+            0.0062,
+            0.4866,
+            -1.1057
+          ]
+        },
+        "previous_action_id": "act-005-batch-c",
+        "schema_version": 1,
+        "time_remaining_s": 87.74,
+        "time_s": 62.26
+      },
+      "observation_digest": "1b975903d9dc67925dc7a11541e54f82a399e617e5ad2479250a32c7bf6a9367",
+      "observation_id": 6,
+      "outcome": {
+        "action_id": "act-006-rth",
+        "duration_s": 20.0,
+        "end_position_m": [
+          1.1646,
+          -0.3006,
+          2.8447
+        ],
+        "executed": true,
+        "failure": null,
+        "newly_inspected": [],
+        "notes": [],
+        "still_missing": []
+      }
+    },
+    {
+      "action": {
+        "action_id": "act-007-complete",
+        "chosen_by": "devin",
+        "claim": "complete",
+        "confidence": 0.9,
+        "constraints": {
+          "max_speed_mps": 1.0
+        },
+        "expected_evidence": [
+          "mission closed with full 24/24 inspection coverage",
+          "no outstanding gap reasons or unused waypoint attempts required"
+        ],
+        "observation_id": 7,
+        "primitive": "complete",
+        "reason": "All 24 authorised waypoints are inspected (every evidence entry inspected=true with no gap_reasons, still_missing empty) and the return_home leg executed without failure, leaving the vehicle near home at low speed. Photographic evidence is complete, so end the mission rather than spending the remaining 7 actions and 67 s adding flight risk at 0.76 m clearance.",
+        "schema_version": 1,
+        "waypoint_indexes": []
+      },
+      "action_digest": "2c29489ed50700aef9654c8be7f3be69df91a5a6cb5782311749ecca7cc71a6f",
+      "decision": {
+        "action_id": "act-007-complete",
+        "decision": "accepted",
+        "duration_s": 0.0,
+        "policy_version": "mission-envelope-v1",
+        "primitive": "complete",
+        "reason": "terminal action, claim complete",
+        "waypoint_indexes": []
+      },
+      "observation": {
+        "allowed_primitives": [
+          "inspect_waypoints",
+          "quiet_hover",
+          "return_home",
+          "complete",
+          "abort"
+        ],
+        "available_targets": [],
+        "budget": {
+          "actions_remaining": 7,
+          "actions_used": 5
+        },
+        "events": [],
+        "evidence": [
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 0
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 1
+          },
+          {
+            "approached": true,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 2
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 3
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 4
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 5
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 6
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 7
+          },
+          {
+            "approached": false,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 8
+          },
+          {
+            "approached": false,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 9
+          },
+          {
+            "approached": true,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 10
+          },
+          {
+            "approached": true,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 11
+          },
+          {
+            "approached": false,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 12
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 13
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 14
+          },
+          {
+            "approached": false,
+            "attempts": 2,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 15
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 16
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 17
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 18
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 19
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 20
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 21
+          },
+          {
+            "approached": true,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 22
+          },
+          {
+            "approached": false,
+            "attempts": 1,
+            "gap_reasons": [],
+            "inspected": true,
+            "waypoint_index": 23
+          }
+        ],
+        "flight": {
+          "clearance_m": 0.7605,
+          "wind_estimate_mps2": 1.024
+        },
+        "last_outcome": {
+          "action_id": "act-006-rth",
+          "duration_s": 20.0,
+          "end_position_m": [
+            1.1646,
+            -0.3006,
+            2.8447
+          ],
+          "executed": true,
+          "failure": null,
+          "newly_inspected": [],
+          "notes": [],
+          "still_missing": []
+        },
+        "limits": {
+          "attempts_used": {
+            "0": 1,
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 1,
+            "6": 1,
+            "7": 1,
+            "8": 2,
+            "9": 2,
+            "10": 2,
+            "11": 2,
+            "12": 2,
+            "13": 1,
+            "14": 1,
+            "15": 2,
+            "16": 1,
+            "17": 1,
+            "18": 1,
+            "19": 1,
+            "20": 1,
+            "21": 1,
+            "22": 1,
+            "23": 1
+          },
+          "default_action_duration_s": 20.0,
+          "max_action_duration_s": 40.0,
+          "max_attempts_per_waypoint": 3,
+          "max_speed_mps": 8.0,
+          "max_targets_per_action": 8,
+          "mission_time_remaining_s": 67.74,
+          "policy_version": "mission-envelope-v1"
+        },
+        "mission_id": "mission-1000",
+        "observation_id": 7,
+        "pose": {
+          "body_rate_rps": 1.5018,
+          "position_m": [
+            1.1646,
+            -0.3006,
+            2.8447
+          ],
+          "speed_mps": 0.3104,
+          "tilt_deg": 37.37,
+          "velocity_mps": [
+            -0.0075,
+            -0.265,
+            -0.1614
+          ]
+        },
+        "previous_action_id": "act-006-rth",
+        "schema_version": 1,
+        "time_remaining_s": 67.74,
+        "time_s": 82.26
+      },
+      "observation_digest": "fdb9a7364660461c8447edfc6517fa88ef091785fbca18aa84f4f1c792559036",
+      "observation_id": 7
+    }
+  ],
+  "synthetic": true,
+  "verification": {
+    "actions_executed": 5,
+    "authorised_indexes": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    "collision": false,
+    "coverage": 1.0,
+    "coverage_threshold": 0.95,
+    "elapsed_s": 82.26,
+    "failure": null,
+    "inspected_count": 24,
+    "missing_indexes": [],
+    "passed": true,
+    "seed": 1000,
+    "time_budget_s": 150.0,
+    "verifier": "sim2-interactive-v1",
+    "waypoint_count": 24
+  }
+}

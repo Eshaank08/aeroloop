@@ -11,14 +11,22 @@ from urllib.parse import urlsplit
 from inspection.adaptive import AdaptiveRunner
 from inspection.artifact import build_artifact
 from inspection.devin import DevinClient, DevinRecapturePlanner
+from inspection.devin import DevinMissionSession
 from inspection.quality import QualityOracle
 from inspection.work_order import parse_work_order
+from mission.agent import DevinMissionPlanner, ScriptedPilot, run_mission
+from mission.contract import ACTION_SCHEMA
+from mission.episode import MissionEpisode
 from viz.flightlab import fly
 from viz.mission import CommandError, EXAMPLES, help_text, parse
 from viz.replay import scene
 
 
 VIZ_DIR = Path(__file__).resolve().parent
+REPO_ROOT = VIZ_DIR.parent
+# Served from the repository root rather than viz/, so the mission view can use the
+# real turbofan and quadcopter models and read written mission artifacts.
+ROOT_PREFIXES = ("/engine-reference/", "/artifacts/")
 
 
 def _inspection_planner(request: dict):
@@ -30,6 +38,13 @@ def _inspection_planner(request: dict):
     max_acu_text = os.environ.get("AEROLOOP_DEVIN_MAX_ACU", "").strip()
     max_acu = int(max_acu_text) if max_acu_text else None
     return DevinRecapturePlanner(DevinClient.from_env(), max_acu_limit=max_acu)
+
+
+SECTORS = {
+    "all": None,
+    "top": [index for index in range(24) if index % 8 in (0, 1, 7)],
+    "ring0": list(range(8)),
+}
 
 
 def _wind_label(scale: float) -> str:
@@ -61,6 +76,14 @@ class CommandHandler(SimpleHTTPRequestHandler):
         self.send_response(204)
         self.send_header("Content-Length", "0")
         self.end_headers()
+
+    def translate_path(self, path):
+        clean = urlsplit(path).path
+        if clean.startswith(ROOT_PREFIXES):
+            candidate = (REPO_ROOT / clean.lstrip("/")).resolve()
+            if candidate.is_relative_to(REPO_ROOT):
+                return str(candidate)
+        return super().translate_path(path)
 
     def do_GET(self):
         path = urlsplit(self.path).path
@@ -202,12 +225,72 @@ class CommandHandler(SimpleHTTPRequestHandler):
         combined["waypoints"] = list(combined.get("waypoints", []))
         return combined
 
+    def _mission(self):
+        """Run one autonomous simulator v2 mission and return it for replay."""
+        try:
+            request = self._read_json() or {}
+            seed = int(request.get("seed", 1000))
+            sector = str(request.get("sector", "all"))
+            planner_name = str(request.get("planner", "baseline")).lower()
+            max_actions = int(request.get("max_actions", 12))
+        except Exception as error:
+            self._send_json(400, {"ok": False, "reply": f"Bad mission request: {error}"})
+            return
+
+        authorised = SECTORS.get(sector)
+        if sector not in SECTORS:
+            self._send_json(400, {"ok": False, "reply": f"Unknown sector {sector!r}"})
+            return
+
+        try:
+            if planner_name == "devin":
+                client = DevinClient.from_env(poll_interval_s=8.0, timeout_s=420.0)
+                max_acu_text = os.environ.get("AEROLOOP_DEVIN_MAX_ACU", "").strip()
+                session = DevinMissionSession(
+                    client,
+                    ACTION_SCHEMA,
+                    title=f"AeroLoop autonomous mission seed {seed}",
+                    max_acu_limit=int(max_acu_text) if max_acu_text else None,
+                )
+                planner = DevinMissionPlanner(session)
+            elif planner_name == "baseline":
+                planner = ScriptedPilot()
+            else:
+                raise ValueError("planner must be 'devin' or 'baseline'")
+        except Exception as error:
+            self._send_json(400, {"ok": False, "reply": str(error)})
+            return
+
+        try:
+            episode = MissionEpisode(seed=seed, authorised_indexes=authorised)
+            run = run_mission(
+                planner, seed=seed, authorised_indexes=authorised,
+                max_actions=max_actions, episode=episode,
+            )
+            self._send_json(200, {
+                "ok": True,
+                "reply": (
+                    f"{run.planner_name} flew {run.verification['inspected_count']}"
+                    f"/{run.verification['waypoint_count']} waypoints: {run.disposition}"
+                ),
+                "seed": seed,
+                "sector": sector,
+                "waypoints": [list(point) for point in episode.waypoints],
+                "authorised_indexes": episode.authorised_indexes,
+                "frames": episode.frames,
+                "artifact": run.to_dict(),
+            })
+        except Exception as error:
+            self._send_json(500, {"ok": False, "reply": f"Mission failed: {error}"})
+
     def do_POST(self):
         path = urlsplit(self.path).path
         if path == "/api/fly":
             self._fly()
         elif path == "/api/inspect":
             self._inspect()
+        elif path == "/api/mission":
+            self._mission()
         else:
             self._send_json(404, {"ok": False, "reply": "Unknown API endpoint."})
 

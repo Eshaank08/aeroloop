@@ -692,12 +692,19 @@
   }
 
   // ------------------------------------------------------------- trace prep
-  // waypoint ordering is the controller's business, so credit them the way the
-  // verifier does: by proximity, in trace order
+  // v2 replays carry full-tick gate credits from the simulator. Use those
+  // authoritative times instead of re-deriving visitation from sampled frames.
+  // Traces without them fall back to the client-side gate approximation.
   let visitedAt = [];
   function precompute() {
     MEASURED = !!(frames[0] && frames[0].R);
     visitedAt = new Array(wpList.length).fill(Infinity);
+    if (Array.isArray(trace.inspection_times)
+        && trace.inspection_times.length === wpList.length) {
+      visitedAt = trace.inspection_times.map((time) =>
+        Number.isFinite(time) ? time : Infinity);
+      return;
+    }
     const hit = new Array(wpList.length).fill(false);
     frames.forEach((f) => {
       const tol = MEASURED ? GATE_TOL : nac.waypoint_tolerance;

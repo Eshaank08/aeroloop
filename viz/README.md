@@ -102,7 +102,9 @@ A v2 trace carries the airframe's own attitude, body rates and thrust, so the
 pose is measured rather than reconstructed, the HUD reads out tilt from level and
 how far the camera is off the nacelle, and the wedge in front of the nose is the
 inspection camera's field of view at the gate's half angle, green while the shot
-would count. A waypoint lights up only when the recorded flight passed the same
-gate the verifier applies: inside tolerance, aimed at the skin, and steady. On a
-v1 trace, where the point mass simulator has no attitude to record, the pose is
-still reconstructed from the recorded acceleration and the panel says so.
+would count. For a v2 replay, waypoint visitation, coverage and coloring come
+from the simulator's recorded inspection result rather than being re-derived
+from strided frames. On a v1 trace, where the point mass simulator has no
+attitude to record, the pose is still reconstructed from the recorded
+acceleration and the panel says so. Traces without recorded inspection times
+use the existing client-side gate fallback.

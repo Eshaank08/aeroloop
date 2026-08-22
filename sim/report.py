@@ -26,9 +26,6 @@ class ReportLoadError(Exception):
     """Raised when a file does not contain a usable verification artifact."""
 
 
-UnusableReportError = ReportLoadError
-
-
 def _utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace(
         "+00:00", "Z"

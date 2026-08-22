@@ -71,10 +71,23 @@ pytest -q
 ```
 
 That runs the full verifier. It prints a per-scenario report plus a final PASS/FAIL.
+The default batch uses 30 scenarios and base seed 1000. To verify against a
+judge-supplied seed, override both values with environment variables:
+
+```bash
+AEROLOOP_SCENARIOS=5 AEROLOOP_BASE_SEED=4242 pytest -q
+```
+
 You can also run it directly for more detail:
 
 ```bash
 python -m sim.run_verifier --scenarios 30 --verbose
+```
+
+The equivalent judge-seed command is:
+
+```bash
+python -m sim.run_verifier --scenarios 5 --seed 4242 --verbose
 ```
 
 Iterate until `pytest` passes. Collisions are the hardest constraint: a controller that

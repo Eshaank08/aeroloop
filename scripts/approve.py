@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from controller import Controller  # noqa: E402
 from sim.report import (  # noqa: E402
     ApprovalRefused,
+    ReportLoadError,
     approve_report,
     build_report,
     check_integrity,
@@ -24,6 +25,9 @@ from sim.report import (  # noqa: E402
     write_report,
 )
 from sim.run_verifier import verify  # noqa: E402
+
+DEFAULT_SCENARIOS = 30
+DEFAULT_BASE_SEED = 1000
 
 
 def _display_path(path):
@@ -80,9 +84,9 @@ def _print_failure_reasons(report):
             print(f"failure: seed {scenario['seed']}: {'; '.join(reasons)}")
 
 
-def _new_report():
-    ok, results = verify(Controller, count=30, base_seed=1000, verbose=False)
-    report = build_report(ok, results, 30, 1000, "controller.py")
+def _new_report(scenarios, seed):
+    ok, results = verify(Controller, count=scenarios, base_seed=seed, verbose=False)
+    report = build_report(ok, results, scenarios, seed, "controller.py")
     timestamp = report["generated_at_utc"].replace("-", "").replace(":", "")
     artifact_path = Path("reports") / f"verification_{timestamp}.json"
     write_report(report, artifact_path)
@@ -90,9 +94,13 @@ def _new_report():
 
 
 def _approve_interactively(report, artifact_path):
-    answer = input(
-        "Type yes to record human approval for this verification artifact: "
-    )
+    try:
+        answer = input(
+            "Type yes to record human approval for this verification artifact: "
+        )
+    except EOFError:
+        print("NOT APPROVED. No confirmation received.")
+        return 1
     if answer != "yes":
         print("NOT APPROVED. Controller held.")
         return 1
@@ -109,21 +117,27 @@ def _approve_interactively(report, artifact_path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--report", type=Path)
+    parser.add_argument("--scenarios", type=int, default=DEFAULT_SCENARIOS)
+    parser.add_argument("--seed", type=int, default=DEFAULT_BASE_SEED)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
     if args.report is None:
-        report, artifact_path = _new_report()
+        report, artifact_path = _new_report(args.scenarios, args.seed)
     else:
         artifact_path = args.report
-        report = load_report(artifact_path)
-        _print_summary(report, artifact_path)
-        if report.get("approval") is not None and not check_integrity(report):
-            print("Approval refused: artifact integrity check failed.")
+        try:
+            report = load_report(artifact_path)
+        except ReportLoadError as exc:
+            print(f"Unable to use verification report: {exc}")
             return 1
+        _print_summary(report, artifact_path)
         if report["result"] != "PASS":
             _print_failure_reasons(report)
             print("Approval refused: verification result is FAIL.")
+            return 1
+        if report.get("approval") is not None and not check_integrity(report):
+            print("Approval refused: artifact integrity check failed.")
             return 1
         if report.get("approval") is not None:
             print("Approval refused: artifact is already approved.")

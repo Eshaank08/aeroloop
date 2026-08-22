@@ -1,0 +1,9 @@
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: https://github.com/Eshaank08/aeroloop/blob/master/docs/REAL_WORLD_ROADMAP.md
+</in-app-browser-context>
+
+## My request:
+what about the human in the loop and are we adding audio and visual stuff, what if a bird comes in a drone path, or some other stuff or controlling wind, or if it is for defense then something else, and if it is for inspection thne why not do it manually, why use this?

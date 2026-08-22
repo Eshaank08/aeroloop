@@ -1,0 +1,13 @@
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 2 tabs.
+- Current URL: http://127.0.0.1:8765/flight_view.html
+</in-app-browser-context>
+
+## My request:
+No API key for the simulator because `python -m viz.server` runs the physics (`Drone`, `Controller`, `Nacelle`) entirely on your machine. The only script that calls Devin's API is `scripts/trigger_devin.py`, which is optional.
+"Random" wind and scenarios are actually deterministic: `sim/scenarios.py` builds each gust from a seed, so the same seed produces the same wind every time. Camera/evidence data is synthetic: `inspection/evidence.py` derives standoff, view angle, dwell, and wind from the physics trace, not from real sensors or cameras. That is why every capture carries `synthetic=True`. i asked it this, but the probkem here
+
+
+dont we need to use the ai of devin to control the drone, if its options then how do we even use devin at the end of the day?

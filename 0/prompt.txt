@@ -1,0 +1,16 @@
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 2 tabs.
+- Current URL: http://127.0.0.1:8877/backend_view.html
+</in-app-browser-context>
+
+## My request:
+so this is one issue i feel it has, the design looks very dark, the random objects are not ther,e visiona dn audio detection are not there,&#x20;
+
+
+things on the mission view seem very jargon, cnat understand what they mean, the deciosnis pannel doenst make sense, the drone goes through the floor sometime,s but still says all points captured,&#x20;
+
+the the points it goe sthrough which turn green, i am no able to understahd what theya re, explain them and also where is the noise in random data, wind is gone and other obstalcels should they be addd or what, also tell me that? also what do you in geenral after seieng this&#x20;
+
+can we make it easily understanable&#x20;

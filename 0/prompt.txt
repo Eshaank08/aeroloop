@@ -1,0 +1,6 @@
+dont make it, just tell me what has to e done, what I was thinking is,&#x20;
+
+everytime the abckend generates random data noise and problems inside simulator likereal wrld probelms, and then devin is basiclaly steering the drone to pass the check and everthing, &#x20;
+
+
+we want to make an agent which repalces what is being done manually,  no understand what that si and then tell me i will implement it &#x20;

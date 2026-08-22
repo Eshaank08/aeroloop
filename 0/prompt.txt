@@ -1,0 +1,12 @@
+The winning workflow is:
+
+1. Discover and describe an unexpected object.
+2. Read markings and establish probable identity.
+3. Ask a human to confirm the asset.
+4. Retrieve the approved inspection procedure.
+5. Gather visual, thermal, acoustic, and telemetry evidence.
+6. Adaptively request better viewpoints or quiet audio captures.
+7. Highlight anomalies and uncertainty.
+8. Leave final disposition and return-to-service approval to qualified personnel.
+
+&#x20;this sounds good to me, cna we amke this and how do we use devin in the bakcend or devin for x thing for this and&#x20;

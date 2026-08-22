@@ -760,6 +760,21 @@
   const followPos = new THREE.Vector3(12, 6, 14);
   const followAim = new THREE.Vector3(0, 0, mid);
 
+  // a chase camera that trails a drone flying 3 m from a 2.1 m cylinder ends up
+  // inside the skin, so push it back out along the radius
+  const CAM_SHELL = nac.keep_out_radius + 0.45;
+  function pushOutside(p) {
+    const z = Math.max(nac.axis_start[0] - 0.6, Math.min(nac.axis_end[0] + 0.6, p.z));
+    if (z !== p.z) return p;                   // clear of the barrel ends
+    const r = Math.hypot(p.x, p.y);
+    if (r >= CAM_SHELL) return p;
+    if (r < 1e-4) { p.x = CAM_SHELL; return p; }
+    const k = CAM_SHELL / r;
+    p.x *= k;
+    p.y *= k;
+    return p;
+  }
+
   function updateCameras(dt) {
     const target = drone.position;
     const back = camState.fwd.clone().setY(0);
@@ -768,7 +783,8 @@
     const want = target.clone()
       .add(back.clone().multiplyScalar(-2.6))
       .add(new THREE.Vector3(0, 1.15, 0));
-    followPos.lerp(want, Math.min(1, dt * 2.2));
+    followPos.lerp(pushOutside(want), Math.min(1, dt * 2.2));
+    pushOutside(followPos);
     followAim.lerp(target, Math.min(1, dt * 4.5));
     followCam.position.copy(followPos);
     followCam.lookAt(followAim);
@@ -811,7 +827,8 @@
   }
   syncGust();
   el('gust').onclick = () => {
-    const target = trace.gust.start_s;
+    // the gust envelope is a half sine, so its peak is the interesting frame
+    const target = trace.gust.start_s + trace.gust.duration_s / 2;
     let best = 0;
     frames.forEach((f, i) => {
       if (Math.abs(f.t - target) < Math.abs(frames[best].t - target)) best = i;

@@ -123,6 +123,8 @@ def build_artifact(
         requested_captures=requested_dicts,
         planner_record={
             "planner": result.planner,
+            "metadata": result.planner_metadata,
+            "failed": result.planner_failed,
             "input_gap_count": len(gaps),
             "raw_requests": requested_dicts,
             "validated_requests": accepted_dicts,

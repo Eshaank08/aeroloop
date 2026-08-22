@@ -3,12 +3,14 @@
 import argparse
 from functools import partial
 import json
+import os
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
 from inspection.adaptive import AdaptiveRunner
 from inspection.artifact import build_artifact
+from inspection.devin import DevinClient, DevinRecapturePlanner
 from inspection.quality import QualityOracle
 from inspection.work_order import parse_work_order
 from viz.flightlab import fly
@@ -17,6 +19,17 @@ from viz.replay import scene
 
 
 VIZ_DIR = Path(__file__).resolve().parent
+
+
+def _inspection_planner(request: dict):
+    name = str(request.get("planner") or os.environ.get("AEROLOOP_INSPECTION_PLANNER", "rule")).lower()
+    if name in {"rule", "rule_engine"}:
+        return None
+    if name != "devin":
+        raise ValueError("planner must be 'rule' or 'devin'")
+    max_acu_text = os.environ.get("AEROLOOP_DEVIN_MAX_ACU", "").strip()
+    max_acu = int(max_acu_text) if max_acu_text else None
+    return DevinRecapturePlanner(DevinClient.from_env(), max_acu_limit=max_acu)
 
 
 def _wind_label(scale: float) -> str:
@@ -110,12 +123,13 @@ class CommandHandler(SimpleHTTPRequestHandler):
             request = self._read_json()
             text = request.get("text") if isinstance(request, dict) else None
             work_order = parse_work_order(text or "")
+            planner = _inspection_planner(request if isinstance(request, dict) else {})
         except Exception as error:
             self._send_json(400, {"ok": False, "reply": f"Could not parse work order: {error}"})
             return
 
         try:
-            runner = AdaptiveRunner(oracle=QualityOracle())
+            runner = AdaptiveRunner(planner=planner, oracle=QualityOracle())
             result = runner.run(
                 work_order.label,
                 work_order.nacelle,
@@ -130,9 +144,13 @@ class CommandHandler(SimpleHTTPRequestHandler):
             good = sum(1 for q in result.final_quality if q.status == "good")
             disposition = result.final_disposition
             reply = (
-                f"adaptive run complete: {disposition}. "
+                f"adaptive run complete with {result.planner}: {disposition}. "
                 f"{good}/{len(result.final_quality)} captures good."
             )
+            if result.planner_failed:
+                reply += " Planner unreachable, no follow-up actions were flown."
+            elif result.policy_violations:
+                reply += f" {len(result.policy_violations)} request(s) rejected by policy."
             self._send_json(
                 200,
                 {
@@ -142,6 +160,12 @@ class CommandHandler(SimpleHTTPRequestHandler):
                     "artifact": artifact,
                     "captures": [c.__dict__ for c in result.final_captures],
                     "quality": [q.__dict__ for q in result.final_quality],
+                    "planner": {
+                        "name": result.planner,
+                        "metadata": result.planner_metadata,
+                        "failed": result.planner_failed,
+                        "violations": result.policy_violations,
+                    },
                     "mission": {
                         "kind": "sweep",
                         "label": work_order.label,

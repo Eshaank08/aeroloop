@@ -99,6 +99,8 @@ class AdaptiveResult:
     wind_scale: float = 1.0
     synthetic: bool = True
     planner: str = "rule_engine"
+    planner_metadata: dict = field(default_factory=dict)
+    planner_failed: bool = False
     threshold_version: str = "synthetic-v1"
     initial: FlightResult = field(default_factory=FlightResult)
     gaps: list[QualityResult] = field(default_factory=list)

@@ -1,5 +1,9 @@
 # Real-world multimodal inspection roadmap
 
+> The immediate next-stage implementation is the
+> [Devin autonomy deployment roadmap](DEVIN_AUTONOMY_ROADMAP.md), which makes Devin
+> the required runtime mission agent for every autonomous inspection action.
+
 ## Purpose
 
 AeroLoop currently proves that Devin can write a flight controller and improve it

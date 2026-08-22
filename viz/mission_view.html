@@ -64,6 +64,7 @@
 <div id="hud" class="panel">
   <h2>Mission</h2>
   <div class="row"><span>seed</span><span id="m-seed">-</span></div>
+  <div class="row"><span>authorised</span><span id="m-region">-</span></div>
   <div class="row"><span>agent</span><span id="m-agent">-</span></div>
   <div class="row"><span>clock</span><span id="m-clock">0.0s</span></div>
   <div class="row"><span>inspected</span><span id="m-inspected">0/0</span></div>
@@ -81,13 +82,21 @@
   <div class="steps" id="steps"><div style="color:var(--dim)">Run a mission to see every observation, decision and safety ruling.</div></div>
 </div>
 
-<div id="status">The engine and drone are real scanned models. The flight is simulator v2 with measured attitude.</div>
+<div id="status">Ask in plain English. Try "inspect the underside on a random scene" or "sweep the whole nacelle, seed 1027".</div>
+<div id="examples" class="panel" style="bottom:112px; left:50%; transform:translateX(-50%); display:flex; gap:6px; padding:7px 9px;">
+  <button class="ex">inspect the lower end of the engine</button>
+  <button class="ex">check the inlet on a random scene</button>
+  <button class="ex">full sweep, seed 1027</button>
+  <button class="ex">inspect the top side in a random scenario</button>
+</div>
 
 <div id="controls" class="panel">
-  <label>seed <input id="seed" type="number" value="1000" style="width:80px"></label>
-  <select id="sector"><option value="all">whole nacelle</option><option value="top">top side</option><option value="ring0">front ring</option></select>
-  <select id="planner"><option value="baseline">baseline agent</option><option value="devin">Devin (live API)</option></select>
-  <button id="run">Fly mission</button>
+  <input id="order" type="text" style="width:390px"
+         placeholder="tell the drone what to inspect, then press enter"
+         value="inspect the lower end of the engine">
+  <button id="mic" title="speak the work order">mic</button>
+  <select id="planner"><option value="devin">Devin (live API)</option><option value="baseline">baseline agent</option></select>
+  <button id="run">Send</button>
   <button id="play">Pause</button>
   <button id="rate">4x</button>
   <button id="cam">Follow</button>
@@ -297,7 +306,11 @@ function applyMission(data) {
   renderDecisions();
 
   const v = data.artifact.verification;
-  el('m-seed').textContent = data.seed;
+  const intent = data.intent || {};
+  el('m-seed').textContent = intent.seed_was_random ? `${data.seed} (random)` : data.seed;
+  el('m-region').textContent = intent.region
+    ? `${intent.region}, ${intent.waypoint_count} wp`
+    : `${(data.authorised_indexes || []).length} wp`;
   el('m-agent').textContent = data.artifact.planner;
   el('m-inspected').textContent = `${v.inspected_count}/${v.waypoint_count}`;
   el('m-coverage').textContent = `${(v.coverage * 100).toFixed(1)}%`;
@@ -379,19 +392,15 @@ async function runMission() {
   const button = el('run');
   button.disabled = true;
   const planner = el('planner').value;
+  const text = el('order').value.trim();
   el('status').textContent = planner === 'devin'
-    ? 'Creating a Devin session and flying it decision by decision. This takes a minute.'
-    : 'Flying the deterministic baseline.';
+    ? `Devin is reading "${text}" and flying it decision by decision. This takes a minute.`
+    : `Flying "${text}" with the deterministic baseline.`;
   try {
     const response = await fetch('/api/mission', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        seed: Number(el('seed').value),
-        sector: el('sector').value,
-        planner,
-        max_actions: 12,
-      }),
+      body: JSON.stringify({ text, planner }),
     });
     const data = await response.json();
     if (!data.ok) { el('status').textContent = data.reply; return; }
@@ -404,6 +413,32 @@ async function runMission() {
 }
 
 el('run').onclick = runMission;
+el('order').addEventListener('keydown', (event) => { if (event.key === 'Enter') runMission(); });
+document.querySelectorAll('.ex').forEach((chip) => {
+  chip.onclick = () => { el('order').value = chip.textContent; runMission(); };
+});
+
+// Speech is a convenience only. Everything it can do, the text box can do.
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!Recognition) {
+  el('mic').disabled = true;
+  el('mic').title = 'this browser has no speech recognition';
+} else {
+  const recogniser = new Recognition();
+  recogniser.lang = 'en-US';
+  recogniser.interimResults = false;
+  el('mic').onclick = () => { el('mic').classList.add('on'); recogniser.start(); };
+  recogniser.onresult = (event) => {
+    el('order').value = event.results[0][0].transcript;
+    el('mic').classList.remove('on');
+    runMission();
+  };
+  recogniser.onerror = () => {
+    el('mic').classList.remove('on');
+    el('status').textContent = 'Speech failed, which usually means the page is not a secure context. Type the order instead.';
+  };
+  recogniser.onend = () => el('mic').classList.remove('on');
+}
 el('play').onclick = () => { playing = !playing; el('play').textContent = playing ? 'Pause' : 'Play'; };
 el('rate').onclick = () => {
   rate = rate === 1 ? 4 : (rate === 4 ? 12 : 1);

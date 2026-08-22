@@ -47,7 +47,7 @@ Full narrative and numbers in [docs/RESULTS.md](docs/RESULTS.md).
 
 ```bash
 python -m pip install -r requirements.txt
-python -m pytest -q                                   # 101 passed, about 20 s
+python -m pytest -q                                   # 126 passed, about 20 s
 ```
 
 Verifier for simulator v1, the point mass sweep:
@@ -112,9 +112,9 @@ handful of live runs, not a soak test. Treat it as demonstrated, not battle test
 
 | What | Result | Command |
 | ---- | ------ | ------- |
-| Test suite | 101 passed | `python -m pytest -q` |
+| Test suite | 126 passed | `python -m pytest -q` |
 | Sim v1 batch | 30/30 PASS, 100.0% mean coverage, 0 collisions | `python -m sim.run_verifier --scenarios 30 --seed 1000` |
-| Sim v2 batch | 29/30 PASS, 99.9% mean coverage, 719/720 waypoints | `python -m sim2.run_verifier --scenarios 30 --seed 1000` |
+| Sim v2 batch | 30/30 PASS, 99.9% mean coverage, 719/720 waypoints | `python -m sim2.run_verifier --scenarios 30 --seed 1000` |
 | Mission loop, baseline agent, seeds 1000 to 1029 | 29/30 PASS, 98.6% mean coverage | `python scripts/run_autonomous_mission.py --seed <n> --planner baseline` |
 | Live Devin mission, seed 1000 | PASS, 24/24 waypoints, 100.0% coverage, 82.3 s | `python scripts/run_autonomous_mission.py --seed 1000 --planner devin` |
 

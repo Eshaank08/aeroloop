@@ -15,7 +15,7 @@ Scope, stated once so nothing here is over read:
 
 | Metric | Result |
 | ------ | ------ |
-| Tests | 101 passed |
+| Tests | 126 passed |
 
 ```bash
 python -m pytest -q
@@ -44,7 +44,7 @@ human edited it.
 
 | Metric | Result |
 | ------ | ------ |
-| Scenarios passed | 29/30 |
+| Scenarios passed | 30/30 |
 | Mean coverage | 99.9% |
 | Waypoints inspected | 719/720 |
 | Failing seed | 1027 only |
@@ -61,6 +61,13 @@ pass rate, but the single failing seed is the honest number to quote.
 v1 and v2 numbers are not comparable. v2 grades a quadrotor with attitude dynamics and
 only counts a waypoint when the camera is aimed and the shot is steady, so its
 coverage is a strictly harder measurement.
+
+Seed 1027 now passes the batch verifier. It previously failed by 2.9e-12 seconds of float
+accumulation in the elapsed time bookkeeping, which a Devin session diagnosed and fixed by
+deriving elapsed time from the tick count. No threshold moved and no trajectory changed:
+mean coverage and 719/720 inspected are identical before and after, only that one pass flag
+flipped. The full disclosure is in docs/IDEA.md. It still only inspects 23 of 24 waypoints,
+which is above the unchanged 95 percent coverage threshold.
 
 ## 4. Autonomous mission loop, deterministic baseline agent
 
@@ -177,7 +184,51 @@ behaviour.
 **The human contribution.** None. No human edited `controller2.py` at any point, before
 or after this fix.
 
-## 8. What is not measured, and must not be claimed
+## 8. Unseen seeds, and plain language work orders
+
+Seeds 1000 to 1029 were used throughout development, so they prove very little on their
+own. Seeds 5000 to 5029 had never been run when these numbers were taken.
+
+| Path | Unseen seeds 5000 to 5029 | Command |
+| --- | --- | --- |
+| Simulator v2 batch verifier, `controller2.py` | 30/30 PASS, mean coverage 100.0%, 720/720 waypoints | `python -m sim2.run_verifier --scenarios 30 --seed 5000` |
+| Autonomous mission loop, baseline agent | 30/30 PASS, mean coverage 100.0%, mean elapsed 79.6s, zero controller exceptions | `run_mission(ScriptedPilot(), seed=s)` for s in 5000..5029 |
+
+Live Devin missions on unseen seeds, over the real v3 API:
+
+| Seed | Region | Result | Actions | Session |
+| --- | --- | --- | --- | --- |
+| 5003 | whole nacelle | PASS, 24/24, 84.3s | 5 accepted, 0 rejected | `fd971c21448b41cb8f5fc9739fc4a1d9` |
+| 5026 | whole nacelle | PASS, 24/24, 75.2s | 6 accepted, 1 rejected | `a92cb32fa83a44e4a14c4ff4da93b951` |
+| 5017 | top side | PASS, 9/9, 50.2s | 4 accepted, 1 rejected | `999422369dd0481a97704d6ca22766f6` |
+| 860797 | bottom side, from a plain sentence | PASS, 9/9 | 3 accepted, 0 rejected | `858054850267460584e5810ba8d841e4` |
+
+Live Devin record across all runs: 5 missions attempted under the fixed controller, 5
+passed. That is a small sample and should be described as one.
+
+Seed 5026 is worth singling out. The one shot controller needs 122.92s to sweep it. Devin
+flying the same scenario adaptively finished in 75.2s with the same 24/24 coverage,
+because it chose its own batching rather than following a fixed route. That is the
+clearest evidence in this file that the autonomous layer earns its place, and it is not
+an artifact of the elapsed time fix, which only ever moved a value by picoseconds.
+
+### Plain language work orders
+
+The mission view takes a sentence. The authorised region is resolved locally and shown
+before flight, the sentence itself is passed to Devin to interpret.
+
+| Sentence a judge types | Authorised | Scene |
+| --- | --- | --- |
+| inspect the lower end of the engine | the bottom side, 9 waypoints | random, reported |
+| check the inlet on a random scene | the front of the nacelle, 8 waypoints | random, reported |
+| take the drone from one corner to the other and inspect everything, seed 1027 | the whole nacelle, 24 waypoints | seed 1027 |
+| look at the port side | the left side, 9 waypoints | random, reported |
+
+An unparsed sentence authorises the whole nacelle rather than nothing, so a sentence the
+parser does not understand cannot produce a mission that passes by inspecting zero
+waypoints.
+
+## 9. What is not measured, and must not be claimed
 
 - No real hardware flight. Every number here comes from simulation.
 - No defect detection. Coverage of the inspection sweep is what is graded.

@@ -79,9 +79,10 @@ class DevinMissionPlanner:
 
     name = "devin"
 
-    def __init__(self, session, brief: str = MISSION_BRIEF):
+    def __init__(self, session, brief: str = MISSION_BRIEF, work_order: str = ""):
         self.session = session
         self.brief = brief
+        self.work_order = work_order
 
     @property
     def metadata(self) -> dict:
@@ -97,8 +98,18 @@ class DevinMissionPlanner:
         if rejection:
             packet["previous_action_rejected"] = rejection
         message = json.dumps(packet, sort_keys=True)
+        # The operator's own words, unedited. The authorised waypoint set in the
+        # observation is the hard boundary; this is the intent inside it.
+        order = (
+            f"\n\nThe operator asked for this, in their words:\n"
+            f"  \"{self.work_order}\"\n"
+            "Only the waypoints listed in available_targets are authorised. Interpret "
+            "the request inside that set, and if the request is already satisfied, say "
+            "so with a terminal action rather than flying more.\n"
+            if self.work_order else ""
+        )
         prompt = (
-            f"{self.brief}\n\nAction schema:\n"
+            f"{self.brief}{order}\nAction schema:\n"
             f"{json.dumps(ACTION_SCHEMA, sort_keys=True)}\n\nFirst observation:\n{message}"
         )
 

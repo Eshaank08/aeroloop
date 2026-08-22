@@ -13,14 +13,20 @@ python3 -m pip install -r requirements.txt
 python3 -m pytest -q
 python3 -m sim.run_verifier --scenarios 30 --verbose
 python3 -m sim.run_verifier --scenarios 50 --seed 424242 --verbose
+python3 -m sim2.run_verifier --scenarios 30 --verbose
+python3 -m sim2.run_verifier --scenarios 20 --seed 424242 --verbose
 ```
+
+Sections 1 to 6 are v1 numbers, graded by `sim/`. Section 7 is v2, graded by `sim2/`
+against different thresholds. The two are not comparable and are never mixed here.
 
 ## Environment these numbers were measured on
 
 | Item                | Value                                                |
 | ------------------- | ---------------------------------------------------- |
-| Commit under test   | `16e46b7e9561a37c579041d1679ab00a48821760` (this branch, master merged in) |
+| Commit under test   | `6cd7a18d4138f25a0ef5d5cc37818b2b38b90f13` (this branch, master merged in) |
 | `controller.py`     | unmodified, as merged in PR #4                        |
+| `controller2.py`    | unmodified, as merged in PR #17                       |
 | Python              | 3.10.12 (`python3 --version`)                         |
 | numpy               | 2.2.1                                                 |
 | pytest              | 9.1.1                                                 |
@@ -45,18 +51,19 @@ python3 -m pytest -q
 Output:
 
 ```
-.......                                                                  [100%]
-7 passed in 0.56s
+...........................................................              [100%]
+59 passed in 24.43s
 
-real	0m0.680s
-user	0m0.675s
-sys	0m0.005s
+real	0m24.578s
+user	0m24.095s
+sys	0m0.039s
 ```
 
-Seven tests are collected, confirmed with `python3 -m pytest -q --collect-only`:
+Fifty nine tests are collected, confirmed with `python3 -m pytest -q --collect-only`.
+The tail of that collection, verbatim:
 
 ```
-tests/test_controller.py::test_controller_passes_verification
+tests/test_inspection_work_order.py::test_ring_selection_selects_ring_waypoints
 tests/test_report.py::test_report_round_trip_has_exact_schema
 tests/test_report.py::test_fail_artifact_cannot_be_approved
 tests/test_report.py::test_approval_uses_approver_environment
@@ -64,12 +71,16 @@ tests/test_report.py::test_tampering_breaks_signed_digest
 tests/test_report.py::test_load_report_rejects_unusable_artifacts
 tests/test_report.py::test_integrity_rejects_approved_non_pass_artifact
 
-7 tests collected in 0.01s
+59 tests collected in 0.04s
 ```
 
-The first one wraps the whole verifier, so a green `pytest` means the full 30 scenario
-batch passed. The other six cover the signed verification artifact and the approval gate
-in `sim/report.py`.
+The two verifier wrappers are `tests/test_controller.py::test_controller_passes_verification`
+(the v1 batch) and `tests/test_controller2.py::test_controller2_passes_verification`
+(the v2 batch), so a green `pytest` means both graded batches passed. The remaining
+tests cover the signed artifact and the approval gate in `sim/report.py`, and the
+evidence scoring, action policy, work order parsing, artifact integrity and Devin
+planner in `inspection/`. The v2 batch is why the run now takes about 24 s rather than
+under a second.
 
 ## 2. Default verification batch, 30 scenarios from base seed 1000
 
@@ -124,9 +135,9 @@ AeroLoop verification report
   RESULT: PASS
 
 
-real	0m0.693s
-user	0m0.556s
-sys	0m0.000s
+real	0m0.558s
+user	0m0.545s
+sys	0m0.004s
 ```
 
 Derived from the 30 `time` values in that report, computed over the pasted numbers:
@@ -192,8 +203,8 @@ AeroLoop verification report
   RESULT: PASS
 
 
-real	0m1.700s
-user	0m1.683s
+real	0m1.114s
+user	0m1.099s
 sys	0m0.008s
 ```
 
@@ -229,9 +240,9 @@ Summary block, verbatim:
   RESULT: PASS
 
 
-real	0m0.909s
-user	0m0.904s
-sys	0m0.004s
+real	0m0.957s
+user	0m0.944s
+sys	0m0.008s
 ```
 
 Derived over all 50 `time` values in that run: fastest 33.36 s, slowest 37.58 s,

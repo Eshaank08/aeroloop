@@ -18,12 +18,18 @@ What is on master right now, verified in this checkout and not taken on trust:
 
 - `controller.py` was written by a Devin session and merged through pull request #4. The
   commit author on that file is the Devin bot account, not a person.
-- `python3 -m pytest -q` prints `7 passed`. One of those tests runs the whole verifier,
-  the other six cover the signed verification artifact and the approval gate.
+- `python3 -m pytest -q` prints `59 passed`. Two of those tests run the v1 and v2
+  verifiers end to end, the rest cover the signed artifact, the approval gate, the
+  evidence scoring, the action policy and the Devin planner.
 - `python3 -m sim.run_verifier --scenarios 30 --verbose` reports 30/30 scenarios passed,
   100.0% mean coverage, 0 collisions.
-- A 50 scenario batch on unseen base seed 424242 reports 50/50 passed, 100.0% mean
+- A 50 scenario v1 batch on unseen base seed 424242 reports 50/50 passed, 100.0% mean
   coverage, 0 collisions.
+- `controller2.py` for the v2 quadrotor was written by a Devin session and merged through
+  pull request #17. `python3 -m sim2.run_verifier --scenarios 30 --verbose` reports 29/30
+  scenarios passed, 99.9% mean coverage, `RESULT: PASS` against the 90% pass rate.
+- A 20 scenario v2 batch on unseen base seed 424242 reports 20/20 passed, 100.0% mean
+  coverage, 480 of 480 waypoints inspected.
 - `viz/flight_view.html` replays a graded run in the browser with no server and no
   network.
 - `scripts/approve.py` writes a signed verification artifact under `reports/` recording
@@ -163,12 +169,12 @@ whether it is done.
 | Version | Task                                                              | File the agent writes | Status                                    |
 | ------- | ----------------------------------------------------------------- | --------------------- | ----------------------------------------- |
 | v1      | Fly a full inspection sweep of a nacelle under randomized wind, point mass with acceleration control | `controller.py`       | done, written by Devin, merged in PR #4    |
-| v2      | Fly the same sweep on a rate controlled quadrotor whose coverage only counts when a camera is aimed at the waypoint | the v2 controller file named in `docs/SIM2_SPEC.md` | specified, not built, no v2 run measured  |
+| v2      | Fly the same sweep on a rate controlled quadrotor whose coverage only counts when a camera is aimed at the waypoint | `controller2.py`      | done, written by Devin, merged in PR #17   |
 
-The v2 simulator and its spec are the work of a parallel effort and are not on this
-branch, so the exact v2 filename and interface are whatever `docs/SIM2_SPEC.md` says and
-are deliberately not restated here. Nothing in this repository has been graded under v2,
-so treat every number here as a v1 number.
+The v2 simulator is now on master in `sim2/`, graded by `python3 -m sim2.run_verifier`
+against its own thresholds (coverage, no failure, elapsed within 150 s, pass rate). Its
+contract is in `docs/SIM2_SPEC.md` and is not restated here. Every number is labelled v1
+or v2 in `docs/RESULTS.md`, because the two simulators are not comparable.
 
 The section above this one is the brief handed to the agent for v1. Keep it exact. The
 thresholds in it are the contract, and softening them would invalidate every number in
@@ -177,20 +183,23 @@ thresholds in it are the contract, and softening them would invalidate every num
 ## Repo layout
 
 ```
-controller.py             <- THE ONLY FILE DEVIN WRITES (starts as a failing stub)
+controller.py             <- THE v1 FILE DEVIN WRITES (starts as a failing stub)
+controller2.py            <- THE v2 FILE DEVIN WRITES, rate controlled quadrotor
 sim/aircraft_geometry.py  Nacelle collision surface + inspection waypoints
 sim/drone_dynamics.py     Drone physics: position, velocity, wind disturbance
 sim/scenarios.py          Seeded randomized wind-gust scenario generator
 sim/limits.py             Flight limits (accel, speed, time budget, tick rate)
 sim/run_verifier.py       Runs the controller across N scenarios, prints PASS/FAIL
 sim/report.py             Signed verification artifact, and the approval recorded on it
-tests/test_controller.py  pytest wrapper so the normal test loop runs the verifier
-tests/test_report.py      Tests for the artifact schema, its signature and the gate
+sim2/                     Simulator v2: quadrotor dynamics, camera gate, its verifier
+inspection/               Evidence scoring, action policy, artifact, Devin planner
+tests/                    pytest wrappers for both verifiers plus the unit suites
 scripts/trigger_devin.py  Creates a Devin session against this repo via the API
+scripts/run_devin_mission.py  Runs a Devin-planned re-capture mission, needs credentials
 scripts/approve.py        Final human approval gate, run after a PASS
-viz/                      Read-only replay recorder, browser flight view, command console
+viz/                      Read-only replay recorders, browser flight view, command console
 reports/                  Verification artifacts written by the gate, gitignored
-docs/                     GOAL, IDEA, PRD, DEMO, RESULTS, REAL_WORLD_ROADMAP
+docs/                     GOAL, IDEA, PRD, DEMO, RESULTS, SIM2_SPEC, the roadmaps
 ```
 
 ## Human in the loop

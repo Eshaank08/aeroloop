@@ -151,6 +151,65 @@ def test_devin_client_fails_closed_on_remote_error():
         )
 
 
+def test_devin_client_times_out_on_a_stuck_session():
+    """A session that never errors and never finishes -- just hangs -- must still
+    produce a safe stop. This is the realistic network-failure shape (a dropped
+    connection or a stalled agent), not just an immediate API error, and it was
+    previously untested: every other test's fake transport reaches a terminal
+    status within one or two calls."""
+    transport = FakeTransport([
+        {"session_id": "session-stuck", "status": "running"},
+    ])
+    clock_values = iter([0.0, 999.0])
+    client = DevinClient(
+        "secret-test-key",
+        "org-test",
+        transport=transport,
+        poll_interval_s=0,
+        sleeper=lambda _: None,
+        clock=lambda: next(clock_values),
+        timeout_s=150.0,
+    )
+    with pytest.raises(DevinAPIError, match="timed out"):
+        client.run_structured("prompt", {"type": "object"}, title="test")
+
+
+def test_stuck_session_never_reports_pass_on_a_clean_sweep():
+    """The timeout path must flow through the same fail-closed rule as a hard
+    connection error: a hung planner cannot let an otherwise-clean sweep pass."""
+    def _stuck_transport(method, url, key, payload, timeout_s):
+        return {"session_id": "session-stuck", "status": "running"}
+
+    clock_values = iter([0.0] + [999.0] * 10)
+    client = DevinClient(
+        "secret-test-key",
+        "org-test",
+        transport=_stuck_transport,
+        poll_interval_s=0,
+        sleeper=lambda _: None,
+        clock=lambda: next(clock_values),
+        timeout_s=150.0,
+    )
+    planner = DevinRecapturePlanner(client)
+    work_order = parse_work_order("inspect top side, light wind seed 606076")
+    result = AdaptiveRunner(planner=planner, oracle=AllGoodOracle()).run(
+        work_order.label,
+        work_order.nacelle,
+        work_order.limits,
+        seed=work_order.seed,
+        wind_scale=work_order.wind_scale,
+        selected_waypoints=work_order.selected_waypoints,
+        selected_waypoint_indexes=work_order.selected_waypoint_indexes,
+    )
+
+    assert result.planner_failed is True
+    assert result.final_disposition == DISPOSITION_INSUFFICIENT
+
+    artifact = build_artifact(result, nacelle=work_order.nacelle, limits=work_order.limits)
+    assert artifact["final_disposition"] == DISPOSITION_INSUFFICIENT
+    assert artifact["planner_record"]["failed"] is True
+
+
 def test_devin_client_requires_credentials(monkeypatch):
     monkeypatch.delenv("DEVIN_API_KEY", raising=False)
     monkeypatch.delenv("DEVIN_ORG_ID", raising=False)

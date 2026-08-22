@@ -1,0 +1,5 @@
+slow and unsafe why, the whole ppint was to steer the drone with devin not make a detereministic path in the simulator, how is devin even used here,&#x20;
+
+
+
+I wnat to amke a sttement, devin should be the one getting used at the end of teh daym no matter in what way, how do w eachieve that, in the next step and test it right now. ,&#x20;

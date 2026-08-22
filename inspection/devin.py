@@ -19,6 +19,12 @@ from inspection.schema import QualityResult, RequestedCapture
 
 API_BASE = "https://api.devin.ai/v3"
 
+# In a resumable mission session these mean "your turn", not "the session died".
+MISSION_IDLE_DETAILS = {
+    "waiting_for_user",
+    "finished",
+}
+
 TERMINAL_FAILURE_DETAILS = {
     "error",
     "inactivity",
@@ -34,6 +40,9 @@ TERMINAL_FAILURE_DETAILS = {
     "waiting_for_approval",
     "waiting_for_user",
 }
+
+# A mission session is long lived, so only genuinely fatal states end it.
+MISSION_FATAL_DETAILS = TERMINAL_FAILURE_DETAILS - MISSION_IDLE_DETAILS
 
 RECAPTURE_SCHEMA = {
     "type": "object",
@@ -194,6 +203,119 @@ class DevinClient:
                 raise DevinAPIError("Devin session timed out")
             self.sleeper(self.poll_interval_s)
             session = self.transport("GET", status_url, self.api_key, None, self.request_timeout_s)
+
+
+class DevinMissionSession:
+    """A resumable Devin session that answers many observations in one mission.
+
+    One session per mission keeps the agent's reasoning continuous across the
+    flight, which is the point: later actions should reflect what earlier ones
+    revealed. Each answer must name the observation it responds to, so a stale or
+    replayed decision can never be executed.
+    """
+
+    def __init__(
+        self,
+        client: DevinClient,
+        schema: dict,
+        *,
+        title: str,
+        tags: list[str] | None = None,
+        max_acu_limit: int | None = None,
+    ):
+        self.client = client
+        self.schema = schema
+        self.title = title
+        self.tags = tags or ["aeroloop", "autonomous-mission"]
+        self.max_acu_limit = max_acu_limit
+        self.session_id = ""
+        self.session_url = ""
+        self.status = ""
+
+    @property
+    def started(self) -> bool:
+        return bool(self.session_id)
+
+    def _status_url(self) -> str:
+        return f"{self.client.sessions_url}/{self.session_id}"
+
+    def start(self, prompt: str) -> None:
+        payload: dict[str, Any] = {
+            "prompt": prompt,
+            "title": self.title,
+            "resumable": True,
+            "structured_output_required": True,
+            "structured_output_schema": self.schema,
+            "tags": self.tags,
+        }
+        if self.max_acu_limit is not None:
+            payload["max_acu_limit"] = self.max_acu_limit
+        session = self.client.transport(
+            "POST", self.client.sessions_url, self.client.api_key, payload,
+            self.client.request_timeout_s,
+        )
+        session_id = session.get("session_id") or session.get("id")
+        if not isinstance(session_id, str) or not session_id:
+            raise DevinAPIError("Devin did not return a session ID")
+        self.session_id = session_id
+        self.session_url = session.get("url") if isinstance(session.get("url"), str) else ""
+        self.status = str(session.get("status") or "new")
+
+    def send(self, message: str) -> None:
+        self.client.transport(
+            "POST", f"{self._status_url()}/messages", self.client.api_key,
+            {"message": message}, self.client.request_timeout_s,
+        )
+
+    def await_output(self, matches, nudge: str = "", max_nudges: int = 2) -> dict:
+        """Poll until structured output satisfying `matches` appears.
+
+        In a resumable session `waiting_for_user` is not a failure, it means the
+        session has finished its turn and is idle. Structured output can also lag
+        the status by a poll, so the output is always checked before the status is
+        judged. If the session goes idle without answering the current
+        observation, it is nudged rather than abandoned.
+        """
+        deadline = self.client.clock() + self.client.timeout_s
+        idle_polls = 0
+        nudges = 0
+        while True:
+            session = self.client.transport(
+                "GET", self._status_url(), self.client.api_key, None,
+                self.client.request_timeout_s,
+            )
+            self.status = str(session.get("status") or "unknown")
+            detail = str(session.get("status_detail") or "")
+            output = session.get("structured_output")
+            if isinstance(output, dict) and matches(output):
+                return output
+            if self.status == "error" or detail in MISSION_FATAL_DETAILS:
+                raise DevinAPIError(
+                    f"Devin session stopped without a usable decision ({detail or self.status})"
+                )
+            if detail in MISSION_IDLE_DETAILS:
+                idle_polls += 1
+                if idle_polls >= 2 and nudge:
+                    if nudges >= max_nudges:
+                        raise DevinAPIError(
+                            "Devin went idle without answering the current observation"
+                        )
+                    self.send(nudge)
+                    nudges += 1
+                    idle_polls = 0
+            else:
+                idle_polls = 0
+            if self.client.clock() >= deadline:
+                raise DevinAPIError("Devin did not answer within the mission decision timeout")
+            self.client.sleeper(self.client.poll_interval_s)
+
+    def decide(self, prompt: str, message: str, matches, nudge: str = "") -> dict:
+        """Start the session or continue it, then wait for the next decision."""
+        if not self.started:
+            self.start(prompt)
+        else:
+            self.send(message)
+        return self.await_output(matches, nudge=nudge)
 
 
 def _quality_to_dict(result: QualityResult) -> dict:

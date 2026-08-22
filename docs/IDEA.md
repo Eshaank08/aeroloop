@@ -77,3 +77,69 @@ Track this honestly as it happens. Current record:
    how the industry itself validates flight software before first flight.
 4. Chose to wire the verifier in as the pytest suite rather than write custom retry
    logic, so Devin's existing test-fix-rerun habit does the iteration for free.
+5. **Started narrow: Devin writes a controller, a verifier grades it.** One shot. The
+   agent produced `controller.py` for simulator v1, the verifier said PASS or FAIL, and
+   that was the whole loop. Honest but thin, because the agent's only decision was made
+   at compile time. Once the software shipped, nothing intelligent was left in the
+   system.
+6. **Added an adaptive evidence loop.** Instead of grading a sweep as done or not done,
+   we scored evidence per waypoint and let a planner ask for targeted re-captures where
+   the evidence was weak. That is where the interesting behaviour lives: reacting to
+   what actually happened rather than to what was planned.
+7. **Found that a clean sweep with an unreachable planner still reported PASS. Made it
+   fail closed.** If the controller happened to cover everything on its own, the mission
+   reported success even when the planner never answered a single call. That is exactly
+   the failure the challenge warns about: a system that cannot tell a good result from a
+   lucky one. Now, if the authority deciding what to inspect goes silent, the vehicle
+   performs a bounded return toward home and the disposition can never be PASS, no
+   matter how much evidence happens to exist.
+8. **Found the planner could fly outside the authorised sector. Bounded it.** Nothing
+   stopped a planner from requesting waypoints it had not been cleared for. Added
+   `mission/safety.py`, an envelope that rejects out of sector waypoints, over long
+   actions, excess speed, stale observation ids, replayed action ids and exhausted per
+   waypoint attempts. The deliberate design choice: the envelope reports the rejection
+   back to the agent and never substitutes a target of its own, because an envelope that
+   quietly picks a replacement is doing the agent's job and hiding the agent's mistakes.
+9. **Moved from one shot re-capture planning to Devin as the full runtime mission
+   agent, on simulator v2.** The re-capture planner still assumed the flight plan was
+   basically fixed. Simulator v2, a rate controlled quadrotor with a camera gate,
+   removed that assumption: `mission/episode.py` turns the flight into reset, observe,
+   act, verify, and Devin chooses every single action from sensed observations alone. It
+   never sees the wind schedule or the verifier answer, and its claim of completion does
+   not override the verifier.
+10. **The runtime loop then broke the controller, and an agent fixed it.** Handing
+    partial waypoint sets to `controller2.py` exposed a `ZeroDivisionError` the batch
+    verifier could never have found, because the batch always passes the full nacelle. A
+    separate Devin session diagnosed and fixed it in PR #21, verified identical routes
+    over 2000 random cases, and lifted the mission loop from 27/30 to 29/30. No human
+    edited the controller. That was the moment the project stopped being "an agent wrote
+    some code we tested" and became a loop that finds its own defects.
+11. Fixed a float accumulation defect in the v2 verifier's elapsed time bookkeeping. The
+   scenario loop summed `t += params.dt` at 50 Hz, so a run that used the whole budget of
+   7500 ticks reported `elapsed_s = 150.00000000000293` instead of 150.0. Since
+   `ScenarioResult.passed` requires `elapsed_s <= budget_s`, seed 1027 was marked FAIL by
+   2.9e-12 seconds of arithmetic drift despite flying exactly 7500 ticks of 0.02s.
+   The fix derives the graded elapsed time from the tick count, `round((tick + 1) * dt, 9)`,
+   the same trick `mission/episode.py` already uses so an action cannot accumulate its way
+   past the budget. This was a bookkeeping correction, not a change to the bar and not a
+   change to the physics:
+     - No threshold moved. `COVERAGE_THRESHOLD` stays 0.95, `SCENARIO_PASS_RATE` stays 0.90,
+   `time_budget_s` stays 150.0, and `sim2/params.py` was not touched.
+     - No tolerance or epsilon was added to the comparison. The comparison is still
+   `elapsed_s <= budget_s`; only the left hand side became exact.
+     - The clock handed to the controller and to `scenario.at(t)` was left exactly as it was,
+   so the wind is sampled at the same instants and no trajectory shifted. All 30 scenarios
+   report identical coverage, identical inspected counts, identical failure reasons and
+   identical elapsed values to 1e-9 before and after.
+     - Measured result improved from 29/30 to 30/30. Seed 1027 still only inspects 23 of 24
+   waypoints, 95.8 percent coverage, which is above the unchanged 95 percent threshold, and
+   it now reports elapsed exactly 150.0s. Nothing else changed row for row.
+   A regression test in `tests/test_sim2_verifier.py` pins the invariant: a run that consumes
+   the full tick budget reports elapsed exactly equal to the budget and is not failed for
+   exceeding it.
+
+What we would say to a judge about the shape of that change: the first version put an
+agent inside a build loop, which is a thing Devin already does well. The version we
+submitted puts an agent inside a runtime loop that is bounded, auditable, and able to
+refuse the agent, and every one of those bounds exists because we watched the system
+get it wrong first.

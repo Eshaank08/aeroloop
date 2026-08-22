@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AeroLoop mission view: Devin flying simulator v2</title>
+<style>
+  :root {
+    --ink: #e8edf4;
+    --dim: #93a1b5;
+    --panel: rgba(11, 16, 24, 0.86);
+    --line: rgba(120, 150, 190, 0.22);
+    --good: #46d98b;
+    --warn: #ffc65c;
+    --bad: #ff6b6b;
+    --devin: #7aa2ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #05070c; color: var(--ink);
+    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; overflow: hidden; }
+  #scene { position: fixed; inset: 0; }
+  .panel { position: fixed; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; backdrop-filter: blur(9px); }
+  #hud { top: 16px; left: 16px; width: 254px; }
+  #decisions { top: 16px; right: 16px; width: 386px; max-height: calc(100vh - 150px);
+    display: flex; flex-direction: column; }
+  #controls { bottom: 16px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center;
+    max-width: calc(100vw - 32px); }
+  h2 { margin: 0 0 9px; font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--dim); font-weight: 600; }
+  .row { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
+  .row span:last-child { color: #fff; }
+  .steps { overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+  .step { border-left: 2px solid var(--devin); padding: 7px 0 7px 9px; margin-bottom: 8px; }
+  .step.rejected { border-left-color: var(--bad); }
+  .step.safety { border-left-color: var(--warn); }
+  .step.active { background: rgba(122, 162, 255, 0.11); }
+  .step .head { display: flex; justify-content: space-between; gap: 8px; }
+  .step .prim { color: var(--devin); font-weight: 600; }
+  .step.rejected .prim { color: var(--bad); }
+  .step .verdict { font-size: 11px; color: var(--dim); }
+  .step .why { color: var(--dim); font-size: 11.5px; margin-top: 3px; }
+  .step .got { font-size: 11.5px; margin-top: 3px; color: var(--good); }
+  .step .miss { font-size: 11.5px; color: var(--bad); }
+  button { background: rgba(28, 38, 54, .9); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 7px; padding: 6px 11px; cursor: pointer; font: inherit; }
+  button:hover { border-color: rgba(150, 190, 240, .5); }
+  button.on { background: var(--devin); color: #04101f; border-color: var(--devin); }
+  button:disabled { opacity: .45; cursor: default; }
+  select, input { background: rgba(28, 38, 54, .9); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; font: inherit; }
+  #scrub { width: 260px; }
+  .pass { color: var(--good); } .insufficient { color: var(--warn); } .aborted { color: var(--bad); }
+  a { color: var(--devin); }
+  #status { position: fixed; bottom: 74px; left: 50%; transform: translateX(-50%);
+    color: var(--dim); font-size: 12px; text-align: center; }
+  .tag { display: inline-block; font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+    border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; color: var(--dim); }
+</style>
+</head>
+<body>
+<div id="scene"></div>
+
+<div id="hud" class="panel">
+  <h2>Mission</h2>
+  <div class="row"><span>seed</span><span id="m-seed">-</span></div>
+  <div class="row"><span>agent</span><span id="m-agent">-</span></div>
+  <div class="row"><span>clock</span><span id="m-clock">0.0s</span></div>
+  <div class="row"><span>inspected</span><span id="m-inspected">0/0</span></div>
+  <div class="row"><span>coverage</span><span id="m-coverage">0%</span></div>
+  <div class="row"><span>speed</span><span id="m-speed">0.00 m/s</span></div>
+  <div class="row"><span>tilt</span><span id="m-tilt">0&deg;</span></div>
+  <div class="row"><span>clearance</span><span id="m-clearance">-</span></div>
+  <div class="row"><span>actions</span><span id="m-actions">0 ok / 0 rejected</span></div>
+  <div class="row"><span>verifier</span><span id="m-verdict">-</span></div>
+  <div style="margin-top:9px" id="m-session"></div>
+</div>
+
+<div id="decisions" class="panel">
+  <h2>Devin decisions</h2>
+  <div class="steps" id="steps"><div style="color:var(--dim)">Run a mission to see every observation, decision and safety ruling.</div></div>
+</div>
+
+<div id="status">The engine and drone are real scanned models. The flight is simulator v2 with measured attitude.</div>
+
+<div id="controls" class="panel">
+  <label>seed <input id="seed" type="number" value="1000" style="width:80px"></label>
+  <select id="sector"><option value="all">whole nacelle</option><option value="top">top side</option><option value="ring0">front ring</option></select>
+  <select id="planner"><option value="baseline">baseline agent</option><option value="devin">Devin (live API)</option></select>
+  <button id="run">Fly mission</button>
+  <button id="play">Pause</button>
+  <button id="rate">4x</button>
+  <button id="cam">Follow</button>
+  <input id="scrub" type="range" min="0" max="0" value="0">
+  <span id="clock">0.0s</span>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js",
+    "three/addons/": "./vendor/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
+import { OrbitControls } from './vendor/controls/OrbitControls.module.js';
+
+// The simulator works in x along the nacelle axis, y and z across it. Three.js is
+// y-up, so sim (x, y, z) maps to three (y, z, x), the same convention the existing
+// flight view and the engine reference viewer use.
+const toScene = (p) => new THREE.Vector3(p[1], p[2], p[0]);
+
+const NACELLE_LENGTH = 4.5;
+const KEEP_OUT_RADIUS = 2.1;
+
+const el = (id) => document.getElementById(id);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x05070c);
+scene.fog = new THREE.Fog(0x05070c, 22, 68);
+
+const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 400);
+camera.position.set(7.5, 5.4, 9.5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+el('scene').appendChild(renderer.domElement);
+
+const orbit = new OrbitControls(camera, renderer.domElement);
+orbit.target.set(0, 0, NACELLE_LENGTH / 2);
+orbit.enableDamping = true;
+
+scene.add(new THREE.HemisphereLight(0x9fc4ff, 0x0a1018, 0.75));
+const key = new THREE.DirectionalLight(0xffffff, 1.5);
+key.position.set(8, 12, 6);
+key.castShadow = true;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x7aa2ff, 0.6);
+rim.position.set(-7, 3, -6);
+scene.add(rim);
+
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(90, 90),
+  new THREE.MeshStandardMaterial({ color: 0x0a0f18, roughness: 0.95, metalness: 0.05 })
+);
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = -3.2;
+floor.receiveShadow = true;
+scene.add(floor);
+const grid = new THREE.GridHelper(90, 60, 0x1b2740, 0x121a2a);
+grid.position.y = -3.19;
+scene.add(grid);
+
+// The graded keep-out volume, drawn as a wireframe so what the verifier actually
+// checks stays visible next to the decorative engine model.
+const keepOut = new THREE.Mesh(
+  new THREE.CylinderGeometry(KEEP_OUT_RADIUS, KEEP_OUT_RADIUS, NACELLE_LENGTH, 40, 1, true),
+  new THREE.MeshBasicMaterial({ color: 0xff5b6e, wireframe: true, transparent: true, opacity: 0.12 })
+);
+keepOut.rotation.x = Math.PI / 2;
+keepOut.position.set(0, 0, NACELLE_LENGTH / 2);
+scene.add(keepOut);
+
+const loader = new GLTFLoader();
+let engineReady = false;
+
+// Real turbofan model contributed alongside the defect research. It is visual only:
+// the collision geometry the verifier grades is the wireframe cylinder above.
+loader.load('/engine-reference/assets/turbofan_engine.glb', (gltf) => {
+  const model = gltf.scene;
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const axes = [['x', size.x], ['y', size.y], ['z', size.z]].sort((a, b) => b[1] - a[1]);
+  const scale = NACELLE_LENGTH / axes[0][1];
+  model.scale.setScalar(scale);
+  if (axes[0][0] === 'x') model.rotation.y = Math.PI / 2;
+  else if (axes[0][0] === 'y') model.rotation.z = Math.PI / 2;
+  const after = new THREE.Box3().setFromObject(model);
+  const centre = after.getCenter(new THREE.Vector3());
+  model.position.sub(new THREE.Vector3(centre.x, centre.y, after.min.z));
+  model.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+  scene.add(model);
+  engineReady = true;
+}, undefined, () => {
+  el('status').textContent = 'Engine model missing, showing the graded cylinder only.';
+});
+
+let drone = new THREE.Group();
+scene.add(drone);
+loader.load('/engine-reference/assets/quadcopter_drone.glb', (gltf) => {
+  const model = gltf.scene;
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  model.scale.setScalar(0.62 / Math.max(size.x, size.y, size.z));
+  const centre = new THREE.Box3().setFromObject(model).getCenter(new THREE.Vector3());
+  model.position.sub(centre);
+  model.traverse((child) => { if (child.isMesh) child.castShadow = true; });
+  drone.add(model);
+});
+const beam = new THREE.Mesh(
+  new THREE.ConeGeometry(0.34, 1.15, 22, 1, true),
+  new THREE.MeshBasicMaterial({ color: 0x7aa2ff, transparent: true, opacity: 0.2, side: THREE.DoubleSide })
+);
+beam.rotation.z = Math.PI / 2;
+beam.position.x = 0.58;
+drone.add(beam);
+
+const trailGeom = new THREE.BufferGeometry();
+const trail = new THREE.Line(trailGeom, new THREE.LineBasicMaterial({ color: 0x7aa2ff, transparent: true, opacity: 0.55 }));
+scene.add(trail);
+
+let markers = [];
+let mission = null;
+let frames = [];
+let cursor = 0;
+let playing = true;
+let rate = 4;
+let follow = true;
+let inspectedAt = new Map();
+
+function clearMarkers() {
+  markers.forEach((m) => scene.remove(m));
+  markers = [];
+}
+
+function buildMarkers(waypoints, authorised) {
+  clearMarkers();
+  const allowed = new Set(authorised);
+  waypoints.forEach((wp, index) => {
+    const marker = new THREE.Mesh(
+      new THREE.SphereGeometry(allowed.has(index) ? 0.12 : 0.07, 16, 16),
+      new THREE.MeshStandardMaterial({
+        color: allowed.has(index) ? 0x8fa3bd : 0x33404f,
+        emissive: 0x000000,
+        transparent: !allowed.has(index),
+        opacity: allowed.has(index) ? 1 : 0.35,
+      })
+    );
+    marker.position.copy(toScene(wp));
+    marker.userData.index = index;
+    scene.add(marker);
+    markers.push(marker);
+  });
+}
+
+function stepClass(step) {
+  if (step.action && step.action.chosen_by === 'safety_envelope') return 'step safety';
+  if (step.decision && step.decision.decision === 'rejected') return 'step rejected';
+  return 'step';
+}
+
+function renderDecisions() {
+  const host = el('steps');
+  host.innerHTML = '';
+  if (!mission) return;
+  mission.artifact.steps.forEach((step, i) => {
+    if (!step.action) return;
+    const div = document.createElement('div');
+    div.className = stepClass(step);
+    div.dataset.step = i;
+    const a = step.action;
+    const d = step.decision || {};
+    const o = step.outcome;
+    const targets = a.waypoint_indexes.length ? ` [${a.waypoint_indexes.join(', ')}]` : '';
+    div.innerHTML =
+      `<div class="head"><span class="prim">${a.primitive}${targets}</span>` +
+      `<span class="verdict">${d.decision || 'pending'}</span></div>` +
+      `<div class="why">${a.reason || ''}</div>` +
+      (d.decision === 'rejected' ? `<div class="miss">rejected: ${d.reason}</div>` : '') +
+      (o && o.newly_inspected.length ? `<div class="got">captured ${o.newly_inspected.join(', ')}</div>` : '') +
+      (o && o.failure ? `<div class="miss">failure: ${o.failure}</div>` : '');
+    host.appendChild(div);
+  });
+}
+
+function applyMission(data) {
+  mission = data;
+  frames = data.frames || [];
+  cursor = 0;
+  inspectedAt = new Map();
+
+  // Reconstruct when each waypoint turned green, by walking the outcomes in order.
+  let clock = 0;
+  const durations = data.artifact.steps.filter((s) => s.outcome);
+  durations.forEach((step) => {
+    clock += step.outcome.duration_s;
+    step.outcome.newly_inspected.forEach((index) => {
+      if (!inspectedAt.has(index)) inspectedAt.set(index, clock);
+    });
+  });
+
+  buildMarkers(data.waypoints, data.authorised_indexes);
+  renderDecisions();
+
+  const v = data.artifact.verification;
+  el('m-seed').textContent = data.seed;
+  el('m-agent').textContent = data.artifact.planner;
+  el('m-inspected').textContent = `${v.inspected_count}/${v.waypoint_count}`;
+  el('m-coverage').textContent = `${(v.coverage * 100).toFixed(1)}%`;
+  const disposition = data.artifact.final_disposition;
+  const klass = disposition === 'PASS' ? 'pass' : (disposition === 'ABORTED' ? 'aborted' : 'insufficient');
+  el('m-verdict').innerHTML = `<span class="${klass}">${disposition}</span>`;
+  const accepted = data.artifact.steps.filter((s) => (s.decision || {}).decision === 'accepted').length;
+  el('m-actions').textContent = `${accepted} ok / ${data.artifact.rejections.length} rejected`;
+  const url = (data.artifact.planner_metadata || {}).session_url;
+  el('m-session').innerHTML = url
+    ? `<span class="tag">devin session</span><br><a href="${url}" target="_blank">${url.split('/').pop()}</a>`
+    : '<span class="tag">deterministic baseline</span>';
+  el('scrub').max = Math.max(0, frames.length - 1);
+  el('status').textContent = data.reply;
+}
+
+function frameAt(i) { return frames[Math.max(0, Math.min(frames.length - 1, i))]; }
+
+function updateFromFrame() {
+  if (!frames.length) return;
+  const f = frameAt(cursor);
+  drone.position.copy(toScene(f.p));
+  // Measured attitude from the simulator, mapped into the scene basis.
+  const R = f.R;
+  const m = new THREE.Matrix4().set(
+    R[1][1], R[1][2], R[1][0], 0,
+    R[2][1], R[2][2], R[2][0], 0,
+    R[0][1], R[0][2], R[0][0], 0,
+    0, 0, 0, 1
+  );
+  drone.quaternion.setFromRotationMatrix(m);
+
+  const speed = Math.hypot(f.v[0], f.v[1], f.v[2]);
+  el('m-clock').textContent = `${f.t.toFixed(1)}s`;
+  el('clock').textContent = `${f.t.toFixed(1)}s`;
+  el('m-speed').textContent = `${speed.toFixed(2)} m/s`;
+  const tilt = Math.acos(Math.max(-1, Math.min(1, R[2][2]))) * 180 / Math.PI;
+  el('m-tilt').textContent = `${tilt.toFixed(1)}\u00b0`;
+
+  const radial = Math.hypot(f.p[1], f.p[2]);
+  const axial = Math.min(Math.max(f.p[0], 0), NACELLE_LENGTH);
+  const clearance = Math.hypot(radial, f.p[0] - axial) - KEEP_OUT_RADIUS;
+  el('m-clearance').textContent = `${clearance.toFixed(2)} m`;
+  el('m-clearance').style.color = clearance < 0.35 ? '#ff6b6b' : '#fff';
+
+  markers.forEach((marker) => {
+    const at = inspectedAt.get(marker.userData.index);
+    const done = at !== undefined && f.t >= at;
+    marker.material.color.setHex(done ? 0x46d98b : (marker.material.opacity < 1 ? 0x33404f : 0x8fa3bd));
+    marker.material.emissive.setHex(done ? 0x123d26 : 0x000000);
+    marker.scale.setScalar(done ? 1.25 : 1);
+  });
+
+  const points = frames.slice(Math.max(0, cursor - 260), cursor + 1).map((fr) => toScene(fr.p));
+  if (points.length > 1) trailGeom.setFromPoints(points);
+
+  if (follow) {
+    const target = drone.position.clone();
+    orbit.target.lerp(target, 0.08);
+    const desired = target.clone().add(new THREE.Vector3(3.4, 2.1, 3.4));
+    camera.position.lerp(desired, 0.035);
+  }
+  el('scrub').value = cursor;
+
+  // Highlight whichever decision is currently being flown.
+  let clock = 0, activeIndex = -1;
+  mission.artifact.steps.forEach((step, i) => {
+    if (!step.outcome) return;
+    const start = clock;
+    clock += step.outcome.duration_s;
+    if (f.t >= start && f.t <= clock) activeIndex = i;
+  });
+  document.querySelectorAll('.step').forEach((node) => {
+    node.classList.toggle('active', Number(node.dataset.step) === activeIndex);
+  });
+}
+
+async function runMission() {
+  const button = el('run');
+  button.disabled = true;
+  const planner = el('planner').value;
+  el('status').textContent = planner === 'devin'
+    ? 'Creating a Devin session and flying it decision by decision. This takes a minute.'
+    : 'Flying the deterministic baseline.';
+  try {
+    const response = await fetch('/api/mission', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        seed: Number(el('seed').value),
+        sector: el('sector').value,
+        planner,
+        max_actions: 12,
+      }),
+    });
+    const data = await response.json();
+    if (!data.ok) { el('status').textContent = data.reply; return; }
+    applyMission(data);
+  } catch (error) {
+    el('status').textContent = `Mission request failed: ${error}`;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+el('run').onclick = runMission;
+el('play').onclick = () => { playing = !playing; el('play').textContent = playing ? 'Pause' : 'Play'; };
+el('rate').onclick = () => {
+  rate = rate === 1 ? 4 : (rate === 4 ? 12 : 1);
+  el('rate').textContent = `${rate}x`;
+};
+el('cam').onclick = () => {
+  follow = !follow;
+  el('cam').classList.toggle('on', follow);
+  el('cam').textContent = follow ? 'Follow' : 'Orbit';
+};
+el('cam').classList.add('on');
+el('scrub').oninput = (event) => { cursor = Number(event.target.value); updateFromFrame(); };
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = (now - last) / 1000;
+  last = now;
+  if (playing && frames.length) {
+    // Frames are recorded every other 50 Hz tick, so 25 frames is one second of flight.
+    cursor += dt * 25 * rate;
+    if (cursor >= frames.length - 1) { cursor = frames.length - 1; playing = false; el('play').textContent = 'Play'; }
+    updateFromFrame();
+  }
+  orbit.update();
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(animate);
+
+// Load the last recorded mission if one is on disk, so the view is never empty.
+fetch('/data3/mission_trace.json').then((r) => r.ok ? r.json() : null).then((trace) => {
+  if (!trace || mission) return;
+  fetch('/data3/mission_artifact.json').then((r) => r.ok ? r.json() : null).then((artifact) => {
+    if (!artifact || mission) return;
+    applyMission({
+      seed: trace.seed,
+      waypoints: trace.waypoints,
+      authorised_indexes: trace.authorised_indexes,
+      frames: trace.frames,
+      artifact,
+      reply: 'Replaying the last recorded Devin mission. Press Fly mission to run a new one.',
+    });
+  });
+}).catch(() => {});
+</script>
+</body>
+</html>

@@ -81,37 +81,42 @@ def run_scenario(controller_cls, scenario, nacelle: Nacelle = DEFAULT_NACELLE,
     drone = QuadDrone(params=params)
     inspected = [False] * len(waypoints)
     near_seen = [False] * len(waypoints)
-    t = 0.0
     ticks_exhausted = True
+    # The scenario clock is advanced by dt each tick for the physics, while the
+    # graded elapsed time is derived from the tick count so that it cannot
+    # accumulate its way past the budget.
+    t = 0.0
+    elapsed = 0.0
 
-    for _ in range(params.max_ticks):
+    for tick in range(params.max_ticks):
         try:
             command = controller.step(t, drone.state)
         except Exception as exc:
             print(f"    controller raised {type(exc).__name__}: {exc}", file=sys.stderr)
             return _result(
-                scenario, inspected, "controller_exception", t, near_seen,
+                scenario, inspected, "controller_exception", elapsed, near_seen,
                 params.time_budget_s,
             )
 
         if not command_is_finite(command):
             print("    controller returned an invalid command", file=sys.stderr)
             return _result(
-                scenario, inspected, "invalid_command", t, near_seen,
+                scenario, inspected, "invalid_command", elapsed, near_seen,
                 params.time_budget_s,
             )
 
         drone.step(command, scenario.at(t))
         t += params.dt
+        elapsed = round((tick + 1) * params.dt, 9)
 
         if nacelle.is_collision(drone.state.position):
             return _result(
-                scenario, inspected, "collision", t, near_seen,
+                scenario, inspected, "collision", elapsed, near_seen,
                 params.time_budget_s,
             )
         if math.sqrt(sum(value * value for value in drone.state.velocity)) > params.max_speed:
             return _result(
-                scenario, inspected, "unsafe_speed", t, near_seen,
+                scenario, inspected, "unsafe_speed", elapsed, near_seen,
                 params.time_budget_s,
             )
 
@@ -130,7 +135,7 @@ def run_scenario(controller_cls, scenario, nacelle: Nacelle = DEFAULT_NACELLE,
     if ticks_exhausted and coverage < COVERAGE_THRESHOLD:
         failure_reason = "timeout"
     return _result(
-        scenario, inspected, failure_reason, t, near_seen, params.time_budget_s,
+        scenario, inspected, failure_reason, elapsed, near_seen, params.time_budget_s,
     )
 
 

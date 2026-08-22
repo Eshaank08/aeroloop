@@ -15,7 +15,6 @@ from .quad_dynamics import QuadDrone, command_is_finite
 
 COVERAGE_THRESHOLD = 0.95
 SCENARIO_PASS_RATE = 0.90
-GROUND_ALTITUDE = 0.2
 
 
 @dataclass
@@ -108,11 +107,6 @@ def run_scenario(controller_cls, scenario, nacelle: Nacelle = DEFAULT_NACELLE,
         if nacelle.is_collision(drone.state.position):
             return _result(
                 scenario, inspected, "collision", t, near_seen,
-                params.time_budget_s,
-            )
-        if drone.state.position[2] < GROUND_ALTITUDE:
-            return _result(
-                scenario, inspected, "ground", t, near_seen,
                 params.time_budget_s,
             )
         if math.sqrt(sum(value * value for value in drone.state.velocity)) > params.max_speed:

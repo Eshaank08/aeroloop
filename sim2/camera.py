@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 
 inspection_tolerance = 0.5
-camera_fov_half_angle = math.radians(35.0)
+camera_fov_half_angle = math.radians(60.0)
 max_blur_rate = 1.5
 max_blur_speed = 2.5
 

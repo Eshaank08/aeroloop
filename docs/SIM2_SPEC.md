@@ -79,7 +79,6 @@ Any of these ends the episode and fails the scenario:
 
 - **collision**: inside the nacelle keep-out radius, exactly as v1 judges it, reusing
   `sim.aircraft_geometry`
-- **ground**: `z < 0.2`
 - **unsafe speed**: `|v| > max_speed`
 - **invalid command**: any non finite value out of the controller
 - **timeout**: elapsed exceeds `time_budget_s`
@@ -94,9 +93,14 @@ A waypoint `wp` flips from pending to inspected on a tick where **all** of these
 1. `distance(position, wp) <= 0.5` m (`inspection_tolerance`)
 2. the camera is on target: the angle between the boresight `R @ (1, 0, 0)` and the
    vector from the drone to the closest point on the nacelle **surface** is at most
-   `35` degrees (`camera_fov_half_angle`)
+   `60` degrees (`camera_fov_half_angle`)
 3. the shot is steady: `|omega| <= 1.5` rad/s (`max_blur_rate`) and
    `|v| <= 2.5` m/s (`max_blur_speed`)
+
+The gate uses 60 degrees because 35 degrees demanded 55 degrees of tilt at the top and
+bottom waypoints and was not flyable.
+There is no ground plane because the nacelle geometry is shared with v1 and half its
+waypoints are below the axis.
 
 Closest point on the surface is the radial projection used by v1's
 `Nacelle.distance_to_surface`, so points beyond the nacelle ends project onto the end

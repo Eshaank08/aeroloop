@@ -111,7 +111,10 @@
   <div class="row"><span>clearance to keep-out</span><b id="clearance">-</b></div>
   <div class="row"><span>wind</span><b id="wind">-</b></div>
   <div class="row"><span>collisions</span><b id="collisions">-</b></div>
+  <div class="row"><span>tilt from level</span><b id="tilt">-</b></div>
+  <div class="row"><span>camera off nacelle</span><b id="aim">-</b></div>
   <div class="big" id="verdict">-</div>
+  <div class="sub" id="attsrc" style="margin:6px 0 0">-</div>
 </div>
 
 <div id="grid" class="panel">
@@ -179,7 +182,15 @@
 
 <script src="vendor/three.min.js"></script>
 <script src="vendor/OrbitControls.js"></script>
-<script src="data/data.js"></script>
+<script>
+// the recording to replay comes from the query string, so one view serves both
+// simulators: no argument reads viz/data, ?data=data2 reads viz/data2.
+(function () {
+  const dir = (new URLSearchParams(location.search).get('data') || 'data')
+    .replace(/[^A-Za-z0-9_]/g, '');
+  document.write('<script src="' + dir + '/data.js"><\/script>');
+}());
+</script>
 <script>
 (function () {
   const data = window.AEROLOOP;
@@ -198,6 +209,45 @@
 
   // three.js is y-up, the simulator is x-along-nacelle, so map sim (x,y,z) -> (y,z,x).
   const V = (p) => new THREE.Vector3(p[1], p[2], p[0]);
+
+  // v2 traces carry the airframe's own attitude, body rates and thrust, so the
+  // pose is measured rather than reconstructed, and a waypoint only counts when
+  // the camera was pointed at the nacelle and the shot was steady.
+  const cam = scene_.camera || {};
+  let MEASURED = !!(frames[0] && frames[0].R);
+  const FOV_HALF = cam.fov_half_deg || 35;
+  const GATE_TOL = cam.inspection_tolerance || 0.5;
+  const GATE_RATE = cam.max_blur_rate || 1.5;
+  const GATE_SPEED = cam.max_blur_speed || 2.5;
+
+  // the closest point on the nacelle skin, the same radial projection the
+  // simulator grades against
+  function surfacePoint(p) {
+    const x = Math.max(nac.axis_start[0], Math.min(nac.axis_end[0], p[0]));
+    const r = Math.hypot(p[1], p[2]);
+    if (r < 1e-9) return [x, nac.radius, 0];
+    return [x, p[1] / r * nac.radius, p[2] / r * nac.radius];
+  }
+
+  const col = (R, j) => [R[0][j], R[1][j], R[2][j]];
+
+  function angleBetween(a, b) {
+    const na = Math.hypot(a[0], a[1], a[2]), nb = Math.hypot(b[0], b[1], b[2]);
+    if (na < 1e-9 || nb < 1e-9) return 180;
+    const d = (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (na * nb);
+    return Math.acos(Math.max(-1, Math.min(1, d))) * 180 / Math.PI;
+  }
+
+  // boresight is body +x, and it is aimed at the nearest skin point
+  function aimDeg(f) {
+    if (!f.R) return null;
+    const s = surfacePoint(f.p);
+    return angleBetween(col(f.R, 0), [s[0] - f.p[0], s[1] - f.p[1], s[2] - f.p[2]]);
+  }
+
+  function tiltDeg(f) {
+    return f.R ? angleBetween(col(f.R, 2), [0, 0, 1]) : null;
+  }
 
   const FLOOR_Y = -4.6;
   const HANGAR = 64;          // floor half extent is HANGAR / 2
@@ -556,6 +606,25 @@
   drone.add(navRear);
   const beacon = new THREE.PointLight(0x66b3ff, 0.5, 4.5);
   drone.add(beacon);
+
+  // what the inspection camera can actually see, at the gate's half angle
+  const CONE_LEN = 1.0;
+  const coneGeo = new THREE.ConeGeometry(
+    CONE_LEN * Math.tan(FOV_HALF * Math.PI / 180), CONE_LEN, 28, 1, true);
+  coneGeo.rotateX(Math.PI / 2);
+  coneGeo.translate(0, 0, CONE_LEN / 2);
+  const coneMat = new THREE.MeshBasicMaterial({ color: 0x4ea1ff, transparent: true,
+    opacity: 0.06, side: THREE.DoubleSide, depthWrite: false });
+  const cone = new THREE.Mesh(coneGeo, coneMat);
+  cone.position.copy(camPod.position);
+  drone.add(cone);
+  const coneEdgeMat = new THREE.LineBasicMaterial({ color: 0x4ea1ff, transparent: true,
+    opacity: 0.22 });
+  const coneEdges = new THREE.LineSegments(new THREE.EdgesGeometry(coneGeo, 30),
+    coneEdgeMat);
+  coneEdges.position.copy(camPod.position);
+  drone.add(coneEdges);
+
   scene.add(drone);
 
   drone.traverse((o) => o.layers.set(CHASE_ONLY));
@@ -623,17 +692,31 @@
   }
 
   // ------------------------------------------------------------- trace prep
-  // waypoint ordering is the controller's business, so credit them the way the
-  // verifier does: by proximity, in trace order
+  // v2 replays carry full-tick gate credits from the simulator. Use those
+  // authoritative times instead of re-deriving visitation from sampled frames.
+  // Traces without them fall back to the client-side gate approximation.
   let visitedAt = [];
   function precompute() {
+    MEASURED = !!(frames[0] && frames[0].R);
     visitedAt = new Array(wpList.length).fill(Infinity);
+    if (Array.isArray(trace.inspection_times)
+        && trace.inspection_times.length === wpList.length) {
+      visitedAt = trace.inspection_times.map((time) =>
+        Number.isFinite(time) ? time : Infinity);
+      return;
+    }
     const hit = new Array(wpList.length).fill(false);
     frames.forEach((f) => {
+      const tol = MEASURED ? GATE_TOL : nac.waypoint_tolerance;
+      const steady = !MEASURED || (
+        Math.hypot(f.rates[0], f.rates[1], f.rates[2]) <= GATE_RATE
+        && Math.hypot(f.v[0], f.v[1], f.v[2]) <= GATE_SPEED);
+      const aimed = !MEASURED || aimDeg(f) <= FOV_HALF;
+      if (!steady || !aimed) return;
       wpList.forEach((w, i) => {
         if (hit[i]) return;
         const d = Math.hypot(f.p[0] - w[0], f.p[1] - w[1], f.p[2] - w[2]);
-        if (d <= nac.waypoint_tolerance) { hit[i] = true; visitedAt[i] = f.t; }
+        if (d <= tol) { hit[i] = true; visitedAt[i] = f.t; }
       });
     });
   }
@@ -652,6 +735,12 @@
   differentiate();
 
   const el = (id) => document.getElementById(id);
+  function showAttitudeSource() {
+    el('attsrc').textContent = MEASURED
+      ? 'attitude, body rates and thrust as the simulator recorded them'
+      : 'attitude reconstructed from the recorded acceleration';
+  }
+  showAttitudeSource();
   el('seed').textContent = trace.seed;
   el('batchseed').textContent = batch.base_seed;
   el('bpass').textContent = batch.passed + '/' + batch.scenarios;
@@ -687,6 +776,15 @@
   function poseDrone(f, a) {
     drone.position.copy(V(f.p));
     halo.position.copy(drone.position).add(new THREE.Vector3(0, -0.12, 0));
+
+    if (f.R) {
+      // measured attitude: body x is the nose and camera, body z is the thrust axis
+      const fwdM = V(col(f.R, 0)), upM = V(col(f.R, 2)), sideM = V(col(f.R, 1));
+      basis.makeBasis(sideM, upM, fwdM);
+      attitude.setFromRotationMatrix(basis);
+      drone.quaternion.copy(attitude);
+      return { thrust: f.thrust, fwd: fwdM };
+    }
 
     // thrust axis: what the airframe must push along to make this acceleration
     const thrust = a.clone().add(up.clone().multiplyScalar(GRAVITY)).normalize();
@@ -766,6 +864,16 @@
     el('clearance').className = breached ? 'bad' : (f.clearance < 0.3 ? 'warn' : 'ok');
     el('wind').textContent = mag.toFixed(2) + ' m/s^2';
     el('collisions').textContent = breached ? 1 : 0;
+
+    const tilt = tiltDeg(f), aim = aimDeg(f);
+    el('tilt').textContent = tilt === null ? 'reconstructed' : tilt.toFixed(1) + ' deg';
+    const onTarget = aim !== null && aim <= FOV_HALF;
+    el('aim').textContent = aim === null ? 'not recorded'
+      : aim.toFixed(1) + ' deg / ' + FOV_HALF.toFixed(0) + ' deg';
+    el('aim').className = aim === null ? '' : (onTarget ? 'ok' : 'warn');
+    coneMat.color.setHex(onTarget ? 0x35d07f : 0x4ea1ff);
+    coneMat.opacity = onTarget ? 0.13 : 0.06;
+    coneEdgeMat.color.setHex(onTarget ? 0x35d07f : 0x4ea1ff);
 
     const alert = el('alert');
     if (breached) {
@@ -899,6 +1007,7 @@
     }
     precompute();
     differentiate();
+    showAttitudeSource();
     el('seed').textContent = trace.seed;
     if (trace.label) el('mission').textContent = trace.label;
     el('scrub').max = frames.length - 1;

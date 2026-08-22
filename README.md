@@ -8,9 +8,12 @@ Built for the Cognition "Find an Industry, Give it an Engineer" track, EHL Munic
 August 2026.
 
 Everything here is simulated. No real drone has flown, and nothing in this repository
-detects defects. What is graded is inspection coverage: did the vehicle get complete,
-usable photographic evidence of every waypoint without hitting the engine and inside
-its time budget.
+detects defects. The mission replay now includes clearly labelled synthetic vision and
+audio signals, a seeded moving object, visible wind and a physical ground boundary.
+The interactive mission verifier grades inspection coverage and safety: did the vehicle
+get complete, usable capture geometry without hitting the engine, floor or moving-object
+safety radius and inside its time budget. The original batch verifier remains unchanged
+for an apples-to-apples controller score.
 
 ## The two loops
 
@@ -26,9 +29,10 @@ accept the physical risk of flying near a real engine.
 **2. The runtime loop (Devin flies the mission).** In simulator v2 the Devin API is
 the mission agent itself. `mission/episode.py` turns the one shot flight into
 reset, observe, act, verify. Devin receives an observation containing only what a
-drone could sense right now: pose, clearance, a wind estimate recovered from the
-vehicle's own motion, per waypoint evidence gaps, remaining action and time budget,
-and the hard limits it must respect. It returns exactly one bounded action at a time
+drone could sense right now: pose, engine and floor clearance, a wind estimate recovered
+from the vehicle's own motion, clearly labelled synthetic object/acoustic events, per
+waypoint evidence gaps, remaining action and time budget, and the hard limits it must
+respect. It returns exactly one bounded action at a time
 as structured output. `mission/safety.py` rejects stale observation ids, replayed
 action ids, waypoints outside the authorised sector, over long actions, excess speed
 and exhausted per waypoint attempts, and reports the rejection back to Devin rather
@@ -47,7 +51,7 @@ Full narrative and numbers in [docs/RESULTS.md](docs/RESULTS.md).
 
 ```bash
 python -m pip install -r requirements.txt
-python -m pytest -q                                   # 126 passed, about 20 s
+python -m pytest -q                                   # 133 passed
 ```
 
 Verifier for simulator v1, the point mass sweep:
@@ -85,8 +89,16 @@ python -m viz.server
 ```
 
 The page auto loads the last recorded mission from `viz/data3/` so it is never empty,
-and the **Fly mission** button runs a fresh one with the seed, sector and planner
-picked in the controls.
+and **Start mission** runs a fresh mission from the plain-English request and chosen
+planner. The mission view is the judge-facing explanation; `/backend_view.html` is the
+auditable protocol and API record.
+
+### Submission requirement
+
+This challenge requires a recognized Entire checkpoint branch or ref, not only a code
+commit. The repository contains project-level Entire configuration for Codex. Before
+submitting, verify and push the session record and ensure `ehl-gg` can read the repo.
+Follow [docs/SUBMISSION_CHECKLIST.md](docs/SUBMISSION_CHECKLIST.md) exactly.
 
 The human safety gate, run after a PASS:
 
@@ -112,16 +124,17 @@ handful of live runs, not a soak test. Treat it as demonstrated, not battle test
 
 | What | Result | Command |
 | ---- | ------ | ------- |
-| Test suite | 126 passed | `python -m pytest -q` |
+| Test suite | 133 passed | `python -m pytest -q` |
 | Sim v1 batch | 30/30 PASS, 100.0% mean coverage, 0 collisions | `python -m sim.run_verifier --scenarios 30 --seed 1000` |
 | Sim v2 batch | 30/30 PASS, 99.9% mean coverage, 719/720 waypoints | `python -m sim2.run_verifier --scenarios 30 --seed 1000` |
 | Mission loop, baseline agent, seeds 1000 to 1029 | 29/30 PASS, 98.6% mean coverage | `python scripts/run_autonomous_mission.py --seed <n> --planner baseline` |
 | Live Devin mission, seed 1000 | PASS, 24/24 waypoints, 100.0% coverage, 82.3 s | `python scripts/run_autonomous_mission.py --seed 1000 --planner devin` |
 
-Seed 1027 fails, in the v2 batch and in the mission loop alike. It is the same
-scenario both times, and it misses the 150 s time budget rather than colliding. It is
-written down here rather than rounded away. Full tables, exact commands and the live
-mission narrative are in [docs/RESULTS.md](docs/RESULTS.md). The live demo runbook,
+Seed 1027 is the edge case in both loops. In the v2 batch it reaches 23/24 views,
+95.8 percent coverage at exactly 150 seconds, so it still passes the unchanged
+95 percent threshold. The mission loop uses a different all-views completion rule and
+records insufficient evidence rather than rounding the missing view away. Full tables,
+exact commands and the live mission narrative are in [docs/RESULTS.md](docs/RESULTS.md). The live demo runbook,
 with a fallback for every step that touches the network, is in
 [docs/DEMO.md](docs/DEMO.md).
 

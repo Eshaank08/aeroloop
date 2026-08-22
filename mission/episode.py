@@ -34,6 +34,12 @@ from mission.contract import (
     Observation,
     WaypointEvidence,
 )
+from mission.environment import (
+    DRONE_GROUND_RADIUS_M,
+    GROUND_Z_M,
+    OBSTACLE_SAFETY_RADIUS_M,
+    make_environment,
+)
 
 HOME_POSITION = (0.0, 0.0, 6.0)
 GUST_EVENT_THRESHOLD = 3.0
@@ -76,6 +82,7 @@ class MissionEpisode:
         )
 
         self.scenario = make_scenario(seed)
+        self.environment = make_environment(seed)
         self.drone = QuadDrone(params=params)
         self.t = 0.0
         self.inspected = {index: False for index in every_index}
@@ -91,6 +98,10 @@ class MissionEpisode:
         self.pending_events: list[dict] = []
         self._wind_estimate = 0.0
         self._gust_reported = False
+        self._visual_reported = False
+        self._audio_reported = False
+        self._minimum_ground_clearance = float("inf")
+        self._obstacle_alerts = 0
         self._record_frame()
 
     # ---- sensing -------------------------------------------------------
@@ -128,13 +139,59 @@ class MissionEpisode:
 
     def _record_frame(self) -> None:
         state = self.drone.state
+        sensors = self.environment.sample(self.t, state.position)
+        wind = self.scenario.at(self.t)
+        self._minimum_ground_clearance = min(
+            self._minimum_ground_clearance, sensors["ground_clearance_m"]
+        )
         self.frames.append({
             "t": round(self.t, 3),
             "p": [round(v, 4) for v in state.position],
             "v": [round(v, 4) for v in state.velocity],
             "R": [[round(v, 5) for v in row] for row in state.attitude],
             "thrust": round(state.thrust, 4),
+            "wind": [round(v, 4) for v in wind],
+            "sensors": sensors,
         })
+
+    def _sense_environment(self) -> str | None:
+        """Record current detections and enforce immediate onboard safety."""
+        sample = self.environment.sample(self.t, self.drone.state.position)
+        self._minimum_ground_clearance = min(
+            self._minimum_ground_clearance, sample["ground_clearance_m"]
+        )
+        detections = sample["visual_detections"]
+        if detections and not self._visual_reported:
+            detection = detections[0]
+            self.pending_events.append({
+                "type": "visual_object_detected",
+                "source": "synthetic_vision",
+                "at_s": round(self.t, 3),
+                **detection,
+            })
+            self._visual_reported = True
+        if sample["audio"]["anomaly"] and not self._audio_reported:
+            self.pending_events.append({
+                "type": "acoustic_anomaly_detected",
+                "source": "synthetic_audio",
+                "at_s": round(self.t, 3),
+                **sample["audio"],
+            })
+            self._audio_reported = True
+
+        if sample["ground_clearance_m"] < 0.0:
+            return "ground_contact"
+        nearest = sample["nearest_object_m"]
+        if nearest is not None and nearest < OBSTACLE_SAFETY_RADIUS_M:
+            self._obstacle_alerts += 1
+            self.pending_events.append({
+                "type": "dynamic_obstacle_safety_stop",
+                "source": "onboard_safety",
+                "at_s": round(self.t, 3),
+                "distance_m": nearest,
+            })
+            return "dynamic_obstacle_proximity"
+        return None
 
     def _evidence(self) -> list[WaypointEvidence]:
         return [
@@ -157,6 +214,7 @@ class MissionEpisode:
     ) -> Observation:
         self.observation_id += 1
         state = self.drone.state
+        sensors = self.environment.sample(self.t, state.position)
         events = list(self.pending_events)
         self.pending_events = []
         if self._wind_estimate >= GUST_EVENT_THRESHOLD and not self._gust_reported:
@@ -180,7 +238,13 @@ class MissionEpisode:
             tilt_deg=self._tilt_deg(),
             body_rate_rps=_norm(state.body_rates),
             clearance_m=self.clearance_m(),
+            ground_clearance_m=sensors["ground_clearance_m"],
             wind_estimate_mps2=self._wind_estimate,
+            perception={
+                "synthetic": True,
+                "visual_detections": sensors["visual_detections"],
+                "audio": sensors["audio"],
+            },
             evidence=self._evidence(),
             available_targets=[
                 index for index in self.authorised_indexes if not self.inspected[index]
@@ -246,6 +310,11 @@ class MissionEpisode:
             self.t = round(self.t + self.params.dt, 9)
             tick += 1
             self._estimate_wind(previous_velocity, previous_thrust_world)
+
+            environment_failure = self._sense_environment()
+            if environment_failure:
+                self._record_frame()
+                return environment_failure
 
             if self.nacelle.is_collision(self.drone.state.position):
                 self._record_frame()
@@ -360,6 +429,12 @@ class MissionEpisode:
             "elapsed_s": round(self.t, 3),
             "time_budget_s": self.params.time_budget_s,
             "collision": self.failure == "collision",
+            "ground_contact": self.failure == "ground_contact",
+            "ground_z_m": GROUND_Z_M,
+            "drone_ground_radius_m": DRONE_GROUND_RADIUS_M,
+            "minimum_ground_clearance_m": round(self._minimum_ground_clearance, 3),
+            "dynamic_obstacle_stop": self.failure == "dynamic_obstacle_proximity",
+            "obstacle_alerts": self._obstacle_alerts,
             "failure": self.failure,
             "actions_executed": self.actions_executed,
             "passed": passed,

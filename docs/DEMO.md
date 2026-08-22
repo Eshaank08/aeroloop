@@ -13,7 +13,7 @@ Do all of this before you walk up. None of it counts against your time.
 ```bash
 cd aeroloop
 python -m pip install -r requirements.txt
-python -m pytest -q                      # must print: 126 passed, about 20 s
+python -m pytest -q                      # must print: 133 passed
 echo -n "$DEVIN_API_KEY" | wc -c         # non zero, never print the key itself
 echo -n "$DEVIN_ORG_ID"  | wc -c
 ```
@@ -125,9 +125,10 @@ python -m sim2.run_verifier --scenarios 30 --seed 1000
 
 > Simulator two is a rate controlled quadrotor, and coverage only counts through a
 > camera gate: within half a metre, aimed within 60 degrees of the surface, and steady.
-> Twenty nine of thirty, 99.9 percent mean coverage, 719 of 720 waypoints. Seed 1027
-> fails. It misses the 150 second time budget under that wind draw. It does not crash.
-> We left it in the numbers rather than picking a friendlier batch.
+> Thirty of thirty pass, 99.9 percent mean coverage, 719 of 720 waypoints. Seed 1027
+> is the honest edge case: 23 of 24 views, 95.8 percent coverage at exactly 150 seconds,
+> which still clears the unchanged 95 percent threshold. We show the missing view rather
+> than rounding the batch to 100 percent.
 
 If a judge offers a base seed, run it live with `--seed <their number>`. Do not promise
 an outcome for a seed you have not run.
@@ -187,11 +188,14 @@ are switching to the recorded mission. Two fallbacks, in this order.
 ## 3:30 to 4:30. The mission view
 
 Switch to the browser tab at `http://127.0.0.1:8765/mission_view.html`. If you ran a
-live mission, press **Fly mission** with the seed, sector and planner set in the
+live mission, press **Start mission** with the plain-English request and planner set in the
 controls, or just show the recorded one.
 
-Point at the right hand panel, one item at a time. This is where Devin's reasoning is
-legible, and it is the most convincing thing in the demo.
+First point to the legend: grey is a required camera view, blue is the view being
+attempted and green means the simulated pose, aim and stability gate passed. It does
+not mean a defect was found. Then point to the sensor panel: wind is seeded simulator
+truth shown in the replay; vision and audio are explicitly synthetic test inputs. Last,
+walk down the plain-language Devin decisions on the right.
 
 > Every entry is one decision. Action one: batch the maximum eight waypoints, because
 > wind is calm and clearance is good. Then it reads its own telemetry, sees body rate

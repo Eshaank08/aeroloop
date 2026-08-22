@@ -9,13 +9,14 @@ Scope, stated once so nothing here is over read:
 - The system verifies inspection **coverage**, not damage. It does not detect defects.
 - The Devin API paths have had a handful of live runs. They work, they are not battle
   tested.
-- Seed 1027 fails, in the simulator v2 batch and in the mission loop. Details below.
+- Seed 1027 is the shared edge case: it passes the batch's 95 percent threshold with
+  23/24 views, while the mission loop reports insufficient evidence. Details below.
 
 ## 1. Test suite
 
 | Metric | Result |
 | ------ | ------ |
-| Tests | 126 passed |
+| Tests | 133 passed |
 
 ```bash
 python -m pytest -q
@@ -47,16 +48,11 @@ human edited it.
 | Scenarios passed | 30/30 |
 | Mean coverage | 99.9% |
 | Waypoints inspected | 719/720 |
-| Failing seed | 1027 only |
+| Edge seed | 1027: 23/24 views, 95.8%, PASS |
 
 ```bash
 python -m sim2.run_verifier --scenarios 30 --seed 1000
 ```
-
-Seed 1027 fails on the 150 s time budget. It does not collide and it does not fly
-outside its envelope, it simply does not finish the sweep in time under that wind
-draw. The batch still reports PASS overall because the threshold is a 90% scenario
-pass rate, but the single failing seed is the honest number to quote.
 
 v1 and v2 numbers are not comparable. v2 grades a quadrotor with attitude dynamics and
 only counts a waypoint when the camera is aimed and the shot is steady, so its

@@ -50,6 +50,9 @@ steady (body rate at most 1.5 rad/s and speed at most 2.5 m/s).
 You will receive observations describing only what the drone can sense. You will
 not be told the wind schedule or the verifier's answer. After each action you get
 a new observation reporting what evidence was gained and what is still missing.
+The `events` list may also contain clearly labelled synthetic visual or acoustic
+detections used by this simulator. Treat an obstacle safety stop as authoritative;
+never try to override it. In real deployment these events come from onboard sensors.
 
 Rules:
 - Answer with structured output only, matching the action schema exactly.
@@ -329,7 +332,10 @@ def run_mission(
     run.planner_metadata = dict(getattr(planner, "metadata", {}))
     run.verification = episode.verify()
 
-    if run.verification["failure"] == "collision" or run.agent_claim == CLAIM_ABORT:
+    safety_failures = {
+        "collision", "ground_contact", "dynamic_obstacle_proximity", "unsafe_speed",
+    }
+    if run.verification["failure"] in safety_failures or run.agent_claim == CLAIM_ABORT:
         run.disposition = DISPOSITION_ABORTED
     elif run.planner_failed:
         # The authority that decides what to inspect never answered. The mission

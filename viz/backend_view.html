@@ -5,23 +5,23 @@
 <title>AeroLoop backend view: the protocol, not the picture</title>
 <style>
   :root {
-    --ink: #dde5f0; --dim: #8595ab; --bg: #070a10; --panel: #0d1219;
-    --line: #1d2836; --devin: #7aa2ff; --good: #46d98b; --bad: #ff6b6b;
-    --warn: #ffc65c; --sim: #c08cff;
+    --ink: #172033; --dim: #5e6b7f; --bg: #e8eef4; --panel: #fbfdff;
+    --line: #c7d2df; --devin: #285ed1; --good: #168553; --bad: #c83b42;
+    --warn: #b66500; --sim: #753bbd;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); padding: 18px 20px 40px;
-    font: 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; }
-  h1 { font-size: 15px; margin: 0 0 3px; letter-spacing: .02em; }
+    font: 13px/1.55 Inter, ui-sans-serif, system-ui, sans-serif; }
+  h1 { font-size: 19px; margin: 0 0 3px; letter-spacing: -.01em; }
   h1 span { color: var(--dim); font-weight: 400; }
   .sub { color: var(--dim); margin-bottom: 16px; font-size: 12px; }
   .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
-  input, select, button { background: #131a24; color: var(--ink); border: 1px solid var(--line);
+  input, select, button { background: white; color: var(--ink); border: 1px solid var(--line);
     border-radius: 6px; padding: 7px 10px; font: inherit; }
   input { width: 420px; }
   button { cursor: pointer; }
   button:hover { border-color: #38506e; }
-  button.go { background: var(--devin); color: #05101f; border-color: var(--devin); font-weight: 600; }
+  button.go { background: var(--devin); color: white; border-color: var(--devin); font-weight: 650; }
   .grid { display: grid; grid-template-columns: 300px 1fr 330px; gap: 14px; align-items: start; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 12px 13px; }
   .card h2 { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase;
@@ -36,12 +36,12 @@
   .good { color: var(--good); } .bad { color: var(--bad); } .warn { color: var(--warn); }
   .turn { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
   .turn > .head { display: flex; justify-content: space-between; gap: 10px;
-    background: #101722; padding: 7px 11px; cursor: pointer; }
+    background: #f1f5f9; padding: 7px 11px; cursor: pointer; }
   .turn > .body { display: none; padding: 10px 11px; border-top: 1px solid var(--line); }
   .turn.open > .body { display: block; }
   .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
   pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 11px;
-    color: #b9c6d8; max-height: 260px; overflow: auto; }
+    color: #35445a; max-height: 260px; overflow: auto; }
   .lbl { color: var(--dim); font-size: 10.5px; text-transform: uppercase;
     letter-spacing: .12em; margin-bottom: 4px; }
   table { border-collapse: collapse; width: 100%; font-size: 11.5px; }
@@ -53,8 +53,8 @@
 </style>
 </head>
 <body>
-<h1>AeroLoop backend view <span>the protocol, not the picture</span></h1>
-<div class="sub">Every exchange between the simulator, the Devin API and the safety envelope for one mission. The 3D view is at <a href="/mission_view.html" style="color:var(--devin)">mission_view.html</a>.</div>
+<h1>AeroLoop autonomy record <span>what happened behind the 3D mission</span></h1>
+<div class="sub">Follow one request from human intent to Devin decisions, local safety checks and an independent verdict. Open the understandable replay at <a href="/mission_view.html" style="color:var(--devin)">mission view</a>.</div>
 
 <div class="bar">
   <input id="order" value="inspect the lower end of the engine on a random scene">
@@ -69,21 +69,21 @@
 <div class="grid">
   <div>
     <div class="card" style="margin-bottom:14px">
-      <h2>Pipeline</h2>
+      <h2>Who controls what</h2>
       <div class="pipe">
-        <div class="node">operator sentence</div>
-        <div class="arrow">&darr; <span class="tag">mission/intent.py, local</span></div>
-        <div class="node">authorised waypoints + seed</div>
+        <div class="node">1. Human defines the inspection area</div>
+        <div class="arrow">&darr; <span class="tag">local authority boundary</span></div>
+        <div class="node">2. Seeded wind, object and sensor test</div>
         <div class="arrow">&darr;</div>
-        <div class="node sim">simulator v2 observe</div>
+        <div class="node sim">3. Simulator sends current observations</div>
         <div class="arrow">&darr; <span class="tag">POST /messages</span></div>
-        <div class="node devin">Devin session decides</div>
+        <div class="node devin">4. Devin chooses the next bounded action</div>
         <div class="arrow">&darr; <span class="tag">structured output</span></div>
-        <div class="node">safety envelope</div>
+        <div class="node">5. Local safety allows or blocks it</div>
         <div class="arrow">&darr; <span class="tag">accept or reject back to Devin</span></div>
-        <div class="node sim">controller2 flies 50 Hz</div>
+        <div class="node sim">6. Flight controller executes at 50 Hz</div>
         <div class="arrow">&darr;</div>
-        <div class="node">independent verifier</div>
+        <div class="node">7. Independent verifier issues PASS or FAIL</div>
       </div>
     </div>
     <div class="card" style="margin-bottom:14px">
@@ -137,7 +137,7 @@ function renderIntent(intent) {
     `<div class="kv"><span>waypoints</span><span>${intent.waypoint_count}</span></div>` +
     `<div class="kv"><span>seed</span><span>${intent.seed}${intent.seed_was_random ? ' <span class="warn">random</span>' : ''}</span></div>` +
     `<div class="kv"><span>action budget</span><span>${intent.max_actions}</span></div>` +
-    `<div class="digest" style="margin-top:7px">Resolved locally before flight. The agent cannot widen this set.</div>`;
+    `<div class="digest" style="margin-top:7px">The same seed reproduces wind, the moving object and synthetic sensor noise. The inspection boundary is fixed before Devin acts.</div>`;
 }
 
 function renderApi(calls) {
@@ -166,6 +166,9 @@ function renderVerify(v, disposition) {
     `<div class="kv"><span>coverage</span><span>${(v.coverage * 100).toFixed(1)}% (need ${(v.coverage_threshold * 100).toFixed(0)}%)</span></div>` +
     `<div class="kv"><span>elapsed</span><span>${v.elapsed_s}s / ${v.time_budget_s}s</span></div>` +
     `<div class="kv"><span>collision</span><span class="${v.collision ? 'bad' : 'good'}">${v.collision}</span></div>` +
+    `<div class="kv"><span>floor contact</span><span class="${v.ground_contact ? 'bad' : 'good'}">${Boolean(v.ground_contact)}</span></div>` +
+    `<div class="kv"><span>moving-object stop</span><span class="${v.dynamic_obstacle_stop ? 'warn' : 'good'}">${Boolean(v.dynamic_obstacle_stop)}</span></div>` +
+    `<div class="kv"><span>lowest floor clearance</span><span>${v.minimum_ground_clearance_m === undefined ? 'not recorded' : `${v.minimum_ground_clearance_m}m`}</span></div>` +
     `<div class="kv"><span>failure</span><span>${esc(v.failure === null ? 'none' : v.failure)}</span></div>` +
     `<div class="digest" style="margin-top:7px">The verifier runs whatever the agent claimed. Its answer wins.</div>`;
 }

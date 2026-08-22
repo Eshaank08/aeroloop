@@ -93,7 +93,9 @@ class Observation:
     tilt_deg: float = 0.0
     body_rate_rps: float = 0.0
     clearance_m: float = 0.0
+    ground_clearance_m: float = 0.0
     wind_estimate_mps2: float = 0.0
+    perception: dict = field(default_factory=dict)
     evidence: list[WaypointEvidence] = field(default_factory=list)
     available_targets: list[int] = field(default_factory=list)
     allowed_primitives: list[str] = field(default_factory=lambda: list(ALLOWED_PRIMITIVES))
@@ -152,8 +154,10 @@ def observation_to_dict(observation: Observation) -> dict:
         },
         "flight": {
             "clearance_m": round(observation.clearance_m, 4),
+            "ground_clearance_m": round(observation.ground_clearance_m, 4),
             "wind_estimate_mps2": round(observation.wind_estimate_mps2, 4),
         },
+        "perception": dict(observation.perception),
         "evidence": [
             {
                 "waypoint_index": item.index,

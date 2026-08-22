@@ -76,4 +76,7 @@ def test_packet_digest_is_stable_and_order_independent():
 def test_observation_dict_shape():
     packet = observation_to_dict(Observation(mission_id="mission-1", observation_id=1))
     assert packet["schema_version"] == SCHEMA_VERSION
-    assert set(packet) >= {"pose", "flight", "evidence", "available_targets", "budget"}
+    assert set(packet) >= {
+        "pose", "flight", "perception", "evidence", "available_targets", "budget"
+    }
+    assert "ground_clearance_m" in packet["flight"]

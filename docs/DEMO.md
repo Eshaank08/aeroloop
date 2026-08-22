@@ -14,7 +14,7 @@ Do all of this while somebody else is still presenting. None of it counts agains
 ```bash
 cd aeroloop
 python3 -m pip install -r requirements.txt        # pytest, numpy
-python3 -m pytest -q                              # must print: 1 passed
+python3 -m pytest -q                              # must print: 7 passed
 echo "$DEVIN_API_KEY" | wc -c                     # non zero length, never print the key
 echo "$DEVIN_ORG_ID"  | wc -c
 ```
@@ -119,7 +119,7 @@ python3 -m sim.run_verifier --scenarios 30 --verbose
 ```
 
 Expected wall clock: under 1 second on a laptop. Measured on the demo machine it was
-`real 0m0.558s`, so treat it as instant and spend the 25 seconds talking, not waiting.
+`real 0m0.693s`, so treat it as instant and spend the 25 seconds talking, not waiting.
 
 What to say while it runs:
 
@@ -139,7 +139,7 @@ Then prove it is not memorization, with a seed nobody has trained on:
 python3 -m sim.run_verifier --scenarios 50 --seed 424242 --verbose
 ```
 
-Expected wall clock: also under a second, measured `real 0m0.920s`.
+Expected wall clock: under two seconds, measured `real 0m1.700s`.
 
 > Different base seed, fifty scenarios, never used during development. Same result.
 
@@ -178,8 +178,13 @@ What to say while it renders:
 
 Audience is looking at: the drone working its way around the nacelle while the coverage
 counter climbs, and the clearance number staying positive. Then click **jump to gust**.
-The committed trace is seed 1017, whose gust starts at 5.5 s and peaks at 4.9, so the
-disturbance lands while the drone is still working the nacelle.
+The committed trace is seed 606076, a 39.82 s sweep at 100 percent coverage and zero
+collisions, whose gust starts at 21.5 s and peaks at 4.27, so the disturbance lands while
+the drone is still working the nacelle. Check those numbers before the demo with the one
+liner in the fallback below, because rerecording the trace changes them.
+
+The view also has `orbit`, `follow` and `pilot view` cameras. Pick one before you walk up
+and leave it there. Do not fiddle with cameras on stage.
 
 > That is the wind hitting mid sweep. Watch the clearance number. It does not go to zero.
 
@@ -201,6 +206,12 @@ move on. Do not spend demo time debugging a browser.
 Never run `python3 -m viz.replay` during the demo. It rewrites `viz/data/`, and the
 committed trace is the one this runbook and the talk track describe.
 
+The flight command console, typed or spoken missions, is a different thing: it needs
+`python3 -m viz.server` running and the page opened from `http://127.0.0.1:8765/flight_view.html`
+rather than off the filesystem. It is local only, so no conference wifi is involved, but
+it is a live flight rather than the graded one and the controller was verified for the
+full sweep only. Keep it out of the 90 seconds and save it for questions.
+
 ---
 
 ## Step 4. The human safety gate, 10 seconds
@@ -211,8 +222,8 @@ Command, tab A:
 python3 scripts/approve.py
 ```
 
-Expected wall clock: about 1 second to reprint the report, then it blocks on input and
-waits for you.
+Expected wall clock: about 1 second to rerun the verifier and write the artifact, then it
+blocks on input and waits for you.
 
 What to say while it prints:
 
@@ -221,16 +232,27 @@ What to say while it prints:
 > about to fly next to a real jet engine.
 
 Type `yes` and press enter. It prints that the controller is released for flight
-operations. Answer `no` and it holds the controller instead. If verification had failed,
-the script refuses to ask at all and exits non zero.
+operations. Anything other than the exact string `yes` holds the controller instead. If
+verification had failed, the script refuses to ask at all and exits non zero.
 
-Audience is looking at: the prompt line, then the release line. Close on:
+Audience is looking at: the artifact summary, then the prompt line, then the release
+line. The summary is worth one sentence, because it is what makes the approval mean
+something:
+
+> It is not signing a screenshot. It is signing an artifact under `reports/` that pins
+> the controller hash, the git commit, whether the tree was dirty, and every scenario
+> result. Change one byte of the controller and the digest no longer matches.
+
+Close on:
 
 > Trigger to artifact, nobody in the middle. The only human decision is the physical
 > safety one.
 
 **Fallback:** none needed, this step is local and offline. If the terminal is wedged,
-read the gate out of `docs/RESULTS.md`, which has the pasted output of the same script.
+read the gate out of `docs/RESULTS.md`, which has the pasted output of the same script
+and the head of the artifact it wrote. `python3 scripts/approve.py --dry-run` writes the
+artifact and skips the prompt, which is the safer thing to run if you are rehearsing and
+do not want to record an approval.
 
 ---
 

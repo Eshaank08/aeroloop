@@ -19,7 +19,7 @@ python3 -m sim.run_verifier --scenarios 50 --seed 424242 --verbose
 
 | Item                | Value                                                |
 | ------------------- | ---------------------------------------------------- |
-| Commit under test   | `a4c34f4d8ae2b349e2289f332f3d346452f51e95` (master)   |
+| Commit under test   | `43c1502a6f471ffd2c8c36fed0fdf972c4c6914f` (this branch, master merged in) |
 | `controller.py`     | unmodified, as merged in PR #4                        |
 | Python              | 3.10.12 (`python3 --version`)                         |
 | numpy               | 2.2.1                                                 |
@@ -45,17 +45,31 @@ python3 -m pytest -q
 Output:
 
 ```
-.                                                                        [100%]
-1 passed in 0.54s
+.......                                                                  [100%]
+7 passed in 0.60s
 
-real	0m0.663s
-user	0m0.638s
-sys	0m0.000s
+real	0m0.747s
+user	0m0.713s
+sys	0m0.009s
 ```
 
-One test is collected, `tests/test_controller.py::test_controller_passes_verification`,
-confirmed with `python3 -m pytest -q --collect-only`. That single test wraps the whole
-verifier, so a green `pytest` means the full 30 scenario batch passed.
+Seven tests are collected, confirmed with `python3 -m pytest -q --collect-only`:
+
+```
+tests/test_controller.py::test_controller_passes_verification
+tests/test_report.py::test_report_round_trip_has_exact_schema
+tests/test_report.py::test_fail_artifact_cannot_be_approved
+tests/test_report.py::test_approval_uses_approver_environment
+tests/test_report.py::test_tampering_breaks_signed_digest
+tests/test_report.py::test_load_report_rejects_unusable_artifacts
+tests/test_report.py::test_integrity_rejects_approved_non_pass_artifact
+
+7 tests collected in 0.01s
+```
+
+The first one wraps the whole verifier, so a green `pytest` means the full 30 scenario
+batch passed. The other six cover the signed verification artifact and the approval gate
+in `sim/report.py`.
 
 ## 2. Default verification batch, 30 scenarios from base seed 1000
 
@@ -110,7 +124,7 @@ AeroLoop verification report
   RESULT: PASS
 
 
-real	0m0.558s
+real	0m0.693s
 user	0m0.556s
 sys	0m0.000s
 ```
@@ -178,9 +192,9 @@ AeroLoop verification report
   RESULT: PASS
 
 
-real	0m0.920s
-user	0m0.912s
-sys	0m0.004s
+real	0m1.700s
+user	0m1.683s
+sys	0m0.008s
 ```
 
 Derived over all 50 `time` values in that run:
@@ -215,9 +229,9 @@ Summary block, verbatim:
   RESULT: PASS
 
 
-real	0m0.903s
-user	0m0.898s
-sys	0m0.000s
+real	0m0.909s
+user	0m0.904s
+sys	0m0.004s
 ```
 
 Derived over all 50 `time` values in that run: fastest 33.36 s, slowest 37.58 s,
@@ -225,33 +239,77 @@ mean 33.96 s.
 
 ## 5. The human safety gate
 
-`scripts/approve.py` reruns the verifier and then blocks on one typed answer. Run with
-`no` on stdin, the tail of the output is:
+`scripts/approve.py` reruns the verifier, writes a signed verification artifact under
+`reports/`, prints its summary, and then blocks on one typed answer.
 
-```
-  thresholds       : coverage >= 95%, collisions == 0, pass rate >= 90%
-
-  RESULT: PASS
-
-Verification PASSED across all scenarios.
-Artifact: controller.py, written entirely by Devin with no human edits.
-
-This is the only human decision in the pipeline.
-Approving means: cleared for inspection flight near a real aircraft.
-
-Approve for real-aircraft inspection flight? [yes/no] 
-NOT APPROVED. Controller held.
-```
-
-Command used:
+Command:
 
 ```bash
 printf 'no\n' | python3 scripts/approve.py
 ```
 
-Answering `yes` prints `APPROVED. Controller released for flight operations.` and exits 0.
-Held and approved are the only two outcomes, and the gate refuses to ask at all if the
-verifier did not pass.
+Tail of the output, verbatim:
+
+```
+AeroLoop verification artifact
+================================
+result           : PASS
+pass rate        : 100.0% (30/30)
+mean coverage    : 100.0%
+total collisions : 0
+controller sha256: 3b54710960b6
+git commit       : 43c1502a6f471ffd2c8c36fed0fdf972c4c6914f
+git dirty        : false
+artifact         : reports/verification_20260822T203839Z.json
+Type yes to record human approval for this verification artifact: NOT APPROVED. Controller held.
+```
+
+With `yes` on stdin instead:
+
+```bash
+printf 'yes\n' | python3 scripts/approve.py
+```
+
+```
+artifact         : reports/verification_20260822T203851Z.json
+Type yes to record human approval for this verification artifact: APPROVED. Controller released for flight operations.
+```
+
+That run exited 0. Held and approved are the only two outcomes, the prompt accepts the
+exact string `yes` and nothing else, and the gate refuses to ask at all if the verifier
+did not pass.
+
+The artifact it wrote records the controller hash, the commit, the thresholds and every
+scenario. Head of `reports/verification_20260822T203851Z.json`, verbatim:
+
+```json
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-08-22T20:38:51Z",
+  "result": "PASS",
+  "controller": {
+    "path": "controller.py",
+    "sha256": "3b54710960b6aad8e8fa74ec29a61b953e3f2d15b6049fa1baa75f47685fd537",
+    "git_commit": "43c1502a6f471ffd2c8c36fed0fdf972c4c6914f",
+    "git_dirty": false
+  },
+  "run": {
+    "scenarios": 30,
+    "base_seed": 1000,
+    "pass_rate": 1.0,
+    "mean_coverage": 1.0,
+    "total_collisions": 0
+  },
+  "thresholds": {
+    "coverage": 0.95,
+    "scenario_pass_rate": 0.9,
+    "collisions": 0,
+    "time_budget_s": 120.0
+  },
+```
+
+`reports/` is gitignored, so these artifacts are produced on the machine that runs the
+gate and are not committed.
 
 ## 6. The trigger path requires environment credentials and nothing else
 
@@ -287,6 +345,25 @@ Devin AI 158243242+devin-ai-integration[bot]@users.noreply.github.com Implement 
 That commit reached master through the merge commit `e069577`, `Merge pull request #4
 from Eshaank08/devin/1787422507-flight-controller`, confirmed with `git log --oneline
 master`. There is no later commit touching `controller.py`.
+
+## 8. The committed flight view trace
+
+The recording the browser view replays is committed under `viz/data/`. What it holds, read
+straight out of the file:
+
+```bash
+python3 -c "import json; d=json.load(open('viz/data/trace.json')); print(d['seed'], d['coverage'], d['collisions'], d['elapsed_s'], d['gust'])"
+```
+
+Output:
+
+```
+606076 1.0 0 39.82 {'start_s': 21.508, 'duration_s': 5.868, 'peak': 4.265}
+```
+
+So the traced scenario is seed 606076: full coverage, zero collisions, a 39.82 s sweep,
+with the gust starting at 21.508 s and peaking at 4.265. Rerecording with
+`python3 -m viz.replay` changes all of it, so recheck this line before quoting it.
 
 ## Not measured
 

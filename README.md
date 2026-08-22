@@ -18,13 +18,16 @@ What is on master right now, verified in this checkout and not taken on trust:
 
 - `controller.py` was written by a Devin session and merged through pull request #4. The
   commit author on that file is the Devin bot account, not a person.
-- `python3 -m pytest -q` prints `1 passed`. That one test runs the whole verifier.
+- `python3 -m pytest -q` prints `7 passed`. One of those tests runs the whole verifier,
+  the other six cover the signed verification artifact and the approval gate.
 - `python3 -m sim.run_verifier --scenarios 30 --verbose` reports 30/30 scenarios passed,
   100.0% mean coverage, 0 collisions.
 - A 50 scenario batch on unseen base seed 424242 reports 50/50 passed, 100.0% mean
   coverage, 0 collisions.
 - `viz/flight_view.html` replays a graded run in the browser with no server and no
   network.
+- `scripts/approve.py` writes a signed verification artifact under `reports/` recording
+  the controller hash, the commit and every scenario, then blocks on one typed answer.
 
 Every one of those numbers, with the exact command that produced it and the output pasted
 verbatim, is in [docs/RESULTS.md](docs/RESULTS.md). The live demo runbook, including the
@@ -151,11 +154,14 @@ sim/drone_dynamics.py     Drone physics: position, velocity, wind disturbance
 sim/scenarios.py          Seeded randomized wind-gust scenario generator
 sim/limits.py             Flight limits (accel, speed, time budget, tick rate)
 sim/run_verifier.py       Runs the controller across N scenarios, prints PASS/FAIL
+sim/report.py             Signed verification artifact, and the approval recorded on it
 tests/test_controller.py  pytest wrapper so the normal test loop runs the verifier
+tests/test_report.py      Tests for the artifact schema, its signature and the gate
 scripts/trigger_devin.py  Creates a Devin session against this repo via the API
 scripts/approve.py        Final human approval gate, run after a PASS
-viz/                      Read-only replay recorder and browser flight view of a graded run
-docs/                     GOAL, IDEA, PRD, DEMO, RESULTS
+viz/                      Read-only replay recorder, browser flight view, command console
+reports/                  Verification artifacts written by the gate, gitignored
+docs/                     GOAL, IDEA, PRD, DEMO, RESULTS, REAL_WORLD_ROADMAP
 ```
 
 ## Human in the loop

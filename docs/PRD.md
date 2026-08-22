@@ -41,12 +41,17 @@ scripts/approve.py   <- the single human touch, a safety gate, post-PASS   [BUIL
 | `sim/limits.py`            | Claude Code | max_accel, max_speed, time_budget_s, dt                        |
 | `sim/run_verifier.py`      | Claude Code | Runs N scenarios, scores coverage/collisions/time, PASS/FAIL   |
 | `tests/test_controller.py` | Claude Code | pytest wrapper so Devin's normal test loop triggers the verifier |
+| `sim/report.py`            | Claude Code | Signed verification artifact, its schema, and the recorded approval |
+| `tests/test_report.py`     | Claude Code | Tests for the artifact schema, its signature, and gate refusals |
 | `controller.py`            | **Devin**   | The flight controller. The only file Devin writes.             |
 | `scripts/trigger_devin.py` | Claude Code | Creates the Devin session via API, polls status                |
-| `scripts/approve.py`       | Claude Code | Prints report, requires one human confirmation                 |
+| `scripts/approve.py`       | Claude Code | Writes the verification artifact, prints its summary, requires one human confirmation |
 | `viz/replay.py`            | Devin       | Reruns the graded scenarios and records them to `viz/data/`, scores nothing |
 | `viz/flight_view.html`     | Devin       | Browser flight view of one recorded run, Three.js vendored, no server, no network |
 | `viz/data/*.json`, `data.js` | generated | Committed recording of the graded batch and of the traced scenario, seed 1017 |
+| `viz/server.py`, `viz/mission.py`, `viz/flightlab.py` | Devin | Flight command console behind the view, chat and voice missions, served at `127.0.0.1:8765` |
+| `reports/*.json`           | generated   | Verification artifacts written by the gate, gitignored           |
+| `docs/REAL_WORLD_ROADMAP.md` | Claude Code | Backlog for moving from the simulator to a real hangar          |
 | `docs/DEMO.md`             | Claude Code | 90 second demo runbook, with an offline fallback per step       |
 | `docs/RESULTS.md`          | Claude Code | Every claimed number, with the command that produced it         |
 | `docs/SIM2_SPEC.md`        | Claude Code | Simulator v2 spec. Specification only, no v2 code on master     |
@@ -62,8 +67,10 @@ this table was updated, so nothing here restates its contents.
 | `tests/test_controller.py`                                         | BUILT, one test wrapping the verifier    |
 | `controller.py`                                                    | BUILT by a Devin session, merged in PR #4 |
 | `scripts/trigger_devin.py`                                         | BUILT, and the trigger to artifact path has been exercised end to end once, producing PR #4 |
-| `scripts/approve.py`                                               | BUILT, reruns the verifier then blocks on one typed answer |
-| `viz/` replay recorder and flight view                              | BUILT, read only, works with no network  |
+| `scripts/approve.py` and `sim/report.py`                            | BUILT, reruns the verifier, writes a signed artifact under `reports/`, then blocks on one typed answer |
+| `viz/` replay recorder and flight view                              | BUILT, read only, the view itself works with no network |
+| `viz/` flight command console                                       | BUILT, needs the local `viz/server.py` process, so it is not part of the offline path |
+| Real hardware roadmap in `docs/REAL_WORLD_ROADMAP.md`               | SPECIFIED, backlog only, nothing in it is implemented |
 | Simulator v2: rate controlled quadrotor with camera gated coverage  | SPECIFIED in `docs/SIM2_SPEC.md`, no implementation on master, no measured result |
 | A v2 controller                                                    | NOT BUILT                                |
 | Real drone hardware, real flight, image processing                  | OUT OF SCOPE, see the last section       |

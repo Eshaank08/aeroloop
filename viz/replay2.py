@@ -90,8 +90,6 @@ def record(scenario, nacelle=DEFAULT_NACELLE, params=DEFAULT_QUAD, stride=2):
 
         if nacelle.is_collision(state.position):
             failure_reason = "collision"
-        elif state.position[2] < 0.2:
-            failure_reason = "ground"
         elif math.sqrt(sum(value * value for value in state.velocity)) > params.max_speed:
             failure_reason = "unsafe_speed"
 
@@ -163,7 +161,7 @@ def scene(nacelle=DEFAULT_NACELLE, params=DEFAULT_QUAD):
             "max_thrust": params.max_thrust,
         },
         "camera": {
-            "fov_half_deg": math.degrees(camera_fov_half_angle),
+            "fov_half_deg": round(math.degrees(camera_fov_half_angle), 4),
         },
         "thresholds": {
             "coverage": COVERAGE_THRESHOLD,

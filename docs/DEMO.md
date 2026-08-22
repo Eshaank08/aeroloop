@@ -13,14 +13,27 @@ Do all of this before you walk up. None of it counts against your time.
 ```bash
 cd aeroloop
 python -m pip install -r requirements.txt
-python -m pytest -q                      # must print: 101 passed, about 20 s
+python -m pytest -q                      # must print: 126 passed, about 20 s
 echo -n "$DEVIN_API_KEY" | wc -c         # non zero, never print the key itself
 echo -n "$DEVIN_ORG_ID"  | wc -c
 ```
 
 Then:
 
-1. Start the browser backend and leave it running: `python -m viz.server`.
+1. Export the credentials **in the shell you start the server from**, then start it and
+   leave it running:
+
+   ```bash
+   export DEVIN_API_KEY=cog_...
+   export DEVIN_ORG_ID=org-...
+   export AEROLOOP_DEVIN_MAX_ACU=20        # cost ceiling per mission
+   python -m viz.server
+   ```
+
+   The server reads the credentials from its own environment. If you start it without
+   them, live missions return `DEVIN_API_KEY and DEVIN_ORG_ID are required for Devin
+   mode` and refuse to run. That is the fail-closed guard doing its job, but it is an
+   embarrassing way to discover it on stage, so check it before you walk up.
 2. Open `http://127.0.0.1:8765/mission_view.html` in a tab and leave it loaded. It auto
    loads the last recorded Devin mission from `viz/data3/`, so the view is never empty
    even with no network at all. Confirm you can see the drone, the engine, and the
@@ -34,6 +47,26 @@ Then:
 6. Decide up front whether you are running a live Devin mission. If wifi is shaky,
    plan to show the recorded one and say so plainly. A recorded run described honestly
    beats a live run that hangs.
+
+## The one thing to get right
+
+Do not narrate scripts. Hand the keyboard over, or type what a judge asks you to type,
+into the box at the bottom of the mission view. It takes plain English:
+
+- `inspect the lower end of the engine on a random scene`
+- `check the inlet, seed 1027`
+- `take the drone from one corner to the other and inspect everything`
+- `look at the port side`
+
+The HUD shows what the sentence authorised before anything flies: the region, the
+waypoint count, and the seed, marked random when the system picked it. Say that out
+loud, because it is the point. The operator's words set the boundary, and Devin chooses
+every action inside it. If a judge invents a sentence you have never tried, run it. An
+unparsed sentence authorises the whole nacelle rather than nothing, so the worst case is
+a full sweep, not a broken demo.
+
+Ask a judge for a number when you want an unseen scene. Seeds 1000 to 1029 and 5000 to
+5029 are the ones in the results tables, so a judge's own number is genuinely unrehearsed.
 
 ## Timing
 

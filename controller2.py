@@ -208,6 +208,7 @@ class Controller:
         self.drag_per_mass = params.drag_coeff / params.mass
 
         self.route = self._plan_route()
+        self.ring_grid = self._ring_grid()
         self.route_index = 0
         self.inspected = [False] * len(self.waypoints)
         self.attempts = {}
@@ -243,6 +244,60 @@ class Controller:
                 members.reverse()
             route.extend(members)
         return route
+
+    def _ring_grid(self):
+        """Ring and slot structure of the waypoints this controller was given.
+
+        The full nacelle is a regular grid: every ring sits at its own axial
+        position and carries the same angular slots. A bounded mission target set
+        is usually not, and can even be a single waypoint, so the grid is derived
+        from the waypoints rather than assumed. Returns None when the waypoints do
+        not form a regular grid, which tells the retry sweep to order the missed
+        waypoints geometrically instead.
+        """
+        rings = {}
+        for index, waypoint in enumerate(self.waypoints):
+            rings.setdefault(round(waypoint[0], 6), []).append(index)
+        axis_positions = sorted(rings)
+        if len(axis_positions) < 2:
+            return None
+        per_ring = len(rings[axis_positions[0]])
+        if per_ring < 3 or any(
+            len(rings[axis]) != per_ring for axis in axis_positions
+        ):
+            return None
+
+        def slot_angle(index):
+            """Angle around the nacelle axis, measured from the +y side."""
+            waypoint = self.waypoints[index]
+            return math.atan2(waypoint[2], waypoint[1]) % (2.0 * math.pi)
+
+        ring_of = {}
+        slot_of = {}
+        index_at = {}
+        reference = None
+        for ring_number, axis_position in enumerate(axis_positions):
+            members = sorted(rings[axis_position], key=slot_angle)
+            angles = [slot_angle(index) for index in members]
+            if reference is None:
+                reference = angles
+            elif any(
+                abs(angle - expected) > 1e-6
+                for angle, expected in zip(angles, reference)
+            ):
+                # rings that do not share their slot angles are not a grid
+                return None
+            for slot, index in enumerate(members):
+                ring_of[index] = ring_number
+                slot_of[index] = slot
+                index_at[(ring_number, slot)] = index
+        return {
+            "rings": len(axis_positions),
+            "per_ring": per_ring,
+            "ring_of": ring_of,
+            "slot_of": slot_of,
+            "index_at": index_at,
+        }
 
     def _travel_direction(self, position_in_route):
         """Horizontal direction of travel out of the waypoint at this route slot."""
@@ -383,40 +438,79 @@ class Controller:
         ]
         if not missed:
             return
-        per_ring = len(self.waypoints) // 3
+        grid = self.ring_grid
+        if grid is None:
+            retry_route = self._nearest_first_route(missed, state)
+        else:
+            retry_route = self._sweep_route(missed, grid)
+        if not retry_route:
+            return
+        self.route = self.route + retry_route
+        self.attempts = {}
+        self.mode = "transit"
+        self.waypoint_start_t = t
+
+    def _sweep_route(self, missed, grid):
+        """Walk the ring grid slot by slot, picking up every missed waypoint."""
+        per_ring = grid["per_ring"]
+        ring_of = grid["ring_of"]
+        slot_of = grid["slot_of"]
+        index_at = grid["index_at"]
         retry_route = []
         current = self.route[-1]
         remaining = set(missed)
 
         while remaining:
-            current_ring, current_slot = divmod(current, per_ring)
+            current_ring = ring_of[current]
+            current_slot = slot_of[current]
 
             def path_length(index):
-                target_ring, target_slot = divmod(index, per_ring)
-                slot_delta = abs(target_slot - current_slot)
+                slot_delta = abs(slot_of[index] - current_slot)
                 slot_delta = min(slot_delta, per_ring - slot_delta)
-                return slot_delta + abs(target_ring - current_ring)
+                return slot_delta + abs(ring_of[index] - current_ring)
 
             target = min(remaining, key=path_length)
-            target_ring, target_slot = divmod(target, per_ring)
+            target_ring = ring_of[target]
+            target_slot = slot_of[target]
             step = 1 if target_slot >= current_slot else -1
             if abs(target_slot - current_slot) > per_ring / 2:
                 step = -step
             while current_slot != target_slot:
                 current_slot = (current_slot + step) % per_ring
-                current = current_ring * per_ring + current_slot
+                current = index_at[(current_ring, current_slot)]
                 retry_route.append(current)
             while current_ring != target_ring:
                 current_ring += 1 if target_ring > current_ring else -1
-                current = current_ring * per_ring + current_slot
+                current = index_at[(current_ring, current_slot)]
                 retry_route.append(current)
             if not retry_route or retry_route[-1] != target:
                 retry_route.append(target)
             remaining.discard(target)
-        self.route = self.route + retry_route
-        self.attempts = {}
-        self.mode = "transit"
-        self.waypoint_start_t = t
+        return retry_route
+
+    def _nearest_first_route(self, missed, state):
+        """Retry order for a waypoint set too small or too sparse to form rings.
+
+        There is no ring to sweep, so the recovery that saves the shot is simply
+        another approach to the missed waypoints, nearest one first. With a single
+        target this re-approaches that waypoint, which is what a retry sweep means
+        for a one waypoint mission.
+        """
+        if state is not None:
+            origin = state.position
+        else:
+            origin = self.waypoints[self.route[-1]] if self.route else (0.0, 0.0, 0.0)
+        retry_route = []
+        remaining = set(missed)
+        while remaining:
+            target = min(
+                remaining,
+                key=lambda index: _norm(_sub(self.waypoints[index], origin)),
+            )
+            retry_route.append(target)
+            origin = self.waypoints[target]
+            remaining.discard(target)
+        return retry_route
 
     # --------------------------------------------------------------- control
 

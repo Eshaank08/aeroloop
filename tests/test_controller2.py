@@ -8,9 +8,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from controller2 import Controller  # noqa: E402
 from sim.aircraft_geometry import DEFAULT_NACELLE  # noqa: E402
-from sim.scenarios import make_scenarios  # noqa: E402
+from sim.scenarios import make_scenario, make_scenarios  # noqa: E402
 from sim2.params import DEFAULT_QUAD  # noqa: E402
-from sim2.quad_dynamics import QuadDrone  # noqa: E402
+from sim2.quad_dynamics import QuadDrone, command_is_finite  # noqa: E402
 from sim2.run_verifier import verify  # noqa: E402
 
 
@@ -54,3 +54,24 @@ def _trace(seed):
 
 def test_dynamics_trace_is_bit_for_bit_deterministic():
     assert _trace(1000) == _trace(1000)
+
+
+def _run_retry_route(waypoints):
+    controller = Controller(waypoints, DEFAULT_NACELLE, DEFAULT_QUAD)
+    drone = QuadDrone(params=DEFAULT_QUAD)
+    scenario = make_scenario(1004)
+
+    for tick in range(DEFAULT_QUAD.max_ticks):
+        t = tick * DEFAULT_QUAD.dt
+        command = controller.step(t, drone.state)
+        assert command_is_finite(command)
+        drone.step(command, scenario.at(t))
+
+    # the crash only ever fired on the retry sweep, so the run has to reach it
+    assert controller.retry_sweeps > 0
+
+
+def test_controller2_retries_small_waypoint_sets_without_invalid_commands():
+    waypoints = DEFAULT_NACELLE.waypoints()
+    _run_retry_route([waypoints[22]])
+    _run_retry_route([waypoints[22], waypoints[23]])

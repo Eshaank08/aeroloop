@@ -47,7 +47,7 @@
   .sep { width: 1px; height: 22px; background: var(--line); }
   #scrub { flex: 1; min-width: 180px; accent-color: var(--accent); }
   #clock { color: var(--dim); min-width: 138px; text-align: right; }
-  #legend { position: fixed; bottom: 92px; left: 16px; color: var(--dim); font-size: 11px; }
+  #legend { position: fixed; bottom: 68px; right: 16px; color: var(--dim); font-size: 11px; }
   .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px;
     margin: 0 5px 0 14px; vertical-align: middle; }
   #legend .swatch:first-child { margin-left: 0; }
@@ -63,6 +63,23 @@
   #reticle i { position: absolute; background: rgba(120, 200, 255, 0.5); }
   #reticle .h { width: 34px; height: 1px; top: 50%; left: 50%; margin-left: -17px; }
   #reticle .v { width: 1px; height: 34px; top: 50%; left: 50%; margin-top: -17px; }
+  #chat { position: fixed; left: 16px; bottom: 68px; width: 330px;
+    display: flex; flex-direction: column; gap: 8px; }
+  #chat .title { font-size: 11px; letter-spacing: 0.12em; color: var(--dim);
+    text-transform: uppercase; }
+  #log { max-height: 210px; overflow-y: auto; display: flex; flex-direction: column;
+    gap: 6px; font-size: 12px; line-height: 1.45; }
+  #log .msg { padding: 6px 9px; border-radius: 8px; border: 1px solid var(--line); }
+  #log .me { background: rgba(78, 161, 255, 0.12); border-color: rgba(78, 161, 255, 0.35); }
+  #log .sim { background: rgba(255, 255, 255, 0.03); }
+  #log .err { border-color: rgba(255, 93, 102, 0.5); color: var(--fail); }
+  #ask { display: flex; gap: 6px; }
+  #ask input { flex: 1; background: #0b1017; color: var(--ink); font: inherit;
+    font-size: 12px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; }
+  #ask input:focus { outline: none; border-color: rgba(78, 161, 255, 0.6); }
+  #mic.live { border-color: var(--fail); color: var(--fail); }
+  #chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  #chips button { font-size: 11px; padding: 4px 8px; }
   #reticle .tag { position: absolute; top: calc(50% + 26px); left: 50%;
     transform: translateX(-50%); color: rgba(120, 200, 255, 0.65); font-size: 11px;
     letter-spacing: 0.16em; }
@@ -73,7 +90,8 @@
 
 <div id="hud" class="panel">
   <h1>AeroLoop</h1>
-  <div class="sub">nacelle inspection sweep, seed <b id="seed">-</b></div>
+  <div class="sub"><span id="mission">nacelle inspection sweep</span>, seed
+    <b id="seed">-</b></div>
   <div class="row"><span>coverage</span><b id="coverage">-</b></div>
   <div class="row"><span>waypoints</span><b id="wps">-</b></div>
   <div class="row"><span>elapsed / budget</span><b id="time">-</b></div>
@@ -99,6 +117,17 @@
 <div id="reticle">
   <i class="h"></i><i class="v"></i>
   <div class="tag">NOSE CAM</div>
+</div>
+
+<div id="chat" class="panel">
+  <div class="title">flight command</div>
+  <div id="log"></div>
+  <div id="chips"></div>
+  <form id="ask">
+    <input id="cmd" autocomplete="off" placeholder="fly from 6 2 8 to 1 0 4" />
+    <button id="mic" type="button" title="speak a command">mic</button>
+    <button id="send" type="submit">fly</button>
+  </form>
 </div>
 
 <div id="legend">
@@ -135,8 +164,11 @@
       + '<code>python -m viz.replay</code> first.</p>';
     return;
   }
-  const scene_ = data.scene, trace = data.trace, batch = data.batch;
-  const nac = scene_.nacelle, lim = scene_.limits, frames = trace.frames;
+  const scene_ = data.scene, batch = data.batch;
+  const nac = scene_.nacelle, lim = scene_.limits;
+  // trace and waypoints are swappable: the command console flies new missions
+  let trace = data.trace, frames = trace.frames;
+  let wpList = scene_.waypoints;
 
   // three.js is y-up, the simulator is x-along-nacelle, so map sim (x,y,z) -> (y,z,x).
   const V = (p) => new THREE.Vector3(p[1], p[2], p[0]);
@@ -391,23 +423,34 @@
   const wpGeo = new THREE.SphereGeometry(nac.waypoint_tolerance * 0.55, 18, 12);
   const reticleGeo = new THREE.RingGeometry(nac.waypoint_tolerance * 0.8,
     nac.waypoint_tolerance * 0.92, 24);
-  const wpMeshes = scene_.waypoints.map((w) => {
-    const m = new THREE.Mesh(wpGeo, new THREE.MeshStandardMaterial({
-      color: 0x55647d, emissive: 0x0a1018, roughness: 0.5 }));
-    m.position.copy(V(w));
-    m.layers.set(CHASE_ONLY);
-    scene.add(m);
+  let wpMeshes = [];
 
-    // the same target as a flat reticle, for the pilot view
-    const r = new THREE.Mesh(reticleGeo, new THREE.MeshBasicMaterial({
-      color: 0x55647d, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
-    r.position.copy(m.position);
-    r.lookAt(new THREE.Vector3(0, 0, w[0]));
-    r.layers.set(PILOT_ONLY);
-    scene.add(r);
-    m.userData.reticle = r;
-    return m;
-  });
+  function buildWaypoints(list) {
+    wpMeshes.forEach((m) => {
+      scene.remove(m.userData.reticle);
+      m.userData.reticle.material.dispose();
+      scene.remove(m);
+      m.material.dispose();
+    });
+    wpMeshes = list.map((w) => {
+      const m = new THREE.Mesh(wpGeo, new THREE.MeshStandardMaterial({
+        color: 0x55647d, emissive: 0x0a1018, roughness: 0.5 }));
+      m.position.copy(V(w));
+      m.layers.set(CHASE_ONLY);
+      scene.add(m);
+
+      // the same target as a flat reticle, for the pilot view
+      const r = new THREE.Mesh(reticleGeo, new THREE.MeshBasicMaterial({
+        color: 0x55647d, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+      r.position.copy(m.position);
+      r.lookAt(new THREE.Vector3(0, 0, w[0]));
+      r.layers.set(PILOT_ONLY);
+      scene.add(r);
+      m.userData.reticle = r;
+      return m;
+    });
+  }
+  buildWaypoints(wpList);
 
   // ------------------------------------------------------------ quadcopter
   const rotors = [];
@@ -502,8 +545,9 @@
   scene.add(halo);
 
   const trailGeo = new THREE.BufferGeometry();
+  let trailCap = Math.max(frames.length, 3200);
   trailGeo.setAttribute('position', new THREE.BufferAttribute(
-    new Float32Array(frames.length * 3), 3));
+    new Float32Array(trailCap * 3), 3));
   const trail = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ color: 0x4ea1ff }));
   scene.add(trail);
 
@@ -555,25 +599,31 @@
   // ------------------------------------------------------------- trace prep
   // waypoint ordering is the controller's business, so credit them the way the
   // verifier does: by proximity, in trace order
-  const visitedAt = new Array(wpMeshes.length).fill(Infinity);
-  (function precompute() {
-    const hit = new Array(wpMeshes.length).fill(false);
+  let visitedAt = [];
+  function precompute() {
+    visitedAt = new Array(wpList.length).fill(Infinity);
+    const hit = new Array(wpList.length).fill(false);
     frames.forEach((f) => {
-      scene_.waypoints.forEach((w, i) => {
+      wpList.forEach((w, i) => {
         if (hit[i]) return;
         const d = Math.hypot(f.p[0] - w[0], f.p[1] - w[1], f.p[2] - w[2]);
         if (d <= nac.waypoint_tolerance) { hit[i] = true; visitedAt[i] = f.t; }
       });
     });
-  })();
+  }
+  precompute();
 
   // acceleration per frame, so the airframe can bank the way a real quad does
-  const accel = frames.map((f, i) => {
-    const n = frames[Math.min(i + 1, frames.length - 1)];
-    const dt = Math.max(n.t - f.t, 1e-6);
-    return new THREE.Vector3(
-      (n.v[1] - f.v[1]) / dt, (n.v[2] - f.v[2]) / dt, (n.v[0] - f.v[0]) / dt);
-  });
+  let accel = [];
+  function differentiate() {
+    accel = frames.map((f, i) => {
+      const n = frames[Math.min(i + 1, frames.length - 1)];
+      const dt = Math.max(n.t - f.t, 1e-6);
+      return new THREE.Vector3(
+        (n.v[1] - f.v[1]) / dt, (n.v[2] - f.v[2]) / dt, (n.v[0] - f.v[0]) / dt);
+    });
+  }
+  differentiate();
 
   const el = (id) => document.getElementById(id);
   el('seed').textContent = trace.seed;
@@ -751,13 +801,15 @@
       b.classList.add('on');
     };
   });
-  const lastT = frames[frames.length - 1].t;
-  if (trace.gust.start_s > lastT) {
-    el('gust').disabled = true;
-    el('gust').textContent = 'gust after sweep';
-    el('gust').title = 'the gust for this seed starts at '
-      + trace.gust.start_s.toFixed(1) + 's, after the sweep finished';
+  function syncGust() {
+    const lastT = frames[frames.length - 1].t;
+    const after = trace.gust.start_s > lastT;
+    el('gust').disabled = after;
+    el('gust').textContent = after ? 'gust after sweep' : 'jump to gust';
+    el('gust').title = after ? 'the gust for this seed starts at '
+      + trace.gust.start_s.toFixed(1) + 's, after the flight finished' : '';
   }
+  syncGust();
   el('gust').onclick = () => {
     const target = trace.gust.start_s;
     let best = 0;
@@ -780,8 +832,129 @@
     renderer.setSize(stage.clientWidth, stage.clientHeight);
   });
 
+  // --------------------------------------------------------- mission loading
+  // swap in a trace the command server just flew, without rebuilding the world
+  function loadTrace(newTrace, waypoints) {
+    trace = newTrace;
+    frames = trace.frames;
+    wpList = waypoints && waypoints.length ? waypoints : wpList;
+    buildWaypoints(wpList);
+    if (frames.length > trailCap) {
+      trailCap = frames.length;
+      trailGeo.setAttribute('position', new THREE.BufferAttribute(
+        new Float32Array(trailCap * 3), 3));
+    }
+    precompute();
+    differentiate();
+    el('seed').textContent = trace.seed;
+    if (trace.label) el('mission').textContent = trace.label;
+    el('scrub').max = frames.length - 1;
+    frameDt = frames.length > 1 ? frames[1].t - frames[0].t : lim.dt;
+    index = 0;
+    playing = true;
+    el('play').textContent = 'pause';
+    document.querySelectorAll('.cell').forEach((c) => c.classList.remove('active'));
+    syncGust();
+    Object.assign(camState, draw());
+  }
+
+  // ------------------------------------------------------- command console
+  // the page is useful on its own from file://, so the console degrades to a
+  // hint when the command server is not running
+  const API = location.protocol === 'file:' ? 'http://127.0.0.1:8765' : '';
+  const log = el('log');
+
+  function say(text, cls) {
+    const d = document.createElement('div');
+    d.className = 'msg ' + (cls || 'sim');
+    d.textContent = text;
+    log.appendChild(d);
+    log.scrollTop = log.scrollHeight;
+    return d;
+  }
+
+  function verdictLine(tr) {
+    const cov = (tr.coverage * 100).toFixed(1);
+    return 'flew ' + tr.elapsed_s.toFixed(1) + 's, coverage ' + cov + '%, '
+      + tr.collisions + ' collision' + (tr.collisions === 1 ? '' : 's')
+      + ', ' + (tr.passed ? 'PASS' : 'FAIL');
+  }
+
+  let busy = false;
+  async function send(text) {
+    if (busy || !text.trim()) return;
+    busy = true;
+    say(text, 'me');
+    const pending = say('flying that now', 'sim');
+    try {
+      const res = await fetch(API + '/api/fly', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text })
+      });
+      const out = await res.json();
+      pending.textContent = out.reply || (out.ok ? 'done' : 'could not fly that');
+      if (!out.ok) pending.className = 'msg err';
+      if (out.ok && out.trace) {
+        loadTrace(out.trace, out.mission && out.mission.waypoints);
+        say(verdictLine(out.trace), out.trace.passed ? 'sim' : 'err');
+      }
+    } catch (err) {
+      pending.className = 'msg err';
+      pending.textContent = 'no command server. start it with '
+        + 'python -m viz.server, then open http://127.0.0.1:8765/flight_view.html';
+    }
+    busy = false;
+  }
+
+  el('ask').onsubmit = (e) => {
+    e.preventDefault();
+    const box = el('cmd');
+    send(box.value);
+    box.value = '';
+  };
+
+  fetch(API + '/api/scene').then((r) => r.json()).then((info) => {
+    say('command server ready. try one of these, or type your own.', 'sim');
+    (info.examples || []).slice(0, 6).forEach((ex) => {
+      const b = document.createElement('button');
+      b.textContent = ex;
+      b.onclick = () => send(ex);
+      el('chips').appendChild(b);
+    });
+  }).catch(() => {
+    say('replaying the recorded verification trace. to fly new missions, run '
+      + 'python -m viz.server and open http://127.0.0.1:8765/flight_view.html', 'sim');
+  });
+
+  // voice, where the browser supports it
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    el('mic').disabled = true;
+    el('mic').title = 'this browser has no speech recognition';
+  } else {
+    const rec = new SR();
+    rec.lang = 'en-US';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    let listening = false;
+    rec.onresult = (e) => {
+      const heard = e.results[0][0].transcript;
+      el('cmd').value = heard;
+      send(heard);
+    };
+    rec.onerror = (e) => say('voice input failed: ' + e.error, 'err');
+    rec.onend = () => { listening = false; el('mic').className = ''; };
+    el('mic').onclick = () => {
+      if (listening) { rec.stop(); return; }
+      listening = true;
+      el('mic').className = 'live';
+      rec.start();
+    };
+  }
+
   let last = performance.now(), acc = 0;
-  const frameDt = frames.length > 1 ? frames[1].t - frames[0].t : lim.dt;
+  let frameDt = frames.length > 1 ? frames[1].t - frames[0].t : lim.dt;
   function loop(now) {
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;

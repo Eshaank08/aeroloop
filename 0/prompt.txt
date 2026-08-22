@@ -1,0 +1,1 @@
+how do we test all brnaches are merged and we cna have the backend the simultor and eveyrthing using th devin api?&#x20;

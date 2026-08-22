@@ -282,5 +282,6 @@ class AdaptiveRunner:
             collision=collision,
             planner=self.planner.__class__.__name__,
             threshold_version=getattr(self.oracle, "version", "synthetic-v1"),
+            threshold_values=(self.oracle.thresholds if self.oracle else {}),
             run_label=work_order,
         )

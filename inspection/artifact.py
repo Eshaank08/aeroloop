@@ -15,6 +15,7 @@ from inspection.schema import (
     DISPOSITION_PASS,
     InspectionArtifact,
 )
+from inspection.quality import DEFAULT_THRESHOLDS
 from sim.report import _controller_metadata
 
 
@@ -112,7 +113,7 @@ def build_artifact(
         limits=limits_dict,
         controller=controller_meta,
         threshold_version=result.threshold_version,
-        threshold_values={"max_speed_mps": 1.0, "max_view_angle_deg": 40.0, "min_dwell_s": 0.4, "max_wind_mps": 5.0, "min_clearance_m": 0.3},
+        threshold_values=result.threshold_values or dict(DEFAULT_THRESHOLDS),
         policy_version="allow-list-v1",
         initial_trace_digest=_trace_digest(initial_trace),
         followup_trace_digest=_trace_digest(followup),
@@ -170,13 +171,12 @@ def artifact_to_dict(artifact: InspectionArtifact) -> dict:
 def artifact_digest(artifact: dict) -> str:
     """Canonical digest of artifact content.
 
-    Wipes the mutable envelope fields and, when present, the approval block's own
-    digest so that approval does not refer to itself. This digest covers every
-    other field, including the approval block itself, so any post-approval mutation
-    is detectable.
+    The integrity_digest and the approval block's own digest are wiped so the
+    digest is not self-referential. Everything else, including generated_at_utc
+    and the full approval block, is covered, so any post-approval mutation is
+    detectable.
     """
     payload = dict(artifact)
-    payload["generated_at_utc"] = ""
     payload["integrity_digest"] = ""
     approval = payload.get("approval")
     if isinstance(approval, dict):

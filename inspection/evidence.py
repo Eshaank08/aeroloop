@@ -79,9 +79,9 @@ def _camera_boresight(
 def _view_angle(camera: tuple[float, float, float], inward_normal: tuple[float, float, float]) -> float:
     """Angle between the camera boresight and the inward surface normal, in degrees."""
     dot = max(-1.0, min(1.0, _dot(camera, inward_normal)))
-    # We want the acute angle between ``camera`` and the inward normal. A camera
-    # looking directly at the surface has dot = 1, so angle = 0.
-    return math.degrees(math.acos(abs(dot)))
+    # A camera looking directly at the surface has dot = 1, so angle = 0.
+    # A camera pointing directly away has dot = -1, so angle = 180.
+    return math.degrees(math.acos(dot))
 
 
 def _hash_capture(capture: Capture) -> str:
@@ -177,8 +177,25 @@ def derive_captures(
             nacelle.distance_to_surface(f["p"]) - nacelle.radius
             for f in inner_frames
         ]
-        first_frame = inner_frames[0]
-        capture_camera = camera_choices[0]
+
+        # A capture must be a continuous visit, not a sum of disconnected passes.
+        groups = [[0]]
+        for k in range(1, len(frame_indexes)):
+            if frame_indexes[k] == frame_indexes[k - 1] + 1:
+                groups[-1].append(k)
+            else:
+                groups.append([k])
+
+        def _window_score(group):
+            return (len(group), -min(view_angles[i] for i in group))
+
+        best_group = max(groups, key=_window_score)
+        best_inner = [inner_frames[i] for i in best_group]
+        best_indexes = [frame_indexes[i] for i in best_group]
+        first_frame = best_inner[0]
+        last_frame = best_inner[-1]
+        best_view_i = min(best_group, key=lambda i: view_angles[i])
+        capture_camera = camera_choices[best_view_i]
 
         capture = Capture(
             capture_id=f"{capture_id_prefix}-wp{index:03d}-{seed if seed is not None else 0}",
@@ -187,14 +204,14 @@ def derive_captures(
             waypoint_index=index,
             waypoint=waypoint,
             captured_at_s=first_frame["t"],
-            standoff_m=sum(standoffs) / len(standoffs),
-            view_angle_deg=min(view_angles),
-            dwell_s=len(inner_frames) * dt,
-            speed_mps=sum(speeds) / len(speeds),
-            wind_mps=sum(wind_mags) / len(wind_mags),
-            clearance_m=min(clearances),
+            standoff_m=sum(standoffs[i] for i in best_group) / len(best_group),
+            view_angle_deg=min(view_angles[i] for i in best_group),
+            dwell_s=(last_frame["t"] - first_frame["t"]) + dt,
+            speed_mps=sum(speeds[i] for i in best_group) / len(best_group),
+            wind_mps=max(wind_mags[i] for i in best_group),
+            clearance_m=min(clearances[i] for i in best_group),
             camera=capture_camera,
-            trace_frame_indexes=frame_indexes,
+            trace_frame_indexes=best_indexes,
             sha256="",
         )
         capture = Capture(**{**capture.__dict__, "sha256": _hash_capture(capture)})

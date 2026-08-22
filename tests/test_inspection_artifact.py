@@ -31,12 +31,22 @@ def test_artifact_has_synthetic_label():
         assert capture["synthetic"] is True
 
 
-def test_artifact_digest_excludes_timestamp_and_approval():
+def test_artifact_digest_includes_timestamp_and_approval():
     artifact = _artifact()
     digest1 = artifact_digest(artifact)
     artifact["generated_at_utc"] = "2099-01-01T00:00:00Z"
     digest2 = artifact_digest(artifact)
-    assert digest1 == digest2
+    assert digest1 != digest2
+
+
+def test_approval_covers_exact_timestamp():
+    artifact = _artifact()
+    artifact["final_disposition"] = "PASS"
+    artifact["integrity_digest"] = artifact_digest(artifact)
+    approve_artifact(artifact, approver="human-judge")
+    assert check_approval_integrity(artifact)
+    artifact["generated_at_utc"] = "2099-01-01T00:00:00Z"
+    assert not check_approval_integrity(artifact)
 
 
 def test_same_seed_same_preapproval_content():

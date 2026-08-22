@@ -149,3 +149,46 @@ def test_one_seeded_case_remains_insufficient():
     result = runner.run("full sweep", DEFAULT_NACELLE, DEFAULT_LIMITS, seed=606076, wind_scale=1.0)
     from inspection.schema import DISPOSITION_INSUFFICIENT
     assert result.final_disposition == DISPOSITION_INSUFFICIENT
+
+
+def _make_frame(t, p, v, clearance):
+    return {
+        "t": round(t, 3),
+        "p": list(p),
+        "v": list(v),
+        "wind": [0.0, 0.0, 0.0],
+        "clearance": clearance,
+        "visited": 1,
+    }
+
+
+def test_opposite_facing_camera_is_oblique():
+    """A camera pointing directly away from the surface must not score as 0 degrees."""
+    waypoint = (1.125, 3.0, 0.0)
+    outward = (0.0, 5.0, 0.0)
+    frames = [_make_frame(i * 0.1, waypoint, outward, 0.9) for i in range(10)]
+    trace = {"frames": frames, "waypoints": [waypoint]}
+    captures = derive_captures(trace, DEFAULT_NACELLE)
+    assert len(captures) == 1
+    cap = captures[0]
+    assert cap.view_angle_deg is not None
+    assert cap.view_angle_deg > 90
+    q = QualityOracle().assess(cap)
+    assert REASON_ANGLE in q.reasons
+
+
+def test_disconnected_visits_use_longest_continuous_window():
+    """Dwell and other metrics must come from a single continuous visit, not a sum."""
+    waypoint = (1.125, 3.0, 0.0)
+    frames = [_make_frame(i * 0.1, waypoint, (0.0, 0.0, 0.0), 0.9) for i in range(5)]
+    # add far frames so frame indexes are not consecutive
+    frames.extend([_make_frame(0.6 + i * 0.1, (10.0, 10.0, 10.0), (1.0, 0.0, 0.0), 8.0) for i in range(5)])
+    frames.extend([_make_frame(1.2 + i * 0.1, waypoint, (0.0, 0.0, 0.0), 0.9) for i in range(3)])
+    trace = {"frames": frames, "waypoints": [waypoint]}
+    captures = derive_captures(trace, DEFAULT_NACELLE)
+    assert len(captures) == 1
+    cap = captures[0]
+    # longest window is 5 frames at dt=0.1 -> 0.5 s dwell, not 8 frames total
+    assert abs(cap.dwell_s - 0.5) < 1e-6
+    assert cap.view_angle_deg is not None and cap.view_angle_deg < 10
+    assert cap.speed_mps == 0.0

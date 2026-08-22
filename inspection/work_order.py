@@ -53,19 +53,32 @@ def _parse_seed(text: str) -> int | None:
     return int(match.group(1)) if match else None
 
 
+_WIND_TERMS_RE = re.compile(
+    r"\b(?:calm|no\s+wind|light\s+wind|light|low|moderate\s+wind|moderate|medium\s+wind|medium|heavy\s+wind|heavy|strong\s+wind|strong|high\s+wind|high)\b",
+    re.IGNORECASE,
+)
+
+
 def _parse_wind(text: str) -> float:
     lower = text.lower()
-    if any(term in lower for term in ("calm", "light", "low")):
+    if re.search(r"\b(?:calm|no\s+wind)\b", lower):
         return 0.3
-    if any(term in lower for term in ("strong", "heavy", "high")):
+    if re.search(r"\b(?:light)\b", lower):
+        return 0.5
+    if re.search(r"\b(?:strong|heavy|high)\b", lower):
         return 2.0
-    if any(term in lower for term in ("moderate", "medium")):
+    if re.search(r"\b(?:moderate|medium)\b", lower):
         return 1.0
     return 1.0
 
 
+def _text_for_job(text: str) -> str:
+    """Strip wind modifiers so they cannot be mistaken for job keywords."""
+    return _WIND_TERMS_RE.sub(" ", text)
+
+
 def _parse_job(text: str) -> tuple[Nacelle, Limits]:
-    lower = text.lower()
+    lower = _text_for_job(text).lower()
     if "narrowbody" in lower or "a320" in lower or re.search(r"\b2\.7\s*m\b", lower):
         nacelle = Nacelle(
             axis_start=(0.0, 0.0, 0.0),
@@ -79,7 +92,7 @@ def _parse_job(text: str) -> tuple[Nacelle, Limits]:
         )
         limits = Limits(max_accel=6.0, max_speed=4.0, time_budget_s=90.0, dt=0.02)
         return nacelle, limits
-    if "dense" in lower or re.search(r"\b60\s*wp\b|\b60\b", lower) or "high" in lower:
+    if "dense" in lower or re.search(r"\b60\s*wp\b|\b60\b", lower):
         nacelle = Nacelle(
             axis_start=(0.0, 0.0, 0.0),
             axis_end=(4.5, 0.0, 0.0),
@@ -97,7 +110,7 @@ def _parse_job(text: str) -> tuple[Nacelle, Limits]:
 
 def parse_work_order(text: str) -> WorkOrder:
     """Convert free text into a deterministic WorkOrder."""
+    wind_scale = _parse_wind(text)
     nacelle, limits = _parse_job(text)
     seed = _parse_seed(text) or 606076
-    wind_scale = _parse_wind(text)
     return WorkOrder(label=text, nacelle=nacelle, limits=limits, seed=seed, wind_scale=wind_scale)

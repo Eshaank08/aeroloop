@@ -114,6 +114,7 @@ class AdaptiveResult:
     artifact_digest: str = ""
     generated_at_utc: str = ""
     run_label: str = ""
+    threshold_values: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

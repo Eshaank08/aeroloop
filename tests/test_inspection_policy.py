@@ -208,3 +208,27 @@ def test_rule_planner_requests_only_failed_waypoints():
     assert len(requests) == 1
     assert requests[0].waypoint_indexes == [5]
     assert requests[0].primitive == "capture_closeup"
+
+
+def test_return_home_flies_to_home_position():
+    validator = PolicyValidator(max_retry=1, home=(0.0, 0.0, 6.0))
+    request = RequestedCapture(
+        request_id="home",
+        waypoint_indexes=[],
+        primitive="return_home",
+    )
+    start = (1.5, 3.0, 3.0)
+    leg = validator.validate(
+        request,
+        DEFAULT_NACELLE,
+        DEFAULT_LIMITS,
+        start,
+        606076,
+        1.0,
+        60.0,
+    )
+    assert leg.mission.kind == "home"
+    assert leg.mission.start == start
+    assert leg.mission.waypoints == [(0.0, 0.0, 6.0)]
+    # return_home must not consume a waypoint retry slot.
+    assert validator.retries == {}

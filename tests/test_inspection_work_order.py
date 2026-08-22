@@ -24,3 +24,18 @@ def test_narrowbody_and_heavy_wind_independent():
     assert wo.nacelle.axis_end[0] == 3.0
     assert wo.wind_scale == 2.0
     assert wo.seed == 42
+
+
+def test_top_side_selects_top_waypoints():
+    wo = parse_work_order("inspect top side, light wind seed 100")
+    assert wo.sector == "Top side"
+    assert wo.selected_waypoints is not None
+    assert len(wo.selected_waypoints) == 9
+    assert all(wp[2] > 0 for wp in wo.selected_waypoints)
+
+
+def test_ring_selection_selects_ring_waypoints():
+    wo = parse_work_order("inspect ring 2, calm seed 200")
+    assert "Ring 2" in wo.sector
+    assert wo.selected_waypoints is not None
+    assert len(wo.selected_waypoints) == 8

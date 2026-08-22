@@ -18,18 +18,24 @@ class WorkOrder:
         limits=None,
         seed: int = 606076,
         wind_scale: float = 1.0,
+        selected_waypoints: list[tuple[float, float, float]] | None = None,
+        sector: str = "",
     ):
         self.label = label
         self.nacelle = nacelle or DEFAULT_NACELLE
         self.limits = limits or DEFAULT_LIMITS
         self.seed = seed
         self.wind_scale = wind_scale
+        self.selected_waypoints = selected_waypoints
+        self.sector = sector
 
     def to_dict(self) -> dict:
         return {
             "label": self.label,
             "seed": self.seed,
             "wind_scale": self.wind_scale,
+            "sector": self.sector,
+            "selected_waypoints": [list(wp) for wp in self.selected_waypoints] if self.selected_waypoints else [],
             "nacelle": {
                 "axis_start": list(self.nacelle.axis_start),
                 "axis_end": list(self.nacelle.axis_end),
@@ -77,6 +83,58 @@ def _text_for_job(text: str) -> str:
     return _WIND_TERMS_RE.sub(" ", text)
 
 
+def _without_seed(text: str) -> str:
+    """Strip seed clauses so numbers like 'seed 200' are not parsed as ring/side."""
+    text = re.sub(r"\bwith\s+seed\s+\d+", " ", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bseed\s+\d+", " ", text, flags=re.IGNORECASE)
+    return text
+
+
+def _parse_selection(text: str, nacelle: Nacelle):
+    """Return (selected waypoints, sector label) if text targets a side or ring, else (None, '')."""
+    cleansed = _without_seed(_text_for_job(text))
+    lowered = cleansed.lower()
+    waypoints = nacelle.waypoints()
+
+    ring_match = re.search(r"\brings?\b(.*)$", cleansed, re.IGNORECASE)
+    if ring_match:
+        ring_numbers = [int(value) for value in re.findall(r"\b\d+\b", ring_match.group(1))]
+        if ring_numbers:
+            invalid = [value for value in ring_numbers if not 1 <= value <= nacelle.rings]
+            if invalid:
+                return None, ""
+            selected = []
+            per_ring = nacelle.per_ring
+            for ring in ring_numbers:
+                begin = (ring - 1) * per_ring
+                selected.extend(waypoints[begin : begin + per_ring])
+            label = "Ring " + ", ".join(str(value) for value in ring_numbers)
+            return selected, label
+
+    side_match = re.search(r"\b(top|bottom|left|right|front|aft)(?:\s+side)?\b", lowered)
+    if side_match and re.search(r"\binspect\b", lowered):
+        side = side_match.group(1)
+        axis_z = (nacelle.axis_start[2] + nacelle.axis_end[2]) / 2.0
+        axis_x = (nacelle.axis_start[0] + nacelle.axis_end[0]) / 2.0
+        epsilon = 1e-9
+        if side == "top":
+            selected = [wp for wp in waypoints if wp[2] > axis_z + epsilon]
+        elif side == "bottom":
+            selected = [wp for wp in waypoints if wp[2] < axis_z - epsilon]
+        elif side == "left":
+            selected = [wp for wp in waypoints if wp[1] > epsilon]
+        elif side == "right":
+            selected = [wp for wp in waypoints if wp[1] < -epsilon]
+        elif side == "front":
+            selected = [wp for wp in waypoints if wp[0] < axis_x - epsilon]
+        else:
+            selected = [wp for wp in waypoints if wp[0] > axis_x + epsilon]
+        if selected:
+            return selected, side.title() + " side"
+
+    return None, ""
+
+
 def _parse_job(text: str) -> tuple[Nacelle, Limits]:
     lower = _text_for_job(text).lower()
     if "narrowbody" in lower or "a320" in lower or re.search(r"\b2\.7\s*m\b", lower):
@@ -113,4 +171,13 @@ def parse_work_order(text: str) -> WorkOrder:
     wind_scale = _parse_wind(text)
     nacelle, limits = _parse_job(text)
     seed = _parse_seed(text) or 606076
-    return WorkOrder(label=text, nacelle=nacelle, limits=limits, seed=seed, wind_scale=wind_scale)
+    selected, sector = _parse_selection(text, nacelle)
+    return WorkOrder(
+        label=text,
+        nacelle=nacelle,
+        limits=limits,
+        seed=seed,
+        wind_scale=wind_scale,
+        selected_waypoints=selected,
+        sector=sector,
+    )

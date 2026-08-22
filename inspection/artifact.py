@@ -186,30 +186,6 @@ def artifact_digest(artifact: dict) -> str:
     return hashlib.sha256(_to_canonical(payload).encode("utf-8")).hexdigest()
 
 
-def approve_artifact(artifact: dict, approver: str | None = None) -> dict:
-    """Add a human approval block to a passing artifact."""
-    if artifact.get("final_disposition") != DISPOSITION_PASS:
-        raise ValueError("Only a PASS artifact can be approved")
-    if artifact.get("approval") is not None:
-        raise ValueError("Artifact is already approved")
-
-    if approver is None:
-        approver = os.environ.get("APPROVER") or getpass.getuser()
-
-    artifact["final_disposition"] = DISPOSITION_APPROVED
-    artifact["approval"] = {
-        "approved": True,
-        "approver": approver,
-        "approved_at_utc": _utc_now(),
-    }
-    # The digest is computed after the approval block is present, but with the
-    # approval's own digest wiped so it is not self-referential.
-    artifact["approval"]["artifact_digest"] = artifact_digest(artifact)
-    # integrity_digest covers the same content and is updated after approval.
-    artifact["integrity_digest"] = artifact_digest(artifact)
-    return artifact
-
-
 def check_artifact_integrity(artifact: dict) -> bool:
     """Return True if the artifact has not been mutated since its digest was minted."""
     expected = artifact.get("integrity_digest")
@@ -227,3 +203,29 @@ def check_approval_integrity(artifact: dict) -> bool:
         return False
     expected = approval.get("artifact_digest")
     return isinstance(expected, str) and expected == artifact_digest(artifact)
+
+
+def approve_artifact(artifact: dict, approver: str | None = None) -> dict:
+    """Add a human approval block to a passing artifact."""
+    if artifact.get("final_disposition") != DISPOSITION_PASS:
+        raise ValueError("Only a PASS artifact can be approved")
+    if artifact.get("approval") is not None:
+        raise ValueError("Artifact is already approved")
+    if not check_artifact_integrity(artifact):
+        raise ValueError("Artifact integrity digest mismatch; the artifact has been tampered with")
+
+    if approver is None:
+        approver = os.environ.get("APPROVER") or getpass.getuser()
+
+    artifact["final_disposition"] = DISPOSITION_APPROVED
+    artifact["approval"] = {
+        "approved": True,
+        "approver": approver,
+        "approved_at_utc": _utc_now(),
+    }
+    # The digest is computed after the approval block is present, but with the
+    # approval's own digest wiped so it is not self-referential.
+    artifact["approval"]["artifact_digest"] = artifact_digest(artifact)
+    # integrity_digest covers the same content and is updated after approval.
+    artifact["integrity_digest"] = artifact_digest(artifact)
+    return artifact

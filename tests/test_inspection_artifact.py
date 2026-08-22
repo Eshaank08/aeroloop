@@ -93,3 +93,13 @@ def test_approval_sets_disposition_approved():
     artifact["integrity_digest"] = artifact_digest(artifact)
     approve_artifact(artifact, approver="human-judge")
     assert artifact["final_disposition"] == DISPOSITION_APPROVED
+
+
+def test_tampered_preapproval_rejected():
+    artifact = _artifact()
+    artifact["final_disposition"] = "PASS"
+    # integrity_digest still matches the original artifact
+    artifact["captures"][0]["speed_mps"] = 999.9
+    # the artifact has been tampered with but the digest was not recomputed
+    with pytest.raises(ValueError, match="tampered"):
+        approve_artifact(artifact, approver="human-judge")

@@ -122,6 +122,7 @@ class CommandHandler(SimpleHTTPRequestHandler):
                 work_order.limits,
                 seed=work_order.seed,
                 wind_scale=work_order.wind_scale,
+                selected_waypoints=work_order.selected_waypoints,
             )
             artifact = build_artifact(result, nacelle=work_order.nacelle, limits=work_order.limits)
             trace = self._combine_for_display(result)
@@ -143,7 +144,8 @@ class CommandHandler(SimpleHTTPRequestHandler):
                     "mission": {
                         "kind": "sweep",
                         "label": work_order.label,
-                        "waypoints": list(work_order.nacelle.waypoints()),
+                        "sector": work_order.sector,
+                        "waypoints": list(work_order.selected_waypoints or work_order.nacelle.waypoints()),
                         "start": (0.0, 0.0, 6.0),
                         "wind_seed": work_order.seed,
                         "wind_scale": work_order.wind_scale,

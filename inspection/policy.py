@@ -10,6 +10,7 @@ from inspection.schema import MissionLeg, PolicyViolation, RequestedCapture
 
 MAX_RETRY = 1
 MAX_DWELL = 10.0
+HOME_POSITION = (0.0, 0.0, 6.0)
 
 ALLOWED_PRIMITIVES = frozenset(("capture_closeup", "capture_orbit", "quiet_hover", "return_home"))
 
@@ -20,9 +21,10 @@ class PolicyValidator:
     The validator tracks retries and rejects anything outside the allow-list.
     """
 
-    def __init__(self, max_retry: int = MAX_RETRY):
+    def __init__(self, max_retry: int = MAX_RETRY, home: tuple[float, float, float] = HOME_POSITION):
         self.retries: dict[int, int] = {}
         self.max_retry = max_retry
+        self.home = home
 
     def _waypoints_for_orbit(self, request: RequestedCapture, nacelle):
         indexes = request.waypoint_indexes
@@ -66,7 +68,7 @@ class PolicyValidator:
         if primitive not in ALLOWED_PRIMITIVES:
             raise PolicyViolation(f"unknown primitive {primitive!r}")
 
-        if not request.waypoint_indexes:
+        if primitive != "return_home" and not request.waypoint_indexes:
             raise PolicyViolation("request must include at least one waypoint index")
 
         total = len(nacelle.waypoints())
@@ -75,9 +77,11 @@ class PolicyValidator:
                 raise PolicyViolation(f"waypoint index {idx} is outside [0, {total})")
 
         # Retry budget: one follow-up attempt per waypoint in this milestone.
-        for idx in request.waypoint_indexes:
-            if self.retries.get(idx, 0) >= self.max_retry:
-                raise PolicyViolation(f"retry limit exceeded for waypoint {idx}")
+        # return_home does not consume a waypoint retry.
+        if primitive != "return_home":
+            for idx in request.waypoint_indexes:
+                if self.retries.get(idx, 0) >= self.max_retry:
+                    raise PolicyViolation(f"retry limit exceeded for waypoint {idx}")
 
         constraints = request.constraints or {}
         constraint_speed = constraints.get("max_speed_mps")
@@ -123,10 +127,10 @@ class PolicyValidator:
                 hold_duration=hold_dur,
             )
         elif primitive == "return_home":
-            hold_dur = hover_duration(start_position, minimum_dwell)
+            hold_dur = hover_duration(self.home, minimum_dwell)
             mission = Mission(
-                kind="hover",
-                waypoints=[start_position],
+                kind="home",
+                waypoints=[self.home],
                 start=start_position,
                 wind_seed=wind_seed,
                 wind_scale=wind_scale,
@@ -137,8 +141,9 @@ class PolicyValidator:
         else:
             raise PolicyViolation(f"unimplemented primitive {primitive!r}")
 
-        for idx in request.waypoint_indexes:
-            self.retries[idx] = self.retries.get(idx, 0) + 1
+        if primitive != "return_home":
+            for idx in request.waypoint_indexes:
+                self.retries[idx] = self.retries.get(idx, 0) + 1
 
         return MissionLeg(
             mission=mission,

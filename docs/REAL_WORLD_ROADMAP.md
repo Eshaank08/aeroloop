@@ -236,6 +236,30 @@ latency and inspector disagreement.
 
 ## Implementation backlog
 
+### Immediate build — adaptive evidence vertical slice
+
+The next implementation milestone is the software-only closed loop that judges can see
+and verify tonight. Its complete contracts, acceptance tests, file-level integration
+map and resources are in
+[Adaptive evidence loop: implementation brief](ADAPTIVE_EVIDENCE_BUILD.md).
+
+Build this before adding real OCR, thermal sensors, acoustic models, work-management
+connectors or hardware:
+
+- [ ] Derive explicitly synthetic evidence records from the existing physics trace.
+- [ ] Score capture quality deterministically from speed, view angle, dwell, wind and
+      clearance.
+- [ ] Convert evidence gaps into allow-listed re-capture requests.
+- [ ] Re-fly only failed locations and show before/after quality in the flight view.
+- [ ] Record both traces, decisions, hashes and disposition in one inspection artifact.
+- [ ] Require explicit human approval for a passing artifact.
+- [ ] Keep Devin behind the same planner interface as a deterministic rule baseline;
+      validate every Devin request before execution.
+
+Success for this milestone is not “the drone visited every waypoint.” Success is “the
+system independently proved that every required capture was usable, or safely stopped
+with `INSUFFICIENT_EVIDENCE`.”
+
 ### Phase 0 — product and safety definition
 
 - [ ] Choose one first asset and procedure, such as an off-wing engine exterior visual
@@ -387,4 +411,3 @@ code.
 These links are starting points, not legal opinions or proof of approval. Before a real
 pilot, the MRO/operator's quality, safety, legal and information-security owners should
 approve the concept of operations and compliance plan.
-

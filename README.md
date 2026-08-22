@@ -36,6 +36,8 @@ fallback for each step when the network is dead, is in [docs/DEMO.md](docs/DEMO.
 For the implementation path beyond simulation, including multimodal perception,
 real-drone integration, safety boundaries, regulatory implications and the complete
 engineering backlog, see [Real-world multimodal inspection roadmap](docs/REAL_WORLD_ROADMAP.md).
+The immediate judge-facing build is specified in
+[Adaptive evidence loop](docs/ADAPTIVE_EVIDENCE_BUILD.md).
 
 ---
 

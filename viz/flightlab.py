@@ -10,7 +10,7 @@ from sim.run_verifier import COVERAGE_THRESHOLD
 from sim.scenarios import WindScenario, make_scenario
 
 
-def fly(mission, nacelle=DEFAULT_NACELLE, limits=DEFAULT_LIMITS, stride=2) -> dict:
+def fly(mission, nacelle=DEFAULT_NACELLE, limits=DEFAULT_LIMITS, stride=2, start_time=0.0) -> dict:
     waypoints = list(mission.waypoints)
     controller = Controller(waypoints, nacelle, limits)
     base_scenario = make_scenario(mission.wind_seed)
@@ -26,16 +26,18 @@ def fly(mission, nacelle=DEFAULT_NACELLE, limits=DEFAULT_LIMITS, stride=2) -> di
     visited = [False] * len(waypoints)
     frames = []
     collision_at = None
-    t = 0.0
+    t = float(start_time)
+    frame_t = 0.0
     hold_ticks = max(1, math.ceil(mission.hold_duration / limits.dt))
 
     for tick in range(limits.max_ticks):
         accel = controller.step(t, drone.position, drone.velocity)
         drone.step(accel, scenario.at(t))
         t += limits.dt
+        frame_t += limits.dt
 
         if nacelle.is_collision(drone.position):
-            collision_at = t
+            collision_at = round(frame_t, 3)
 
         for i, waypoint in enumerate(waypoints):
             if not visited[i] and math.dist(drone.position, waypoint) <= nacelle.waypoint_tolerance:
@@ -47,7 +49,7 @@ def fly(mission, nacelle=DEFAULT_NACELLE, limits=DEFAULT_LIMITS, stride=2) -> di
             wind = scenario.at(t)
             frames.append(
                 {
-                    "t": round(t, 3),
+                    "t": round(frame_t, 3),
                     "p": [round(value, 4) for value in drone.position],
                     "v": [round(value, 4) for value in drone.velocity],
                     "wind": [round(value, 4) for value in wind],
@@ -66,12 +68,13 @@ def fly(mission, nacelle=DEFAULT_NACELLE, limits=DEFAULT_LIMITS, stride=2) -> di
     coverage = sum(visited) / len(waypoints) if waypoints else 1.0
     result = {
         "seed": scenario.seed,
+        "start_time": round(start_time, 3),
         "coverage": coverage,
         "collisions": 1 if collision_at is not None else 0,
-        "elapsed_s": round(t, 3),
+        "elapsed_s": round(frame_t, 3),
         "passed": coverage >= COVERAGE_THRESHOLD
         and collision_at is None
-        and t <= limits.time_budget_s,
+        and frame_t <= limits.time_budget_s,
         "collision_at": collision_at,
         "gust": {
             "start_s": round(scenario.gust_start_s, 3),

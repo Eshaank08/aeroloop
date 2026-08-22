@@ -4,6 +4,7 @@ import pytest
 
 from sim.report import (
     ApprovalRefused,
+    ReportLoadError,
     approve_report,
     build_report,
     check_integrity,
@@ -104,4 +105,37 @@ def test_tampering_breaks_signed_digest(tmp_path):
     assert check_integrity(report)
 
     report["run"]["pass_rate"] = 0.5
+    assert not check_integrity(report)
+
+
+def test_load_report_rejects_unusable_artifacts(tmp_path):
+    missing = tmp_path / "missing.json"
+    directory = tmp_path / "directory.json"
+    directory.mkdir()
+    malformed = tmp_path / "malformed.json"
+    malformed.write_text("{", encoding="utf-8")
+    empty = tmp_path / "empty.json"
+    empty.write_text("", encoding="utf-8")
+    missing_result = tmp_path / "missing_result.json"
+    missing_result.write_text(
+        json.dumps({key: value for key, value in _report(tmp_path).items() if key != "result"}),
+        encoding="utf-8",
+    )
+    wrong_result_type = tmp_path / "wrong_result_type.json"
+    wrong_result_type.write_text(
+        json.dumps(dict(_report(tmp_path), result=1)),
+        encoding="utf-8",
+    )
+
+    for path in (missing, directory, malformed, empty, missing_result, wrong_result_type):
+        with pytest.raises(ReportLoadError):
+            load_report(path)
+
+
+def test_integrity_rejects_approved_non_pass_artifact(tmp_path):
+    report = _report(tmp_path)
+    approve_report(report)
+    report["result"] = "FAIL"
+    report["approval"]["report_sha256"] = report_digest(report)
+
     assert not check_integrity(report)

@@ -19,6 +19,8 @@ from pathlib import Path
 
 API_BASE = "https://api.devin.ai/v3"
 REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_SCENARIOS = 30
+DEFAULT_BASE_SEED = 1000
 
 
 def _request(method, url, key, payload=None):
@@ -30,7 +32,11 @@ def _request(method, url, key, payload=None):
         return json.loads(resp.read().decode())
 
 
-def build_prompt(repo_url: str) -> str:
+def build_prompt(
+    repo_url: str,
+    scenarios: int = DEFAULT_SCENARIOS,
+    seed: int = DEFAULT_BASE_SEED,
+) -> str:
     brief = (REPO_ROOT / "README.md").read_text()
     return (
         f"Work in the repository {repo_url}.\n\n"
@@ -38,6 +44,14 @@ def build_prompt(repo_url: str) -> str:
         "nothing else. Run `pytest -q` to check your work, read the failure report, fix "
         "the controller, and rerun until the verification passes. Do not modify anything "
         "under sim/ or tests/. Open a pull request when pytest passes.\n\n"
+        f"For this run, verify exactly {scenarios} scenarios using base seed {seed}. "
+        f"Set AEROLOOP_SCENARIOS={scenarios} and "
+        f"AEROLOOP_BASE_SEED={seed} when running pytest:\n"
+        f"AEROLOOP_SCENARIOS={scenarios} AEROLOOP_BASE_SEED={seed} "
+        "python -m pytest -q\n"
+        "The equivalent direct verifier command is:\n"
+        f"python -m sim.run_verifier --scenarios {scenarios} --seed {seed} "
+        "--verbose\n\n"
         "----- README.md -----\n"
         f"{brief}"
     )
@@ -48,6 +62,8 @@ def main():
     ap.add_argument("--repo", required=True, help="git URL Devin should work in")
     ap.add_argument("--title", default="AeroLoop: write the inspection flight controller")
     ap.add_argument("--poll", type=int, default=30, help="seconds between status checks")
+    ap.add_argument("--seed", type=int, default=DEFAULT_BASE_SEED)
+    ap.add_argument("--scenarios", type=int, default=DEFAULT_SCENARIOS)
     ap.add_argument("--no-wait", action="store_true")
     args = ap.parse_args()
 
@@ -58,11 +74,16 @@ def main():
 
     url = f"{API_BASE}/organizations/{org}/sessions"
     session = _request("POST", url, key, {
-        "prompt": build_prompt(args.repo),
+        "prompt": build_prompt(
+            args.repo,
+            scenarios=args.scenarios,
+            seed=args.seed,
+        ),
         "title": args.title,
     })
     sid = session.get("session_id") or session.get("id")
     print(f"session created: {sid}")
+    print(f"judge seed: {args.seed} (scenarios: {args.scenarios})")
     print(f"url: {session.get('url', '(check the Devin dashboard)')}")
 
     if args.no_wait:

@@ -67,6 +67,9 @@ def record(scenario, nacelle=DEFAULT_NACELLE, params=DEFAULT_QUAD, stride=2):
     controller = Controller(waypoints, nacelle, params)
     drone = QuadDrone(params=params)
     visited = [False] * len(waypoints)
+    # Keep gate-credit times at simulator tick resolution, even when frames
+    # are sampled at a larger output stride.
+    inspection_times = [None] * len(waypoints)
     frames = []
     failure_reason = None
     failure_at = None
@@ -97,6 +100,7 @@ def record(scenario, nacelle=DEFAULT_NACELLE, params=DEFAULT_QUAD, stride=2):
             for index, waypoint in enumerate(waypoints):
                 if not visited[index] and camera_gate(waypoint, state, nacelle).inspected:
                     visited[index] = True
+                    inspection_times[index] = round(t, 3)
 
         wind = scenario.at(t)
         if (
@@ -134,6 +138,7 @@ def record(scenario, nacelle=DEFAULT_NACELLE, params=DEFAULT_QUAD, stride=2):
             "peak": round(scenario.gust_peak, 3),
         },
         "base_wind": _round_vector(scenario.base),
+        "inspection_times": inspection_times,
         "frames": frames,
     }
 
@@ -196,7 +201,11 @@ def main():
         result = record(scenario, stride=args.stride)
         if scenario.seed == trace_seed:
             trace = result
-        runs.append({key: value for key, value in result.items() if key != "frames"})
+        runs.append({
+            key: value
+            for key, value in result.items()
+            if key not in {"frames", "inspection_times"}
+        })
 
     if trace is None:
         trace = record(make_scenarios(1, trace_seed)[0], stride=args.stride)

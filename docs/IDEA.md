@@ -114,6 +114,29 @@ Track this honestly as it happens. Current record:
     over 2000 random cases, and lifted the mission loop from 27/30 to 29/30. No human
     edited the controller. That was the moment the project stopped being "an agent wrote
     some code we tested" and became a loop that finds its own defects.
+11. Fixed a float accumulation defect in the v2 verifier's elapsed time bookkeeping. The
+   scenario loop summed `t += params.dt` at 50 Hz, so a run that used the whole budget of
+   7500 ticks reported `elapsed_s = 150.00000000000293` instead of 150.0. Since
+   `ScenarioResult.passed` requires `elapsed_s <= budget_s`, seed 1027 was marked FAIL by
+   2.9e-12 seconds of arithmetic drift despite flying exactly 7500 ticks of 0.02s.
+   The fix derives the graded elapsed time from the tick count, `round((tick + 1) * dt, 9)`,
+   the same trick `mission/episode.py` already uses so an action cannot accumulate its way
+   past the budget. This was a bookkeeping correction, not a change to the bar and not a
+   change to the physics:
+     - No threshold moved. `COVERAGE_THRESHOLD` stays 0.95, `SCENARIO_PASS_RATE` stays 0.90,
+   `time_budget_s` stays 150.0, and `sim2/params.py` was not touched.
+     - No tolerance or epsilon was added to the comparison. The comparison is still
+   `elapsed_s <= budget_s`; only the left hand side became exact.
+     - The clock handed to the controller and to `scenario.at(t)` was left exactly as it was,
+   so the wind is sampled at the same instants and no trajectory shifted. All 30 scenarios
+   report identical coverage, identical inspected counts, identical failure reasons and
+   identical elapsed values to 1e-9 before and after.
+     - Measured result improved from 29/30 to 30/30. Seed 1027 still only inspects 23 of 24
+   waypoints, 95.8 percent coverage, which is above the unchanged 95 percent threshold, and
+   it now reports elapsed exactly 150.0s. Nothing else changed row for row.
+   A regression test in `tests/test_sim2_verifier.py` pins the invariant: a run that consumes
+   the full tick budget reports elapsed exactly equal to the budget and is not failed for
+   exceeding it.
 
 What we would say to a judge about the shape of that change: the first version put an
 agent inside a build loop, which is a thing Devin already does well. The version we

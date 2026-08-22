@@ -99,6 +99,19 @@ def test_rejects_too_many_targets_in_one_action(setup):
         )
 
 
+def test_rejects_duplicate_waypoint_indexes_in_one_action(setup):
+    """A repeated index must not be able to burn its attempt budget in one shot:
+    parse_action does not dedupe, and attempts are only committed after validation,
+    so each repetition would otherwise be checked against the same pre-mutation
+    count and then increment the counter once per repetition."""
+    episode, observation, envelope = setup
+    with pytest.raises(MissionPolicyViolation, match="duplicates"):
+        envelope.validate(
+            _action(waypoint_indexes=[1, 1, 1]), observation, episode.time_remaining_s
+        )
+    assert envelope.attempts.get(1, 0) == 0
+
+
 def test_enforces_the_per_waypoint_attempt_limit(setup):
     episode, observation, envelope = setup
     for attempt in range(MAX_ATTEMPTS_PER_WAYPOINT):

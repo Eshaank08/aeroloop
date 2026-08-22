@@ -112,6 +112,12 @@ class MissionSafetyEnvelope:
                 raise MissionPolicyViolation(
                     f"{action.primitive} needs at least one waypoint index"
                 )
+            if len(set(action.waypoint_indexes)) != len(action.waypoint_indexes):
+                raise MissionPolicyViolation(
+                    "waypoint_indexes must not contain duplicates: a repeated index "
+                    "would consume its attempt budget once per repetition instead of "
+                    "once per action"
+                )
             if len(action.waypoint_indexes) > self.max_targets_per_action:
                 raise MissionPolicyViolation(
                     f"{len(action.waypoint_indexes)} targets exceeds the "

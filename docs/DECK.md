@@ -95,7 +95,7 @@ rule with a camera gate. A waypoint counts only when all three hold on the same 
 | Camera aimed at the nacelle surface | within 60 degrees of boresight |
 | Shot steady | body rate at most 1.5 rad/s and speed at most 2.5 m/s |
 
-Devin wrote `controller2.py` for that vehicle. Result: **29/30 PASS, mean coverage 99.9%,
+Devin wrote `controller2.py` for that vehicle. Result: **30/30 PASS, mean coverage 99.9%,
 719 of 720 waypoints inspected.**
 
 > This is the first half of the "how did your approach change" answer. We made the task
@@ -260,7 +260,7 @@ by the safety envelope.**
 | Configuration | Result | Coverage | Notes |
 | --- | --- | --- | --- |
 | Sim v1 + `controller.py` | 30/30 PASS | 100.0% mean | 0 collisions |
-| Sim v2 + `controller2.py` | 29/30 PASS | 99.9% mean | 719/720 waypoints inspected |
+| Sim v2 + `controller2.py` | 30/30 PASS | 99.9% mean | 719/720 waypoints inspected |
 | Autonomous loop, baseline agent, seeds 1000-1029 | 29/30 PASS | 98.6% mean | labelled comparison baseline |
 | Live Devin mission, v3 API, seed 1000 | PASS | 100.0% | 24/24 waypoints, 82.3 s, 6 accepted, 1 rejected |
 

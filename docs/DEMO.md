@@ -13,7 +13,7 @@ Do all of this before you walk up. None of it counts against your time.
 ```bash
 cd aeroloop
 python -m pip install -r requirements.txt
-python -m pytest -q                      # must print: 101 passed, about 20 s
+python -m pytest -q                      # must print: 105 passed, about 30 s
 echo -n "$DEVIN_API_KEY" | wc -c         # non zero, never print the key itself
 echo -n "$DEVIN_ORG_ID"  | wc -c
 ```

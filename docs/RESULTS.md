@@ -15,7 +15,7 @@ Scope, stated once so nothing here is over read:
 
 | Metric | Result |
 | ------ | ------ |
-| Tests | 101 passed |
+| Tests | 105 passed |
 
 ```bash
 python -m pytest -q
@@ -44,19 +44,23 @@ human edited it.
 
 | Metric | Result |
 | ------ | ------ |
-| Scenarios passed | 29/30 |
+| Scenarios passed | 30/30 |
 | Mean coverage | 99.9% |
 | Waypoints inspected | 719/720 |
-| Failing seed | 1027 only |
+| Tightest seed | 1027, the full 150.0 s budget at 95.8% coverage |
 
 ```bash
 python -m sim2.run_verifier --scenarios 30 --seed 1000
 ```
 
-Seed 1027 fails on the 150 s time budget. It does not collide and it does not fly
-outside its envelope, it simply does not finish the sweep in time under that wind
-draw. The batch still reports PASS overall because the threshold is a 90% scenario
-pass rate, but the single failing seed is the honest number to quote.
+Seed 1027 is the tightest seed. It does not collide and it does not fly outside its
+envelope, it just does not finish the whole sweep under that wind draw: it inspects 23 of
+24 waypoints, 95.8% coverage, which clears the unchanged 95% coverage threshold, and it
+uses the full 150.0 s budget. It used to be recorded as the one failing seed, because the
+verifier summed `t += dt` at 50 Hz and reported 150.00000000000293 s for a run of exactly
+7500 ticks of 0.02 s, so it failed the `elapsed <= budget` check by 2.9e-12 s of
+arithmetic. The elapsed time is now derived from the tick count. No threshold moved and no
+physics changed, see "How the approach changed while building" in `docs/IDEA.md`.
 
 v1 and v2 numbers are not comparable. v2 grades a quadrotor with attitude dynamics and
 only counts a waypoint when the camera is aimed and the shot is steady, so its

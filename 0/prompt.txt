@@ -1,0 +1,1 @@
+Run git status and git log --oneline -1 in the folder you are serving: if the log is not 0d9d289 or git status shows viz/flight_view.html modified, you have local edits shadowing the merged version. Easiest reset: clone fresh into a new folder, python -m viz.server there, and open http://127.0.0.1:8765/flight_view.html. open this for me

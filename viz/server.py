@@ -6,7 +6,7 @@ import json
 import os
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 from inspection.adaptive import AdaptiveRunner
 from inspection.artifact import build_artifact
@@ -27,6 +27,19 @@ REPO_ROOT = VIZ_DIR.parent
 # Served from the repository root rather than viz/, so the mission view can use the
 # real turbofan and quadcopter models and read written mission artifacts.
 ROOT_PREFIXES = ("/engine-reference/", "/artifacts/")
+# Containment must be checked against these directories, not the repository root.
+# Checking the root only would let "/artifacts/../.env" resolve inside the repo and
+# be served, which hands out .env and .git to anything that can reach the port.
+ALLOWED_ROOTS = tuple(
+    (REPO_ROOT / prefix.strip("/")).resolve() for prefix in ROOT_PREFIXES
+)
+# Any path that matched a prefix but escaped its directory is mapped here so the
+# request 404s instead of falling through to another root.
+FORBIDDEN_PATH = str(REPO_ROOT / "artifacts" / ".aeroloop-forbidden")
+
+# The command endpoints run real work and can spend Devin credits, so a POST is
+# only honoured when it did not come from another website.
+LOCAL_ORIGINS = ("http://127.0.0.1", "http://localhost", "http://[::1]")
 
 
 def _inspection_planner(request: dict):
@@ -78,12 +91,24 @@ class CommandHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def translate_path(self, path):
-        clean = urlsplit(path).path
+        clean = unquote(urlsplit(path).path)
         if clean.startswith(ROOT_PREFIXES):
             candidate = (REPO_ROOT / clean.lstrip("/")).resolve()
-            if candidate.is_relative_to(REPO_ROOT):
+            # resolve() has already followed any symlink, so a link that points
+            # out of the served directory fails this check too.
+            if any(
+                candidate == root or candidate.is_relative_to(root)
+                for root in ALLOWED_ROOTS
+            ):
                 return str(candidate)
+            return FORBIDDEN_PATH
         return super().translate_path(path)
+
+    def _origin_is_local(self) -> bool:
+        origin = self.headers.get("Origin")
+        if origin is None:
+            return True
+        return origin.startswith(LOCAL_ORIGINS)
 
     def do_GET(self):
         path = urlsplit(self.path).path
@@ -285,6 +310,12 @@ class CommandHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         path = urlsplit(self.path).path
+        if not self._origin_is_local():
+            self._send_json(403, {
+                "ok": False,
+                "reply": "Cross-site requests are not accepted by the flight view.",
+            })
+            return
         if path == "/api/fly":
             self._fly()
         elif path == "/api/inspect":

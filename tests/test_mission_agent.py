@@ -202,6 +202,69 @@ def test_agent_claiming_complete_cannot_override_the_verifier():
     assert run.disposition == DISPOSITION_INSUFFICIENT
 
 
+class IdleThenAnswer:
+    """A session that goes idle holding stale output before answering.
+
+    This is what the real API does between turns of a resumable session:
+    `waiting_for_user` means "your turn", and `structured_output` can still hold
+    the previous turn's answer for a poll or two. Reading either as failure aborts
+    a healthy mission, which is exactly what happened on the first live run.
+    """
+
+    def __init__(self):
+        self.polls = 0
+        self.messages = []
+
+    def __call__(self, method, url, key, payload, timeout_s):
+        if method == "POST" and url.endswith("/sessions"):
+            return {"session_id": "session-idle", "url": "u", "status": "running"}
+        if method == "POST" and url.endswith("/messages"):
+            self.messages.append(payload["message"])
+            return {"ok": True}
+        self.polls += 1
+        if self.polls <= 3:
+            return {
+                "status": "running",
+                "status_detail": "waiting_for_user",
+                "structured_output": _answer(0, "stale"),
+            }
+        return {
+            "status": "running",
+            "status_detail": "waiting_for_user",
+            "structured_output": _answer(
+                1, "a1", primitive="complete", waypoint_indexes=[], claim="complete",
+                reason="done",
+            ),
+        }
+
+
+def test_idle_session_is_nudged_not_abandoned():
+    transport = IdleThenAnswer()
+    run = run_mission(_planner(transport), seed=1000, authorised_indexes=SECTOR)
+
+    assert run.planner_failed is False
+    assert run.agent_claim == "complete"
+    # It nudged rather than declaring the agent dead, and never executed the stale action.
+    assert any("Structured output only" in message for message in transport.messages)
+    assert all(
+        step.get("action", {}).get("action_id") != "stale" for step in run.steps
+    )
+
+
+def test_observation_publishes_the_limits_the_agent_must_respect():
+    transport = FakeDevin([
+        _answer(1, "a1", primitive="complete", waypoint_indexes=[], claim="complete",
+                reason="done"),
+    ])
+    run = run_mission(_planner(transport), seed=1000, authorised_indexes=SECTOR)
+
+    limits = run.steps[0]["observation"]["limits"]
+    assert limits["max_action_duration_s"] > 0
+    assert limits["max_targets_per_action"] > 0
+    assert limits["max_attempts_per_waypoint"] > 0
+    assert limits["max_speed_mps"] > 0
+
+
 def test_scripted_baseline_completes_the_full_nacelle():
     run = run_mission(ScriptedPilot(), seed=1000)
 

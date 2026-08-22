@@ -101,6 +101,7 @@ class Observation:
     actions_used: int = 0
     actions_remaining: int = 0
     last_outcome: dict | None = None
+    limits: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -170,6 +171,7 @@ def observation_to_dict(observation: Observation) -> dict:
             "actions_used": observation.actions_used,
             "actions_remaining": observation.actions_remaining,
         },
+        "limits": dict(observation.limits),
         "last_outcome": observation.last_outcome,
     }
 

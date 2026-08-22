@@ -53,6 +53,8 @@ a new observation reporting what evidence was gained and what is still missing.
 
 Rules:
 - Answer with structured output only, matching the action schema exactly.
+- Never ask a question. Nobody is reading this session and no answer will come.
+  If you are unsure, choose the safest useful action instead.
 - Every action must set observation_id to the observation you are answering.
 - Every action_id must be unique within the mission.
 - Choose inspect_waypoints for evidence, quiet_hover to settle before a difficult
@@ -60,6 +62,11 @@ Rules:
 - An action may be rejected by the safety envelope. You will be told why. Choose a
   different action; the system will not choose one for you.
 - Prefer few, well chosen actions. Time and attempts per waypoint are limited.
+
+Every observation carries a `limits` block with the hard bounds your action must
+satisfy: the longest single action, the most targets in one action, the attempts
+left per waypoint and the vehicle speed limit. An action outside those bounds is
+rejected and wastes a turn, so read them before choosing.
 """
 
 
@@ -98,8 +105,12 @@ class DevinMissionPlanner:
         def matches(output: dict) -> bool:
             return output.get("observation_id") == observation.observation_id
 
+        nudge = (
+            f"Structured output only. Answer observation {observation.observation_id} "
+            "with one action that satisfies the limits block. Do not ask questions."
+        )
         try:
-            return self.session.decide(prompt, message, matches)
+            return self.session.decide(prompt, message, matches, nudge=nudge)
         except Exception as exc:
             raise MissionPlannerError(str(exc)) from exc
 
@@ -239,6 +250,7 @@ def run_mission(
             previous_action_id=previous_action_id,
             last_outcome=last_outcome,
             actions_remaining=max_actions - episode.actions_executed,
+            limits=envelope.limits(episode.time_remaining_s),
         )
         step: dict = {
             "observation_id": observation.observation_id,

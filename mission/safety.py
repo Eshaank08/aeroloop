@@ -70,6 +70,19 @@ class MissionSafetyEnvelope:
         self.seen_action_ids: set[str] = set()
         self.attempts: dict[int, int] = {}
 
+    def limits(self, time_remaining_s: float) -> dict:
+        """The bounds an action must satisfy, published to the agent every turn."""
+        return {
+            "policy_version": POLICY_VERSION,
+            "max_action_duration_s": self.max_duration_s,
+            "default_action_duration_s": DEFAULT_DURATION_S,
+            "max_targets_per_action": self.max_targets_per_action,
+            "max_attempts_per_waypoint": self.max_attempts_per_waypoint,
+            "max_speed_mps": self.max_speed_mps,
+            "mission_time_remaining_s": round(time_remaining_s, 3),
+            "attempts_used": dict(sorted(self.attempts.items())),
+        }
+
     def validate(self, action: Action, observation, time_remaining_s: float) -> Decision:
         decision = Decision(
             action_id=action.action_id,

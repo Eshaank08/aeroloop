@@ -153,6 +153,7 @@ class MissionEpisode:
         previous_action_id: str = "",
         last_outcome: dict | None = None,
         actions_remaining: int = 0,
+        limits: dict | None = None,
     ) -> Observation:
         self.observation_id += 1
         state = self.drone.state
@@ -189,6 +190,7 @@ class MissionEpisode:
             actions_used=self.actions_executed,
             actions_remaining=actions_remaining,
             last_outcome=last_outcome,
+            limits=dict(limits or {}),
         )
 
     # ---- acting --------------------------------------------------------

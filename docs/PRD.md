@@ -52,6 +52,7 @@ scripts/approve.py   <- the single human touch, a safety gate, post-PASS   [BUIL
 | `viz/server.py`, `viz/mission.py`, `viz/flightlab.py` | Devin | Flight command console behind the view, chat and voice missions, served at `127.0.0.1:8765` |
 | `reports/*.json`           | generated   | Verification artifacts written by the gate, gitignored           |
 | `docs/REAL_WORLD_ROADMAP.md` | Claude Code | Backlog for moving from the simulator to a real hangar          |
+| `docs/ADAPTIVE_EVIDENCE_BUILD.md` | Claude Code | Implementation brief for the adaptive evidence loop. Specification only, no code on master |
 | `docs/DEMO.md`             | Claude Code | 90 second demo runbook, with an offline fallback per step       |
 | `docs/RESULTS.md`          | Claude Code | Every claimed number, with the command that produced it         |
 | `docs/SIM2_SPEC.md`        | Claude Code | Simulator v2 spec. Specification only, no v2 code on master     |
@@ -71,6 +72,7 @@ this table was updated, so nothing here restates its contents.
 | `viz/` replay recorder and flight view                              | BUILT, read only, the view itself works with no network |
 | `viz/` flight command console                                       | BUILT, needs the local `viz/server.py` process, so it is not part of the offline path |
 | Real hardware roadmap in `docs/REAL_WORLD_ROADMAP.md`               | SPECIFIED, backlog only, nothing in it is implemented |
+| Adaptive evidence loop in `docs/ADAPTIVE_EVIDENCE_BUILD.md`         | SPECIFIED, contracts and acceptance tests only, no implementation on master, no measured result |
 | Simulator v2: rate controlled quadrotor with camera gated coverage  | SPECIFIED in `docs/SIM2_SPEC.md`, no implementation on master, no measured result |
 | A v2 controller                                                    | NOT BUILT                                |
 | Real drone hardware, real flight, image processing                  | OUT OF SCOPE, see the last section       |

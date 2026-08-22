@@ -19,7 +19,7 @@ python3 -m sim.run_verifier --scenarios 50 --seed 424242 --verbose
 
 | Item                | Value                                                |
 | ------------------- | ---------------------------------------------------- |
-| Commit under test   | `43c1502a6f471ffd2c8c36fed0fdf972c4c6914f` (this branch, master merged in) |
+| Commit under test   | `16e46b7e9561a37c579041d1679ab00a48821760` (this branch, master merged in) |
 | `controller.py`     | unmodified, as merged in PR #4                        |
 | Python              | 3.10.12 (`python3 --version`)                         |
 | numpy               | 2.2.1                                                 |
@@ -46,11 +46,11 @@ Output:
 
 ```
 .......                                                                  [100%]
-7 passed in 0.60s
+7 passed in 0.56s
 
-real	0m0.747s
-user	0m0.713s
-sys	0m0.009s
+real	0m0.680s
+user	0m0.675s
+sys	0m0.005s
 ```
 
 Seven tests are collected, confirmed with `python3 -m pytest -q --collect-only`:
@@ -258,9 +258,9 @@ pass rate        : 100.0% (30/30)
 mean coverage    : 100.0%
 total collisions : 0
 controller sha256: 3b54710960b6
-git commit       : 43c1502a6f471ffd2c8c36fed0fdf972c4c6914f
+git commit       : 16e46b7e9561a37c579041d1679ab00a48821760
 git dirty        : false
-artifact         : reports/verification_20260822T203839Z.json
+artifact         : reports/verification_20260822T204934Z.json
 Type yes to record human approval for this verification artifact: NOT APPROVED. Controller held.
 ```
 
@@ -271,7 +271,7 @@ printf 'yes\n' | python3 scripts/approve.py
 ```
 
 ```
-artifact         : reports/verification_20260822T203851Z.json
+artifact         : reports/verification_20260822T204937Z.json
 Type yes to record human approval for this verification artifact: APPROVED. Controller released for flight operations.
 ```
 
@@ -280,17 +280,17 @@ exact string `yes` and nothing else, and the gate refuses to ask at all if the v
 did not pass.
 
 The artifact it wrote records the controller hash, the commit, the thresholds and every
-scenario. Head of `reports/verification_20260822T203851Z.json`, verbatim:
+scenario. Head of `reports/verification_20260822T204937Z.json`, verbatim:
 
 ```json
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-08-22T20:38:51Z",
+  "generated_at_utc": "2026-08-22T20:49:37Z",
   "result": "PASS",
   "controller": {
     "path": "controller.py",
     "sha256": "3b54710960b6aad8e8fa74ec29a61b953e3f2d15b6049fa1baa75f47685fd537",
-    "git_commit": "43c1502a6f471ffd2c8c36fed0fdf972c4c6914f",
+    "git_commit": "16e46b7e9561a37c579041d1679ab00a48821760",
     "git_dirty": false
   },
   "run": {

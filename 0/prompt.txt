@@ -1,0 +1,7 @@
+<environment_context>
+  <cwd>/Users/eshaan/Main/Products/aeroloop</cwd>
+  <shell>zsh</shell>
+  <current_date>2026-08-22</current_date>
+  <timezone>Europe/Berlin</timezone>
+  <filesystem><workspace_roots><root>/Users/eshaan/Main/Products/aeroloop</root></workspace_roots><permission_profile type="managed"><file_system type="restricted"><entry access="read"><special>:root</special></entry><entry access="write"><path>/Users/eshaan/Main/Products/aeroloop</path></entry><entry access="write"><special>:slash_tmp</special></entry><entry access="write"><special>:tmpdir</special></entry><entry access="read"><path>/Users/eshaan/Main/Products/aeroloop/.git</path></entry><entry access="read"><path>/Users/eshaan/Main/Products/aeroloop/.agents</path></entry><entry access="read"><path>/Users/eshaan/Main/Products/aeroloop/.codex</path></entry></file_system></permission_profile></filesystem>
+</environment_context>

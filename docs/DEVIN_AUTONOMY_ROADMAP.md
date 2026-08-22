@@ -292,14 +292,18 @@ The next action must not be precomputed by the backend.
       Devin rather than replaced locally.
 - [x] Safe stop on agent loss: an unreachable agent or three consecutive unsafe actions
       trigger a bounded return toward home and can never report PASS.
-- [ ] Show the session URL, current reasoning, proposed action and validator result in
-      the flight view.
+- [x] Show the session URL, current reasoning, proposed action and validator result in
+      the flight view (`viz/mission_view.html`). The decision being flown is highlighted
+      as the replay runs.
+- [x] Take the work order as a plain sentence from the operator, by keyboard or
+      microphone. The authorised region is resolved locally and shown before flight;
+      the sentence itself is passed to Devin to interpret (`mission/intent.py`).
 
 ### Milestone 3 — human controls and audit artifact
 
 - [ ] Add visible pause, return-home, land and emergency-stop controls.
 - [ ] Add asset-confirmation and final-approval states with separate identities.
-- [ ] Hash every observation/action pair and include the Devin session ID.
+- [x] Hash every observation/action pair and include the Devin session ID.
 - [ ] Make any post-approval mutation invalidate the artifact.
 - [ ] Export one replayable mission package for judges.
 
@@ -307,12 +311,17 @@ The next action must not be precomputed by the backend.
 
 - [ ] Package the mission backend as one service with a health endpoint and persistent
       artifact directory.
-- [ ] Keep the simulator and Devin credentials on the server; serve only the UI to the
-      browser.
+- [x] Keep the simulator and Devin credentials on the server; serve only the UI to the
+      browser. The browser never sees a key, and a request for a live mission fails
+      closed when the server has no credentials.
 - [ ] Add a mission worker so long Devin calls do not block HTTP requests.
 - [ ] Stream mission state and decisions to the UI with server-sent events or WebSocket.
-- [ ] Add explicit session, action and wall-clock budgets.
-- [ ] Demonstrate clean hold/return behaviour when the network or Devin fails.
+- [x] Add explicit session, action and wall-clock budgets: per action duration, targets
+      per action, attempts per waypoint, actions per mission, mission time budget and an
+      ACU ceiling.
+- [x] Demonstrate clean hold/return behaviour when the network or Devin fails. Proven
+      on a real run: a live session went idle mid mission, the loop performed a bounded
+      return toward home and reported INSUFFICIENT_EVIDENCE rather than PASS.
 
 ### Milestone 5 — real sensor and drone adapters
 
@@ -445,6 +454,24 @@ of investment interest, not disclosed revenue.
 - <https://www.donecle.com/components/>
 - <https://www.mainblades.com/>
 - <https://www.donecle.com/wp-content/uploads/2026/04/Donecle-Press-Release-ENG-FV.pdf>
+
+## Where this actually stands
+
+Measured on master, not aspirational:
+
+- Simulator v1 with `controller.py`: 30/30, mean coverage 100.0%.
+- Simulator v2 with `controller2.py`: 30/30 on seeds 1000 to 1029, and 30/30 on the
+  unseen seeds 5000 to 5029 at 720/720 waypoints.
+- Autonomous mission loop with the labelled baseline agent: 29/30 on seeds 1000 to 1029
+  and 30/30 on unseen seeds 5000 to 5029.
+- Live Devin missions over the real v3 API: 6 attempted since the controller fix, 6
+  passed, including three on unseen seeds and two driven entirely from a typed sentence.
+  That is a small sample and is described as one.
+- 126 automated tests.
+
+The definition of done below is not met yet. The gap is Milestone 1's hidden events
+(obstacles, sensor noise, dropouts), 30 unseen scenarios flown by Devin itself rather
+than by the baseline, and everything in Milestone 5.
 
 ## Definition of done
 

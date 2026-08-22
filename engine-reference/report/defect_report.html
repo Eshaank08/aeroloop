@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hard-to-Find Engine Defects — Research Report</title>
+<style>
+  :root {
+    --bg: #0a0e14; --panel: #121820; --border: rgba(255,255,255,0.09);
+    --text: #d8e0ea; --dim: #9fb0c3; --accent: #7fd3ff; --warn: #ff8866; --red: #ff5c47;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Arial, sans-serif;
+    line-height: 1.6; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 48px 24px 100px; }
+  h1 { font-size: 28px; color: #fff; margin: 0 0 6px; }
+  .subtitle { color: var(--dim); font-size: 15px; margin-bottom: 36px; }
+  h2 { font-size: 20px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px;
+    margin-top: 52px; }
+  h3 { font-size: 17px; color: #fff; margin-bottom: 4px; }
+  .case { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px;
+    margin: 20px 0; }
+  .case .tag { display: inline-block; background: rgba(255,92,71,0.15); color: var(--red); font-size: 12px;
+    font-weight: 600; padding: 3px 9px; border-radius: 20px; margin-bottom: 10px; }
+  .imgrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 16px 0; }
+  .imgrow figure { margin: 0; }
+  .imgrow img { width: 100%; border-radius: 6px; display: block; border: 1px solid var(--border); }
+  .imgrow figcaption { font-size: 12px; color: var(--dim); margin-top: 6px; }
+  .src { font-size: 12px; color: var(--dim); margin-top: 10px; }
+  .src a { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--accent); font-weight: 600; }
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 16px 0; }
+  .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px; text-align: center; }
+  .stat .num { font-size: 30px; font-weight: 700; color: var(--accent); }
+  .stat .label { font-size: 13px; color: var(--dim); margin-top: 4px; }
+  .closing { background: linear-gradient(135deg, rgba(127,211,255,0.08), rgba(255,136,102,0.06));
+    border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-top: 30px; font-size: 16px; }
+  .diagram { background: #060a10; border: 1px solid var(--border); border-radius: 6px; padding: 12px; }
+  footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--dim); }
+  .scope-note { background: rgba(255,136,102,0.08); border-left: 3px solid var(--warn); padding: 12px 16px;
+    border-radius: 4px; font-size: 14px; margin: 20px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Hard-to-Find Engine Defects</h1>
+  <div class="subtitle">Why full, reliable coverage is the precondition every inspection method needs — real cases, not hypotheticals.</div>
+
+  <div class="scope-note">
+    <b>Scope note:</b> the AeroLoop system does not detect or classify defects — it verifies that a flight
+    controller can physically reach and cover every required inspection point without crashing, under
+    realistic wind disturbance. This report exists to establish <i>why</i> that specific capability matters:
+    every defect category below depends on complete, consistent coverage to be caught at all, regardless of
+    what sensor or method is doing the looking.
+  </div>
+
+  <h2>The baseline problem</h2>
+  <div class="stat-row">
+    <div class="stat"><div class="num">99.1%</div><div class="label">autonomous drone surface coverage</div></div>
+    <div class="stat"><div class="num">78%</div><div class="label">average manual walk-around coverage</div></div>
+    <div class="stat"><div class="num">~15%</div><div class="label">typical manual inspection miss rate</div></div>
+    <div class="stat"><div class="num">+27%</div><div class="label">higher detection rate with automation</div></div>
+  </div>
+
+  <h2>Case 1 — Fan blade root fatigue crack</h2>
+  <div class="case">
+    <span class="tag">FATAL INCIDENT</span>
+    <h3>Southwest Airlines Flight 1380 (April 17, 2018)</h3>
+    <p>A CFM56-7B fan blade fractured in flight from a low-cycle fatigue crack that had been present since
+    a 2012 overhaul. The crack was missed by the then-standard fluorescent penetrant inspection (FPI) — a
+    <i>surface</i>-only method — because the crack origin was subsurface, at the blade root. It was only
+    reliably catchable by eddy-current inspection, which requires close, stable, repeatable probe
+    positioning across every blade root, not a one-off glance. The failed blade struck the fan cowling,
+    which detached and struck the fuselage, causing a fatal rapid decompression.</p>
+
+    <div class="imgrow">
+      <figure>
+        <img src="images/fan_blade_fracture.jpg" alt="Fracture surface of the failed fan blade showing fatigue indications">
+        <figcaption>The actual fracture surface, with fatigue crack growth visible as concentric marks near the origin. NTSB investigation photo, May 3 2018.</figcaption>
+      </figure>
+      <figure>
+        <img src="images/cowl_damage_inboard.jpg" alt="Damage to the inboard side of the engine cowling">
+        <figcaption>Damage to the inboard side of the cowling, with components identified by NTSB investigators.</figcaption>
+      </figure>
+      <figure>
+        <img src="images/window_cowl_fragment.jpg" alt="Window damage with a fragment of engine cowl embedded">
+        <figcaption>The consequence: a cabin window opening with a fragment of the inboard fan cowl. This is what a missed subsurface defect ultimately cost.</figcaption>
+      </figure>
+      <figure>
+        <img src="images/cowling_debris_field.jpg" alt="Recovered pieces of the engine nacelle cowling in a field">
+        <figcaption>Recovered cowling debris, found in a field near Bernville, Pennsylvania.</figcaption>
+      </figure>
+    </div>
+    <div class="src">Source: NTSB Accident Report AAR-19/03; images are official NTSB investigation photographs
+    (U.S. federal government work product, public domain), via <a href="https://en.wikipedia.org/wiki/Southwest_Airlines_Flight_1380" target="_blank">Wikipedia / Wikimedia Commons</a>.</div>
+  </div>
+
+  <h2>Case 2 — Fan cowl latch, underside</h2>
+  <div class="case">
+    <span class="tag">45+ INCIDENTS</span>
+    <h3>Airbus A320-family fan cowl door loss incidents</h3>
+    <p>Over three decades, 45+ documented incidents involved A320-family engine fan cowl doors separating
+    in flight because their latches were left unlatched or failed. The latches sit low, on the underside of
+    the nacelle — a zone that, per the Aviation Safety Network timeline, "can only be inspected by crawling
+    under it." Routine walk-arounds and fixed-angle cameras structurally struggle to reach this exact spot,
+    which is precisely why it is the recurring failure point, not a one-off fluke.</p>
+
+    <div class="imgrow">
+      <figure>
+        <img src="images/a319_fan_cowl_reference.jpg" alt="A320-family aircraft showing the underside fan cowl area">
+        <figcaption>Reference photo of an A320-family aircraft (A319) showing the fan cowl area referenced in these incidents. Illustrative of the component and its low, occluded position — not a photo of an actual incident.</figcaption>
+      </figure>
+    </div>
+    <div class="src">Source: <a href="https://news.aviation-safety.net/2018/12/01/timeline-of-occurrences-and-regulatory-actions-on-airbus-a320-family-engine-fan-cowl-door-loss-incidents/" target="_blank">Aviation Safety Network incident timeline</a>. Reference photo public domain via Wikimedia Commons.</div>
+  </div>
+
+  <h2>Case 3 — Composite panel disbond / water ingress</h2>
+  <div class="case">
+    <span class="tag">INVISIBLE TO RGB</span>
+    <h3>Inlet lip and fan cowl acoustic panels</h3>
+    <p>Facesheet-to-core disbond, honeycomb core crush, ply delamination, and trapped water in acoustic
+    panels are common nacelle failure modes — and completely invisible to plain visual inspection. Catching
+    them requires pulsed/flash thermography (ASTM E2582): a heat pulse is applied, and the surface cooling
+    pattern is read frame-by-frame. This needs a stable, perpendicular sensor position for several seconds
+    <i>per panel</i> — any panel not covered at the right distance and angle is simply unread, not "inspected
+    and clean."</p>
+
+    <div class="diagram">
+      <svg viewBox="0 0 640 220" width="100%" style="display:block;">
+        <rect x="0" y="0" width="640" height="220" fill="#060a10"/>
+        <text x="20" y="24" fill="#9fb0c3" font-size="12" font-family="Segoe UI, Arial">Illustrative diagram — not an actual thermal scan</text>
+        <rect x="40" y="50" width="240" height="130" rx="6" fill="#1c2530" stroke="#334455"/>
+        <text x="160" y="45" fill="#d8e0ea" font-size="12" text-anchor="middle">Good coverage: full standoff maintained</text>
+        <circle cx="100" cy="115" r="18" fill="#2c3f52"/>
+        <circle cx="160" cy="115" r="18" fill="#2c3f52"/>
+        <circle cx="220" cy="115" r="18" fill="#3a5a3f" stroke="#6fbf73" stroke-width="2"/>
+        <text x="220" y="119" fill="#bfe8c2" font-size="9" text-anchor="middle">defect</text>
+        <text x="220" y="150" fill="#6fbf73" font-size="10" text-anchor="middle">detected</text>
+
+        <rect x="360" y="50" width="240" height="130" rx="6" fill="#1c2530" stroke="#334455"/>
+        <text x="480" y="45" fill="#d8e0ea" font-size="12" text-anchor="middle">Gust-disrupted pass: coverage gap</text>
+        <circle cx="420" cy="115" r="18" fill="#2c3f52"/>
+        <circle cx="480" cy="115" r="18" fill="#403030" stroke="#663333" stroke-width="2" stroke-dasharray="3,3"/>
+        <text x="480" y="119" fill="#a08080" font-size="9" text-anchor="middle">skipped</text>
+        <circle cx="540" cy="115" r="18" fill="#2c3f52"/>
+        <text x="480" y="150" fill="#ff8866" font-size="10" text-anchor="middle">never read — not "clean", just unseen</text>
+      </svg>
+    </div>
+    <div class="src">Concept illustration based on ASTM E2582 flash thermography methodology and nacelle MRO literature. Not a reproduction of any specific published figure.</div>
+  </div>
+
+  <h2>NDT methods and drone-mountability</h2>
+  <table>
+    <tr><th>Method</th><th>Detects</th><th>Positioning requirement</th><th>Drone feasibility</th></tr>
+    <tr><td>Borescope</td><td>Internal blade/combustor damage</td><td>Physical probe insertion</td><td>Not externally droneable</td></tr>
+    <tr><td>Fluorescent penetrant</td><td>Surface cracks</td><td>Contact/chemical process</td><td>Not droneable</td></tr>
+    <tr><td>Eddy current</td><td>Sub/near-surface cracks</td><td>Close, stable probe proximity</td><td>Possible at short range with stable standoff</td></tr>
+    <tr><td>Flash thermography</td><td>Composite disbond, water ingress</td><td>Fixed standoff, perpendicular, seconds of dwell per panel</td><td>Directly needs a wind-robust controller</td></tr>
+    <tr><td>Optical / RGB (Donecle, Mainblades)</td><td>Surface-visible damage</td><td>Full systematic coverage</td><td>Already deployed, fixed pre-programmed paths</td></tr>
+  </table>
+
+  <div class="closing">
+    <b>The honest bridge.</b> We didn't build a defect detector. We built and verified the one thing every
+    method in that table depends on: a flight controller that holds full coverage under real wind
+    disturbance, where a naive controller collapses to 29.9% coverage under the exact same conditions. A gust
+    that knocks a fixed-path drone off course doesn't produce a false negative on the panel it missed — it
+    produces no reading at all. That gap is where fan blade root cracks, underside latches, and
+    disbonded panels currently go unfound, today, on real aircraft.
+  </div>
+
+  <footer>
+    Sources: NTSB Accident Report AAR-19/03; Flight Safety Foundation; Aviation Safety Network incident
+    timeline; ASTM E2582; nacelle MRO literature (ST Engineering MRAS, PlaneFYI). Images: NTSB investigation
+    photographs (U.S. federal government work, public domain) and one reference photo, both via Wikimedia
+    Commons. Built for the AeroLoop project, EHL Munich — Cognition "Find an Industry, Give it an Engineer" track.
+  </footer>
+
+</div>
+</body>
+</html>

@@ -30,6 +30,10 @@ Every one of those numbers, with the exact command that produced it and the outp
 verbatim, is in [docs/RESULTS.md](docs/RESULTS.md). The live demo runbook, including the
 fallback for each step when the network is dead, is in [docs/DEMO.md](docs/DEMO.md).
 
+For the implementation path beyond simulation, including multimodal perception,
+real-drone integration, safety boundaries, regulatory implications and the complete
+engineering backlog, see [Real-world multimodal inspection roadmap](docs/REAL_WORLD_ROADMAP.md).
+
 ---
 
 ## THE TASK (this section is Devin's brief)
@@ -95,10 +99,23 @@ pytest -q
 ```
 
 That runs the full verifier. It prints a per-scenario report plus a final PASS/FAIL.
+The default batch uses 30 scenarios and base seed 1000. To verify against a
+judge-supplied seed, override both values with environment variables:
+
+```bash
+AEROLOOP_SCENARIOS=5 AEROLOOP_BASE_SEED=4242 pytest -q
+```
+
 You can also run it directly for more detail:
 
 ```bash
 python -m sim.run_verifier --scenarios 30 --verbose
+```
+
+The equivalent judge-seed command is:
+
+```bash
+python -m sim.run_verifier --scenarios 5 --seed 4242 --verbose
 ```
 
 Iterate until `pytest` passes. Collisions are the hardest constraint: a controller that

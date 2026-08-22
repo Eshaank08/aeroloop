@@ -51,6 +51,12 @@ class CommandHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = urlsplit(self.path).path
+        if path in ("/", "/index.html"):
+            self.send_response(302)
+            self.send_header("Location", "/site/index.html")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         if path == "/api/scene":
             payload = scene()
             payload["examples"] = EXAMPLES
@@ -194,7 +200,8 @@ def main():
     args = parser.parse_args()
     handler = partial(CommandHandler, directory=str(VIZ_DIR))
     server = ThreadingHTTPServer(("127.0.0.1", args.port), handler)
-    print(f"Open http://127.0.0.1:{args.port}/flight_view.html", flush=True)
+    print(f"Open http://127.0.0.1:{args.port}/ for the mission site", flush=True)
+    print(f"Flight replay at http://127.0.0.1:{args.port}/flight_view.html", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

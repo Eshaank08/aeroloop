@@ -13,7 +13,7 @@ scripts/trigger_devin.py                                    [BUILT, path exercis
         v
    Devin session  ---writes--->  controller.py               [BUILT, merged in PR #4]
         |  ^                      commit author on that file is the Devin bot
-        |  |  pytest -q  (wraps sim/run_verifier.py)         [BUILT, prints 1 passed]
+        |  |  pytest -q  (wraps both verifiers)               [BUILT, prints 59 passed]
         |  +--- FAIL: coverage/collision/time report fed back automatically
         v
       PASS   30/30 default scenarios, 50/50 on unseen base seed 424242
@@ -26,9 +26,12 @@ scripts/approve.py   <- the single human touch, a safety gate, post-PASS   [BUIL
         v
    ARTIFACT: controller.py + verification report
 
-   simulator v2: rate controlled quadrotor, coverage gated on a camera view
-   docs/SIM2_SPEC.md                                        [SPECIFIED, not built]
-   no v2 number exists anywhere in this repository
+sim2/run_verifier.py  rate controlled quadrotor, coverage gated on a camera view
+   spec docs/SIM2_SPEC.md, controller2.py                    [BUILT, merged in PR #17]
+   29/30 default scenarios, 20/20 on unseen base seed 424242, RESULT: PASS
+
+scripts/run_devin_mission.py  live Devin session as the mission planner   [BUILT]
+   fails closed without DEVIN_API_KEY and DEVIN_ORG_ID, no mission measured here
 ```
 
 ## Components
@@ -40,7 +43,12 @@ scripts/approve.py   <- the single human touch, a safety gate, post-PASS   [BUIL
 | `sim/scenarios.py`         | Claude Code | Seeded randomized wind scenarios, reproducible per seed        |
 | `sim/limits.py`            | Claude Code | max_accel, max_speed, time_budget_s, dt                        |
 | `sim/run_verifier.py`      | Claude Code | Runs N scenarios, scores coverage/collisions/time, PASS/FAIL   |
+| `sim2/`                    | Claude Code | Simulator v2: quadrotor dynamics, camera gate, its own verifier |
+| `controller2.py`           | **Devin**   | The v2 flight controller for the camera gated quadrotor        |
+| `inspection/`              | Claude Code | Evidence scoring, action policy, work order parsing, artifact, Devin planner |
+| `scripts/run_devin_mission.py` | Claude Code | Runs a Devin planned re-capture mission, requires credentials |
 | `tests/test_controller.py` | Claude Code | pytest wrapper so Devin's normal test loop triggers the verifier |
+| `tests/test_controller2.py` | Claude Code | Same wrapper for the v2 batch, plus a determinism check       |
 | `sim/report.py`            | Claude Code | Signed verification artifact, its schema, and the recorded approval |
 | `tests/test_report.py`     | Claude Code | Tests for the artifact schema, its signature, and gate refusals |
 | `controller.py`            | **Devin**   | The flight controller. The only file Devin writes.             |
@@ -49,32 +57,35 @@ scripts/approve.py   <- the single human touch, a safety gate, post-PASS   [BUIL
 | `viz/replay.py`            | Devin       | Reruns the graded scenarios and records them to `viz/data/`, scores nothing |
 | `viz/flight_view.html`     | Devin       | Browser flight view of one recorded run, Three.js vendored, no server, no network |
 | `viz/data/*.json`, `data.js` | generated | Committed recording of the graded batch and of the traced scenario, seed 1017 |
+| `viz/replay2.py`, `viz/data2/*.json` | Devin | Recorder and committed recording for the v2 quadrotor run       |
 | `viz/server.py`, `viz/mission.py`, `viz/flightlab.py` | Devin | Flight command console behind the view, chat and voice missions, served at `127.0.0.1:8765` |
 | `reports/*.json`           | generated   | Verification artifacts written by the gate, gitignored           |
 | `docs/REAL_WORLD_ROADMAP.md` | Claude Code | Backlog for moving from the simulator to a real hangar          |
-| `docs/ADAPTIVE_EVIDENCE_BUILD.md` | Claude Code | Implementation brief for the adaptive evidence loop. Specification only, no code on master |
+| `docs/ADAPTIVE_EVIDENCE_BUILD.md` | Claude Code | Implementation brief for the adaptive evidence loop, now implemented in `inspection/` |
 | `docs/DEMO.md`             | Claude Code | 90 second demo runbook, with an offline fallback per step       |
 | `docs/RESULTS.md`          | Claude Code | Every claimed number, with the command that produced it         |
-| `docs/SIM2_SPEC.md`        | Claude Code | Simulator v2 spec. Specification only, no v2 code on master     |
+| `docs/DEVIN_AUTONOMY_ROADMAP.md` | Claude Code | Milestone where Devin is the required runtime mission agent |
+| `docs/SIM2_SPEC.md`        | Claude Code | Simulator v2 spec, now implemented in `sim2/`                   |
 
-`docs/SIM2_SPEC.md` is written on the parallel v2 branch and is not on master at the time
-this table was updated, so nothing here restates its contents.
+`docs/SIM2_SPEC.md` is the contract for `sim2/` and is not restated here.
 
 ### Built or specified
 
 | Part                                                               | State                                   |
 | ------------------------------------------------------------------ | --------------------------------------- |
 | Simulator v1: geometry, wind, limits, verifier                      | BUILT, a 30 scenario batch runs in under a second |
-| `tests/test_controller.py`                                         | BUILT, one test wrapping the verifier    |
+| `tests/`                                                           | BUILT, 59 tests, two of them wrapping the v1 and v2 verifiers |
 | `controller.py`                                                    | BUILT by a Devin session, merged in PR #4 |
 | `scripts/trigger_devin.py`                                         | BUILT, and the trigger to artifact path has been exercised end to end once, producing PR #4 |
 | `scripts/approve.py` and `sim/report.py`                            | BUILT, reruns the verifier, writes a signed artifact under `reports/`, then blocks on one typed answer |
 | `viz/` replay recorder and flight view                              | BUILT, read only, the view itself works with no network |
 | `viz/` flight command console                                       | BUILT, needs the local `viz/server.py` process, so it is not part of the offline path |
 | Real hardware roadmap in `docs/REAL_WORLD_ROADMAP.md`               | SPECIFIED, backlog only, nothing in it is implemented |
-| Adaptive evidence loop in `docs/ADAPTIVE_EVIDENCE_BUILD.md`         | SPECIFIED, contracts and acceptance tests only, no implementation on master, no measured result |
-| Simulator v2: rate controlled quadrotor with camera gated coverage  | SPECIFIED in `docs/SIM2_SPEC.md`, no implementation on master, no measured result |
-| A v2 controller                                                    | NOT BUILT                                |
+| Devin autonomy milestone in `docs/DEVIN_AUTONOMY_ROADMAP.md`         | SPECIFIED, deployment plan only |
+| Adaptive evidence loop: `inspection/` evidence scoring, action policy, artifact | BUILT, unit tested, but no live Devin planned mission is measured |
+| Simulator v2: rate controlled quadrotor with camera gated coverage  | BUILT in `sim2/`, 29/30 default scenarios and 20/20 on unseen base seed 424242, both `RESULT: PASS` |
+| `controller2.py`                                                   | BUILT by a Devin session, merged in PR #17 |
+| `scripts/run_devin_mission.py`                                     | BUILT, fails closed without credentials, no live mission measured |
 | Real drone hardware, real flight, image processing                  | OUT OF SCOPE, see the last section       |
 
 ## Verifier spec
@@ -97,6 +108,11 @@ this table was updated, so nothing here restates its contents.
 
 **Run passes** if >= 90% of scenarios pass. Any collision anywhere is disqualifying for
 that scenario, no partial credit.
+
+The section above is the v1 verifier in `sim/`. Simulator v2 in `sim2/` grades against
+its own thresholds, printed by its report as `coverage >= 95%, no failure, elapsed <=
+150s, pass rate >= 90%`, and a waypoint only counts when the camera is aimed at it, so v1
+and v2 numbers are not comparable.
 
 ## Default parameters
 
@@ -137,8 +153,9 @@ scripted session wrote the controller and opened PR #4, which is on master.
 **Do not start the deck until step 5 has passed once.** The deck needs real coverage
 numbers and a real iteration count, not projections.
 
-Coverage numbers now exist and live in `docs/RESULTS.md`. The iteration count of the live
-session is not recorded in this repository, so it is not measured and must not be quoted.
+Coverage numbers now exist and live in `docs/RESULTS.md`, for v1 and for v2. The
+iteration count of the live session is not recorded in this repository, so it is not
+measured and must not be quoted.
 
 ## Out of scope
 

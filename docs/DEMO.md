@@ -14,7 +14,7 @@ Do all of this while somebody else is still presenting. None of it counts agains
 ```bash
 cd aeroloop
 python3 -m pip install -r requirements.txt        # pytest, numpy
-python3 -m pytest -q                              # must print: 7 passed
+python3 -m pytest -q                              # must print: 59 passed, takes about 25 s
 echo "$DEVIN_API_KEY" | wc -c                     # non zero length, never print the key
 echo "$DEVIN_ORG_ID"  | wc -c
 ```
@@ -258,9 +258,14 @@ do not want to record an approval.
 
 ## What is not in this demo, and say so if asked
 
-- **Simulator v2**, the rate controlled quadrotor with a camera gate on coverage, is
-  specified in `docs/SIM2_SPEC.md` and is being implemented separately. Every number in
-  this demo is simulator v1. Do not present v2 as running.
+- **Simulator v2**, the rate controlled quadrotor with a camera gate on coverage, is on
+  master in `sim2/` and its controller was written by a Devin session in PR #17, but the
+  90 second script above shows v1 only, because a v2 batch takes about 26 s of wall clock
+  on its own. If asked, the honest one liner is 29 of 30 default scenarios and 20 of 20 on
+  unseen base seed 424242, both `RESULT: PASS`, with the numbers in `docs/RESULTS.md`
+  section 9. Never quote a v1 number as a v2 number.
+- **A live Devin planned mission.** `scripts/run_devin_mission.py` exists and fails closed
+  without credentials, but no mission was measured, so do not claim one ran.
 - **Real hardware.** No drone flies. The artifact is verified flight software, and the
   verification report is what an inspection engineer would sign against.
 - **Damage detection.** Coverage of the inspection sweep is graded, defect finding is not
@@ -273,6 +278,7 @@ do not want to record an approval.
 | Devin API call fails or hangs     | Ctrl C, show the saved session screenshot, then `git log -1 --format='%an %s' -- controller.py` |
 | No network at all                 | Skip the live trigger, run steps 2, 3 and 4, all offline |
 | `pytest` or the verifier will not run | Terminal tab B, page the prerecorded report      |
+| Asked for v2 live and there is time | `python3 -m sim2.run_verifier --scenarios 5 --verbose`, and say the full batch is in `docs/RESULTS.md` |
 | Browser view will not render      | Print the trace JSON one liner from step 3           |
 | Projector loses the terminal      | Steps 2 and 4 are readable out loud, the summary block is five lines |
 | You are out of time               | Cut step 3, keep the verifier report and the safety gate |

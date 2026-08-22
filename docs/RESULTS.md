@@ -17,14 +17,14 @@ python3 -m sim2.run_verifier --scenarios 30 --verbose
 python3 -m sim2.run_verifier --scenarios 20 --seed 424242 --verbose
 ```
 
-Sections 1 to 6 are v1 numbers, graded by `sim/`. Section 7 is v2, graded by `sim2/`
+Sections 1 to 8 are v1 numbers, graded by `sim/`. Section 9 is v2, graded by `sim2/`
 against different thresholds. The two are not comparable and are never mixed here.
 
 ## Environment these numbers were measured on
 
 | Item                | Value                                                |
 | ------------------- | ---------------------------------------------------- |
-| Commit under test   | `6cd7a18d4138f25a0ef5d5cc37818b2b38b90f13` (this branch, master merged in) |
+| Commit under test   | `76414c318e546d812bdeca178c88ab72f0ee98fb` (this branch, master merged in) |
 | `controller.py`     | unmodified, as merged in PR #4                        |
 | `controller2.py`    | unmodified, as merged in PR #17                       |
 | Python              | 3.10.12 (`python3 --version`)                         |
@@ -269,9 +269,9 @@ pass rate        : 100.0% (30/30)
 mean coverage    : 100.0%
 total collisions : 0
 controller sha256: 3b54710960b6
-git commit       : 16e46b7e9561a37c579041d1679ab00a48821760
+git commit       : 76414c318e546d812bdeca178c88ab72f0ee98fb
 git dirty        : false
-artifact         : reports/verification_20260822T204934Z.json
+artifact         : reports/verification_20260822T220309Z.json
 Type yes to record human approval for this verification artifact: NOT APPROVED. Controller held.
 ```
 
@@ -282,7 +282,7 @@ printf 'yes\n' | python3 scripts/approve.py
 ```
 
 ```
-artifact         : reports/verification_20260822T204937Z.json
+artifact         : reports/verification_20260822T220310Z.json
 Type yes to record human approval for this verification artifact: APPROVED. Controller released for flight operations.
 ```
 
@@ -291,17 +291,17 @@ exact string `yes` and nothing else, and the gate refuses to ask at all if the v
 did not pass.
 
 The artifact it wrote records the controller hash, the commit, the thresholds and every
-scenario. Head of `reports/verification_20260822T204937Z.json`, verbatim:
+scenario. Head of `reports/verification_20260822T220310Z.json`, verbatim:
 
 ```json
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-08-22T20:49:37Z",
+  "generated_at_utc": "2026-08-22T22:03:10Z",
   "result": "PASS",
   "controller": {
     "path": "controller.py",
     "sha256": "3b54710960b6aad8e8fa74ec29a61b953e3f2d15b6049fa1baa75f47685fd537",
-    "git_commit": "16e46b7e9561a37c579041d1679ab00a48821760",
+    "git_commit": "76414c318e546d812bdeca178c88ab72f0ee98fb",
     "git_dirty": false
   },
   "run": {
@@ -376,6 +376,100 @@ So the traced scenario is seed 606076: full coverage, zero collisions, a 39.82 s
 with the gust starting at 21.508 s and peaking at 4.265. Rerecording with
 `python3 -m viz.replay` changes all of it, so recheck this line before quoting it.
 
+## 9. Simulator v2, the camera gated quadrotor
+
+`sim2/` grades `controller2.py` on a rate controlled quadrotor where a waypoint only
+counts as inspected when the camera is aimed at it. Its thresholds are its own: coverage
+at or above 95%, no failure, elapsed within 150 s, pass rate at or above 90%.
+
+Command:
+
+```bash
+python3 -m sim2.run_verifier --scenarios 30 --verbose
+```
+
+First scenarios, the last three, and the summary block, verbatim:
+
+```
+
+AeroLoop simulator v2 verification report
+================================================================================================================
+  seed 1000   PASS  coverage 100.0%  inspected 24/24  failure None  elapsed  58.74s  near-tolerance-never-aimed 0
+  seed 1001   PASS  coverage 100.0%  inspected 24/24  failure None  elapsed  61.46s  near-tolerance-never-aimed 0
+  seed 1002   PASS  coverage 100.0%  inspected 24/24  failure None  elapsed  56.50s  near-tolerance-never-aimed 0
+  seed 1003   PASS  coverage 100.0%  inspected 24/24  failure None  elapsed  64.50s  near-tolerance-never-aimed 0
+  seed 1004   PASS  coverage 100.0%  inspected 24/24  failure None  elapsed  72.82s  near-tolerance-never-aimed 0
+  seed 1027   FAIL  coverage  95.8%  inspected 23/24  failure None  elapsed 150.00s  near-tolerance-never-aimed 1
+  seed 1028   PASS  coverage 100.0%  inspected 24/24  failure None  elapsed  50.16s  near-tolerance-never-aimed 0
+  seed 1029   PASS  coverage 100.0%  inspected 24/24  failure None  elapsed 105.12s  near-tolerance-never-aimed 0
+================================================================================================================
+  scenarios passed : 29/30  (96.7%)
+  mean coverage    : 99.9%
+  inspected total  : 719/720
+  thresholds       : coverage >= 95%, no failure, elapsed <= 150s, pass rate >= 90%
+
+RESULT: PASS
+
+real	0m26.048s
+user	0m25.863s
+sys	0m0.004s
+```
+
+One scenario out of thirty, seed 1027, ends at 23 of 24 waypoints because the last
+waypoint is reached in position but never aimed at, which the report counts under
+`near-tolerance-never-aimed`. The batch still prints `RESULT: PASS` because the v2
+threshold is a 90% scenario pass rate. That single failure is a real number and is not
+rounded away here.
+
+Unseen base seed, 20 scenarios:
+
+```bash
+python3 -m sim2.run_verifier --scenarios 20 --seed 424242 --verbose
+```
+
+Summary block, verbatim:
+
+```
+================================================================================================================
+  scenarios passed : 20/20  (100.0%)
+  mean coverage    : 100.0%
+  inspected total  : 480/480
+  thresholds       : coverage >= 95%, no failure, elapsed <= 150s, pass rate >= 90%
+
+RESULT: PASS
+
+real	0m13.606s
+user	0m13.503s
+sys	0m0.004s
+```
+
+v2 sweeps are slower in simulated time than v1 (50 to 105 s against 33 to 37 s) because
+the airframe has to aim a camera as well as translate. The two budgets differ too, 150 s
+for v2 against 120 s for v1, so the two elapsed columns must not be compared directly.
+
+## 10. The Devin mission runner refuses to run without credentials
+
+`scripts/run_devin_mission.py` puts a live Devin session in the loop as the mission
+planner. Without credentials it fails closed rather than falling back to a local planner.
+
+Command:
+
+```bash
+env -u DEVIN_API_KEY -u DEVIN_ORG_ID python3 scripts/run_devin_mission.py --work-order "full sweep"
+```
+
+Output, verbatim:
+
+```
+usage: run_devin_mission.py [-h] [--work-order WORK_ORDER] [--output OUTPUT]
+                            [--poll POLL] [--timeout TIMEOUT]
+                            [--max-acu MAX_ACU]
+run_devin_mission.py: error: DEVIN_API_KEY and DEVIN_ORG_ID are required for Devin mode
+```
+
+No live Devin mission was run for this document, so nothing about its planning quality,
+its ACU cost or its latency is measured here.
+
 ## Not measured
 
 State these as unmeasured rather than guessing at them:
@@ -383,7 +477,11 @@ State these as unmeasured rather than guessing at them:
 - **Number of iterations the Devin session needed.** The session history is not in the
   repository, so the write, run, fix count is not something this document can prove.
 - **Wall clock length of the live Devin session.** Not recorded here.
-- **Verifier behaviour under simulator v2.** The v2 camera gated coverage model is not
-  merged, so no v2 number exists yet. Every number above is simulator v1.
+- **A live Devin planned mission.** Section 10 only shows that the runner fails closed
+  without credentials. No session was run, so no artifact, latency or ACU figure exists
+  here.
+- **Anything in `docs/ADAPTIVE_EVIDENCE_BUILD.md` or `docs/DEVIN_AUTONOMY_ROADMAP.md`
+  beyond what section 9 and section 10 show.** Those documents specify work; this one
+  only records what ran.
 - **Anything about real hardware.** No drone flew. The artifact is verified flight
   software, not a flight test.

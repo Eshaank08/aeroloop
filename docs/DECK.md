@@ -95,8 +95,10 @@ rule with a camera gate. A waypoint counts only when all three hold on the same 
 | Camera aimed at the nacelle surface | within 60 degrees of boresight |
 | Shot steady | body rate at most 1.5 rad/s and speed at most 2.5 m/s |
 
-Devin wrote `controller2.py` for that vehicle. Result: **29/30 PASS, mean coverage 99.9%,
-719 of 720 waypoints inspected.**
+Devin wrote `controller2.py` for that vehicle. Result: **30/30 PASS, mean coverage 99.9%,
+719 of 720 waypoints inspected.** (Seed 1027 individually reaches only 95.8% coverage,
+23 of 24 waypoints, still above the 95% per-scenario threshold, so it counts as a pass
+even though it does not reach full coverage.)
 
 > This is the first half of the "how did your approach change" answer. We made the task
 > harder after Devin had already solved the easy version, because passing a point mass
@@ -260,20 +262,22 @@ by the safety envelope.**
 | Configuration | Result | Coverage | Notes |
 | --- | --- | --- | --- |
 | Sim v1 + `controller.py` | 30/30 PASS | 100.0% mean | 0 collisions |
-| Sim v2 + `controller2.py` | 29/30 PASS | 99.9% mean | 719/720 waypoints inspected |
+| Sim v2 + `controller2.py` | 30/30 PASS | 99.9% mean | 719/720 waypoints inspected |
 | Autonomous loop, baseline agent, seeds 1000-1029 | 29/30 PASS | 98.6% mean | labelled comparison baseline |
 | Live Devin mission, v3 API, seed 1000 | PASS | 100.0% | 24/24 waypoints, 82.3 s, 6 accepted, 1 rejected |
 
-**101 automated tests.**
+**107 automated tests.**
 
-**Seed 1027 fails.** It fails in the batch verifier and it fails in the autonomous loop.
-It is a time budget problem on one hard waypoint: the run spends too long satisfying the
-camera gate at a single point and runs out of budget before the sweep closes. We have not
-fixed it and we are not hiding it.
+**Seed 1027 is the hardest scenario in both paths.** In the batch verifier it now passes,
+but only just: 95.8% coverage, 23 of 24 waypoints, against a 95% bar. In the autonomous
+loop it fails outright. Both trace to the same root cause: the run spends too long
+satisfying the camera gate at one hard waypoint and runs out of budget before the sweep
+closes. We have not fixed it and we are not hiding it.
 
-> Say the failure out loud, in the same tone as the passes. Then say what we know about
-> it: the same waypoint, the same cause, in two independent code paths, which means it is
-> a real property of the task rather than a flake. If a judge asks how we would fix it,
+> Say this out loud, in the same tone as the passes. The same waypoint is the hardest case
+> in two independent code paths, which means it is a real property of the task rather than
+> a flake, even though it clears the bar in one path and not the other. If a judge asks how
+> we would fix it,
 > the answer is a time aware target ordering at the mission layer, which is a Devin task,
 > not a human one.
 
@@ -418,7 +422,7 @@ We started by having Devin write the flight controller for a nacelle inspection 
 against a verifier that existed before it wrote a line. Thirty out of thirty, 100%
 coverage, no collisions. Then we made the task harder: a real quadrotor and a camera gate
 where a waypoint counts only if the drone is within half a metre, aimed within sixty
-degrees, and steady. Devin passed that too, 29 out of 30.
+degrees, and steady. Devin passed that too, 30 out of 30.
 
 Then the actual move. Devin stopped being the engineer and became the mission agent. It
 receives observations and chooses every action, one at a time, through one API session,
@@ -453,7 +457,7 @@ Then we raised our own bar, because a point mass hides the hard part: a quadroto
 translate, and tilting moves the camera. Simulator v2 is a rate controlled quadrotor with
 a camera gate. A waypoint counts only when the drone is within 0.5 metres, aimed within 60
 degrees of the surface, and steady at 1.5 radians per second and 2.5 metres per second.
-Devin wrote controller2.py for that. 29 out of 30, 99.9% coverage.
+Devin wrote controller2.py for that. 30 out of 30, 99.9% coverage.
 
 Then the real change. Devin stopped being only the engineer and became the runtime mission
 agent. It gets an observation packet with only what a drone could sense, and it chooses
@@ -476,11 +480,11 @@ gap reasons, saw they were all "too far" rather than "shot not steady", conclude
 and not steadiness was binding, and adjusted. Pass, 24 of 24, 100% coverage, 82.3 seconds,
 six actions accepted, one rejected by the envelope.
 
-**Results and the failure, 20 seconds.** 30 out of 30 on v1. 29 out of 30 on v2. 29 out of
-30 on the autonomous loop across seeds 1000 to 1029, 98.6% mean coverage. 101 automated
-tests. Seed 1027 fails, in both the batch verifier and the autonomous loop, a time budget
-problem on one hard waypoint. Same cause in two independent paths, so it is a property of
-the task, and we have not fixed it.
+**Results and the failure, 20 seconds.** 30 out of 30 on v1. 30 out of 30 on v2. 29 out of
+30 on the autonomous loop across seeds 1000 to 1029, 98.6% mean coverage. 107 automated
+tests. Seed 1027 is the hardest case in both paths: it barely clears the bar in the batch
+verifier, 95.8% coverage, and fails outright in the autonomous loop. Same cause in two
+independent paths, a time budget problem on one hard waypoint, and we have not fixed it.
 
 **Honesty, 15 seconds.** Everything is simulated, no drone has flown. The system verifies
 inspection coverage, it does not detect defects. The defect research and the turbofan

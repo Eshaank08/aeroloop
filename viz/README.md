@@ -91,3 +91,18 @@ Two honest caveats. The controller was written for the full sweep, so a single
 for, and the panel reports whatever happens, including a collision. And the
 batch panel on the right always shows the recorded verification batch, not the
 mission you just flew: `viz/server.py` only replays, it never scores.
+
+## Which recording is on screen
+
+The view reads `data/data.js` by default and takes the directory from the query
+string, so `flight_view.html?data=data2` replays a simulator v2 recording
+written by `viz/replay2.py` without touching the committed v1 demo data.
+
+A v2 trace carries the airframe's own attitude, body rates and thrust, so the
+pose is measured rather than reconstructed, the HUD reads out tilt from level and
+how far the camera is off the nacelle, and the wedge in front of the nose is the
+inspection camera's field of view at the gate's half angle, green while the shot
+would count. A waypoint lights up only when the recorded flight passed the same
+gate the verifier applies: inside tolerance, aimed at the skin, and steady. On a
+v1 trace, where the point mass simulator has no attitude to record, the pose is
+still reconstructed from the recorded acceleration and the panel says so.

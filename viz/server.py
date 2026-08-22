@@ -114,6 +114,26 @@ class CommandHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = urlsplit(self.path).path
+        if path == "/favicon.ico":
+            self.send_response(204)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        if path == "/api/capabilities":
+            # The UI asks before offering a live mission, so a judge is never
+            # given a button that can only fail.
+            has_credentials = bool(
+                os.environ.get("DEVIN_API_KEY") and os.environ.get("DEVIN_ORG_ID")
+            )
+            self._send_json(200, {
+                "devin_available": has_credentials,
+                "reason": "" if has_credentials else (
+                    "This server was started without DEVIN_API_KEY and DEVIN_ORG_ID, so "
+                    "live missions are refused. Restart it with both exported to enable "
+                    "Devin. The baseline agent works either way."
+                ),
+            })
+            return
         if path == "/api/scene":
             payload = scene()
             payload["examples"] = EXAMPLES
@@ -275,9 +295,12 @@ class CommandHandler(SimpleHTTPRequestHandler):
         authorised = intent.authorised_indexes
         max_actions = intent.max_actions
 
+        api_calls: list = []
         try:
             if planner_name == "devin":
-                client = DevinClient.from_env(poll_interval_s=8.0, timeout_s=420.0)
+                client = DevinClient.from_env(
+                    poll_interval_s=8.0, timeout_s=420.0, recorder=api_calls,
+                )
                 max_acu_text = os.environ.get("AEROLOOP_DEVIN_MAX_ACU", "").strip()
                 session = DevinMissionSession(
                     client,
@@ -309,6 +332,7 @@ class CommandHandler(SimpleHTTPRequestHandler):
                 ),
                 "seed": seed,
                 "intent": intent.to_dict(),
+                "api_calls": api_calls,
                 "sector": intent.region,
                 "waypoints": [list(point) for point in episode.waypoints],
                 "authorised_indexes": episode.authorised_indexes,

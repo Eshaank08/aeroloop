@@ -327,7 +327,10 @@ function applyMission(data) {
   el('status').textContent = data.reply;
 }
 
-function frameAt(i) { return frames[Math.max(0, Math.min(frames.length - 1, i))]; }
+function frameAt(i) {
+  const index = Math.max(0, Math.min(frames.length - 1, Math.floor(i)));
+  return frames[index];
+}
 
 function updateFromFrame() {
   if (!frames.length) return;
@@ -473,6 +476,17 @@ function animate(now) {
   renderer.render(scene, camera);
 }
 requestAnimationFrame(animate);
+
+// Ask the server whether it can fly a live mission at all, so the Devin option is
+// never offered by a server that was started without credentials.
+fetch('/api/capabilities').then((r) => r.json()).then((caps) => {
+  if (caps.devin_available) return;
+  const option = el('planner').querySelector('option[value="devin"]');
+  option.textContent = 'Devin (no credentials on this server)';
+  option.disabled = true;
+  el('planner').value = 'baseline';
+  el('status').textContent = caps.reason;
+}).catch(() => {});
 
 // Load the last recorded mission if one is on disk, so the view is never empty.
 fetch('/data3/mission_trace.json').then((r) => r.ok ? r.json() : null).then((trace) => {

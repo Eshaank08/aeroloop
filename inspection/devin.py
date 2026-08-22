@@ -135,6 +135,7 @@ class DevinClient:
         transport: Callable[[str, str, str, dict | None, float], dict] = _http_json,
         sleeper: Callable[[float], None] = time.sleep,
         clock: Callable[[], float] = time.monotonic,
+        recorder: list | None = None,
     ):
         if not api_key or not org_id:
             raise ValueError("DEVIN_API_KEY and DEVIN_ORG_ID are required for Devin mode")
@@ -144,9 +145,37 @@ class DevinClient:
         self.poll_interval_s = poll_interval_s
         self.timeout_s = timeout_s
         self.request_timeout_s = request_timeout_s
-        self.transport = transport
         self.sleeper = sleeper
         self.clock = clock
+        self.recorder = recorder
+        self.transport = self._recording(transport) if recorder is not None else transport
+
+    def _recording(self, transport):
+        """Log the shape of every API call so the protocol can be shown to a judge.
+
+        The key is never recorded, and the organisation id is reduced to a suffix,
+        because this log is served to a browser.
+        """
+        def wrapped(method, url, key, payload, timeout_s):
+            path = url.replace(self.api_base, "").replace(self.org_id, "{org}")
+            started = time.monotonic()
+            entry = {"method": method, "path": path, "sent_keys": sorted(payload) if payload else []}
+            try:
+                result = transport(method, url, key, payload, timeout_s)
+            except Exception as exc:
+                entry.update(ok=False, error=type(exc).__name__, ms=round((time.monotonic() - started) * 1000))
+                self.recorder.append(entry)
+                raise
+            entry.update(
+                ok=True,
+                ms=round((time.monotonic() - started) * 1000),
+                status=result.get("status"),
+                status_detail=result.get("status_detail"),
+                has_structured_output=isinstance(result.get("structured_output"), dict),
+            )
+            self.recorder.append(entry)
+            return result
+        return wrapped
 
     @classmethod
     def from_env(cls, **kwargs) -> "DevinClient":

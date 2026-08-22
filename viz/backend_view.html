@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AeroLoop backend view: the protocol, not the picture</title>
+<style>
+  :root {
+    --ink: #dde5f0; --dim: #8595ab; --bg: #070a10; --panel: #0d1219;
+    --line: #1d2836; --devin: #7aa2ff; --good: #46d98b; --bad: #ff6b6b;
+    --warn: #ffc65c; --sim: #c08cff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); padding: 18px 20px 40px;
+    font: 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  h1 { font-size: 15px; margin: 0 0 3px; letter-spacing: .02em; }
+  h1 span { color: var(--dim); font-weight: 400; }
+  .sub { color: var(--dim); margin-bottom: 16px; font-size: 12px; }
+  .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  input, select, button { background: #131a24; color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 7px 10px; font: inherit; }
+  input { width: 420px; }
+  button { cursor: pointer; }
+  button:hover { border-color: #38506e; }
+  button.go { background: var(--devin); color: #05101f; border-color: var(--devin); font-weight: 600; }
+  .grid { display: grid; grid-template-columns: 300px 1fr 330px; gap: 14px; align-items: start; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 12px 13px; }
+  .card h2 { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--dim); margin: 0 0 9px; font-weight: 600; }
+  .kv { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
+  .kv span:first-child { color: var(--dim); }
+  .pipe { line-height: 1.75; }
+  .pipe .node { color: var(--ink); }
+  .pipe .arrow { color: var(--line); }
+  .pipe .tag { color: var(--dim); font-size: 11px; }
+  .devin { color: var(--devin); } .sim { color: var(--sim); }
+  .good { color: var(--good); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+  .turn { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+  .turn > .head { display: flex; justify-content: space-between; gap: 10px;
+    background: #101722; padding: 7px 11px; cursor: pointer; }
+  .turn > .body { display: none; padding: 10px 11px; border-top: 1px solid var(--line); }
+  .turn.open > .body { display: block; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+  pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 11px;
+    color: #b9c6d8; max-height: 260px; overflow: auto; }
+  .lbl { color: var(--dim); font-size: 10.5px; text-transform: uppercase;
+    letter-spacing: .12em; margin-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: 11.5px; }
+  th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); }
+  th { color: var(--dim); font-weight: 500; }
+  .digest { color: #6d7f96; font-size: 10.5px; }
+  code { color: var(--devin); }
+  .empty { color: var(--dim); }
+</style>
+</head>
+<body>
+<h1>AeroLoop backend view <span>the protocol, not the picture</span></h1>
+<div class="sub">Every exchange between the simulator, the Devin API and the safety envelope for one mission. The 3D view is at <a href="/mission_view.html" style="color:var(--devin)">mission_view.html</a>.</div>
+
+<div class="bar">
+  <input id="order" value="inspect the lower end of the engine on a random scene">
+  <select id="planner">
+    <option value="devin">planner: devin (live API)</option>
+    <option value="baseline">planner: baseline (no API)</option>
+  </select>
+  <button class="go" id="run">Run mission</button>
+  <span id="state" class="empty">idle</span>
+</div>
+
+<div class="grid">
+  <div>
+    <div class="card" style="margin-bottom:14px">
+      <h2>Pipeline</h2>
+      <div class="pipe">
+        <div class="node">operator sentence</div>
+        <div class="arrow">&darr; <span class="tag">mission/intent.py, local</span></div>
+        <div class="node">authorised waypoints + seed</div>
+        <div class="arrow">&darr;</div>
+        <div class="node sim">simulator v2 observe</div>
+        <div class="arrow">&darr; <span class="tag">POST /messages</span></div>
+        <div class="node devin">Devin session decides</div>
+        <div class="arrow">&darr; <span class="tag">structured output</span></div>
+        <div class="node">safety envelope</div>
+        <div class="arrow">&darr; <span class="tag">accept or reject back to Devin</span></div>
+        <div class="node sim">controller2 flies 50 Hz</div>
+        <div class="arrow">&darr;</div>
+        <div class="node">independent verifier</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <h2>Authorisation</h2>
+      <div id="intent"><span class="empty">no mission yet</span></div>
+    </div>
+    <div class="card">
+      <h2>Server endpoints</h2>
+      <table id="endpoints">
+        <tr><td><code>GET /api/capabilities</code></td><td class="digest">can this server fly live</td></tr>
+        <tr><td><code>GET /api/scene</code></td><td class="digest">nacelle geometry</td></tr>
+        <tr><td><code>POST /api/mission</code></td><td class="digest">autonomous v2 mission</td></tr>
+        <tr><td><code>POST /api/inspect</code></td><td class="digest">v1 adaptive evidence loop</td></tr>
+        <tr><td><code>POST /api/fly</code></td><td class="digest">v1 single flight</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>Observation and action, turn by turn</h2>
+      <div id="turns"><span class="empty">Run a mission to see each observation the drone sensed, what Devin decided, and how the envelope ruled.</span></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card" style="margin-bottom:14px">
+      <h2>Devin API calls</h2>
+      <div id="api"><span class="empty">none yet</span></div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <h2>Verifier</h2>
+      <div id="verify"><span class="empty">none yet</span></div>
+    </div>
+    <div class="card">
+      <h2>Artifact</h2>
+      <div id="artifact"><span class="empty">none yet</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const el = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const j = (o) => esc(JSON.stringify(o, null, 2));
+
+function renderIntent(intent) {
+  if (!intent) return;
+  el('intent').innerHTML =
+    `<div class="kv"><span>region</span><span>${esc(intent.region)}</span></div>` +
+    `<div class="kv"><span>waypoints</span><span>${intent.waypoint_count}</span></div>` +
+    `<div class="kv"><span>seed</span><span>${intent.seed}${intent.seed_was_random ? ' <span class="warn">random</span>' : ''}</span></div>` +
+    `<div class="kv"><span>action budget</span><span>${intent.max_actions}</span></div>` +
+    `<div class="digest" style="margin-top:7px">Resolved locally before flight. The agent cannot widen this set.</div>`;
+}
+
+function renderApi(calls) {
+  if (!calls || !calls.length) {
+    el('api').innerHTML = '<span class="empty">none, the baseline agent makes no API calls</span>';
+    return;
+  }
+  const rows = calls.map((c) => {
+    const cls = c.ok ? (c.has_structured_output ? 'good' : '') : 'bad';
+    const detail = c.error ? c.error : (c.has_structured_output ? 'output' : (c.status_detail || c.status || ''));
+    return `<tr><td>${esc(c.method)}</td><td class="digest">${esc(c.path)}</td>` +
+           `<td class="${cls}">${esc(detail)}</td><td class="digest">${c.ms}ms</td></tr>`;
+  }).join('');
+  const posts = calls.filter((c) => c.method === 'POST').length;
+  el('api').innerHTML =
+    `<table><tr><th>verb</th><th>path</th><th>result</th><th>ms</th></tr>${rows}</table>` +
+    `<div class="digest" style="margin-top:7px">${calls.length} calls, ${posts} writes. ` +
+    `The key travels in the Authorization header only and is never logged.</div>`;
+}
+
+function renderVerify(v, disposition) {
+  const cls = disposition === 'PASS' ? 'good' : (disposition === 'ABORTED' ? 'bad' : 'warn');
+  el('verify').innerHTML =
+    `<div class="kv"><span>disposition</span><span class="${cls}">${esc(disposition)}</span></div>` +
+    `<div class="kv"><span>inspected</span><span>${v.inspected_count}/${v.waypoint_count}</span></div>` +
+    `<div class="kv"><span>coverage</span><span>${(v.coverage * 100).toFixed(1)}% (need ${(v.coverage_threshold * 100).toFixed(0)}%)</span></div>` +
+    `<div class="kv"><span>elapsed</span><span>${v.elapsed_s}s / ${v.time_budget_s}s</span></div>` +
+    `<div class="kv"><span>collision</span><span class="${v.collision ? 'bad' : 'good'}">${v.collision}</span></div>` +
+    `<div class="kv"><span>failure</span><span>${esc(v.failure === null ? 'none' : v.failure)}</span></div>` +
+    `<div class="digest" style="margin-top:7px">The verifier runs whatever the agent claimed. Its answer wins.</div>`;
+}
+
+function renderArtifact(a) {
+  el('artifact').innerHTML =
+    `<div class="kv"><span>mission</span><span>${esc(a.mission_id)}</span></div>` +
+    `<div class="kv"><span>agent claim</span><span>${esc(a.agent_claim || 'none')}</span></div>` +
+    `<div class="kv"><span>planner failed</span><span class="${a.planner_failed ? 'bad' : 'good'}">${a.planner_failed}</span></div>` +
+    `<div class="kv"><span>safe stop</span><span class="${a.safe_stop ? 'warn' : 'good'}">${a.safe_stop}</span></div>` +
+    `<div class="kv"><span>rejections</span><span>${a.rejections.length}</span></div>` +
+    (a.planner_metadata && a.planner_metadata.session_url
+      ? `<div style="margin-top:7px"><a href="${a.planner_metadata.session_url}" target="_blank" style="color:var(--devin)">open the Devin session</a></div>` : '') +
+    `<div class="digest" style="margin-top:7px">sha256 ${esc(a.integrity_digest.slice(0, 32))}...</div>`;
+}
+
+function renderTurns(steps) {
+  const host = el('turns');
+  const flown = steps.filter((s) => s.action);
+  if (!flown.length) { host.innerHTML = '<span class="empty">no actions</span>'; return; }
+  host.innerHTML = flown.map((s, i) => {
+    const a = s.action, d = s.decision || {}, o = s.outcome;
+    const rejected = d.decision === 'rejected';
+    const targets = a.waypoint_indexes.length ? ` [${a.waypoint_indexes.join(', ')}]` : '';
+    const verdict = rejected
+      ? `<span class="bad">rejected</span>`
+      : `<span class="good">accepted</span>`;
+    const gained = o && o.newly_inspected.length ? ` <span class="good">+${o.newly_inspected.length} captured</span>` : '';
+    return `<div class="turn${i === 0 ? ' open' : ''}">
+      <div class="head" onclick="this.parentNode.classList.toggle('open')">
+        <span><span class="dim">obs ${s.observation_id}</span> &rarr;
+          <span class="devin">${esc(a.primitive)}${esc(targets)}</span></span>
+        <span>${verdict}${gained}</span>
+      </div>
+      <div class="body">
+        <div style="margin-bottom:9px"><div class="lbl">Devin's stated reason</div>
+          <div class="devin">${esc(a.reason)}</div></div>
+        ${rejected ? `<div style="margin-bottom:9px"><div class="lbl">Envelope ruling, returned to Devin</div>
+          <div class="bad">${esc(d.reason)}</div></div>` : ''}
+        <div class="cols">
+          <div><div class="lbl">Observation sent (sensed only)</div><pre>${j(s.observation)}</pre>
+            <div class="digest">sha256 ${esc((s.observation_digest || '').slice(0, 24))}...</div></div>
+          <div><div class="lbl">Action returned (structured output)</div><pre>${j(a)}</pre>
+            <div class="digest">sha256 ${esc((s.action_digest || '').slice(0, 24))}...</div></div>
+        </div>
+        ${o ? `<div style="margin-top:9px"><div class="lbl">Measured outcome</div><pre>${j(o)}</pre></div>` : ''}
+      </div></div>`;
+  }).join('');
+}
+
+async function run() {
+  const button = el('run');
+  button.disabled = true;
+  el('state').textContent = 'running, a live mission takes a minute';
+  el('state').className = 'warn';
+  try {
+    const response = await fetch('/api/mission', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: el('order').value.trim(), planner: el('planner').value }),
+    });
+    const data = await response.json();
+    if (!data.ok) {
+      el('state').textContent = data.reply;
+      el('state').className = 'bad';
+      return;
+    }
+    const a = data.artifact;
+    renderIntent(data.intent);
+    renderApi(data.api_calls);
+    renderVerify(a.verification, a.final_disposition);
+    renderArtifact(a);
+    renderTurns(a.steps);
+    el('state').textContent = data.reply;
+    el('state').className = a.final_disposition === 'PASS' ? 'good' : 'warn';
+  } catch (error) {
+    el('state').textContent = String(error);
+    el('state').className = 'bad';
+  } finally {
+    button.disabled = false;
+  }
+}
+
+el('run').onclick = run;
+el('order').addEventListener('keydown', (e) => { if (e.key === 'Enter') run(); });
+
+fetch('/api/capabilities').then((r) => r.json()).then((caps) => {
+  if (caps.devin_available) return;
+  const option = el('planner').querySelector('option[value="devin"]');
+  option.textContent = 'planner: devin (no credentials on this server)';
+  option.disabled = true;
+  el('planner').value = 'baseline';
+  el('state').textContent = caps.reason;
+  el('state').className = 'warn';
+});
+</script>
+</body>
+</html>

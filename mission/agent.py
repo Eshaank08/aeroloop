@@ -103,9 +103,14 @@ class DevinMissionPlanner:
         order = (
             f"\n\nThe operator asked for this, in their words:\n"
             f"  \"{self.work_order}\"\n"
-            "Only the waypoints listed in available_targets are authorised. Interpret "
-            "the request inside that set, and if the request is already satisfied, say "
-            "so with a terminal action rather than flying more.\n"
+            "That sentence has already been translated into the authorised waypoint set "
+            "you can see in the observation. The translation is the operator's, not "
+            "yours, so treat the authorised set as the definition of the job: the "
+            "inspection is complete only when every one of those waypoints has been "
+            "inspected. Do not narrow it further because you read the sentence "
+            "differently, and do not claim complete while available_targets is "
+            "non-empty. If some waypoint genuinely cannot be captured, say so with "
+            "insufficient_evidence or needs_human rather than calling the mission done.\n"
             if self.work_order else ""
         )
         prompt = (

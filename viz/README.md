@@ -34,3 +34,26 @@ budget, speed, clearance to the keep-out shell, wind magnitude, collisions, and
 the verdict. Right panel is the whole verification batch, one cell per scenario,
 green for pass. Drag to orbit, scroll to zoom, and use `jump to gust` to skip
 straight to the disturbance.
+
+## What you are looking at
+
+The drone is a quadcopter airframe with counter rotating rotors. Rotor speed
+follows the thrust the trace implies, and the airframe banks along the thrust
+axis reconstructed from the recorded acceleration, so the attitude you see is
+the attitude the recorded flight demanded, not an animation.
+
+The nacelle sits on cradles and pylons in a hangar bay with painted floor
+markings, a directional key light and shadows, roof trusses and lamps. Wind is
+drawn twice: as streaks blowing through the bay at the scenario wind vector, and
+as the arrow on the drone.
+
+The keep-out shell is inert while the drone keeps its distance. As clearance
+falls the shell brightens, a hotspot flares on the surface nearest the drone,
+and a proximity banner appears. A breach turns both red.
+
+Three cameras:
+
+- `orbit`, the free camera, drag and scroll as before
+- `follow`, a chase camera that trails the airframe and smooths its aim
+- `pilot view`, the nose camera on the drone, with the airframe and the waypoint
+  spheres hidden and inspection targets drawn as reticles instead

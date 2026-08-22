@@ -1,0 +1,29 @@
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: https://github.com/Eshaank08/aeroloop/blob/master/docs/REAL_WORLD_ROADMAP.md
+</in-app-browser-context>
+
+## My request:
+Testing after merge:
+
+Pull master on your local clone:
+
+
+git checkout main && git pull
+\# or git checkout master && git pull
+Run the test suite:
+
+
+source .venv/bin/activate
+python -m pytest -q
+AEROLOOP\_SCENARIOS=30 AEROLOOP\_BASE\_SEED=606061 python -m pytest -q
+Run the simulator backend:
+
+
+python -m viz.server
+Open [http://127.0.0.1:8765/flight\_view.html](http://127.0.0.1:8765/flight_view.html) and try a sector command like:
+inspect top side, light wind seed 606076
+inspect ring 2, calm seed 200
+The flight trace should cover only the selected waypoints, evidence-coloured dots should mark quality, and PASS / INSUFFICIENT\_EVIDENCE should show after the re-capture round. No API key is needed. do this for me&#x20;

@@ -6,6 +6,30 @@ written and verified by an AI engineer with no human in the loop.
 Built for the Cognition "Find an Industry, Give it an Engineer" track, EHL Munich,
 August 2026.
 
+## What this repository is
+
+A closed loop. `scripts/trigger_devin.py` creates a Devin session over the API with the
+task spec below as its whole prompt. That session writes `controller.py`, runs the
+verifier in `sim/`, reads the failure report, fixes the controller, and reruns until it
+passes, then opens a pull request. A human sees the result only at the end, at
+`scripts/approve.py`, and only to accept the physical risk of flying near a real engine.
+
+What is on master right now, verified in this checkout and not taken on trust:
+
+- `controller.py` was written by a Devin session and merged through pull request #4. The
+  commit author on that file is the Devin bot account, not a person.
+- `python3 -m pytest -q` prints `1 passed`. That one test runs the whole verifier.
+- `python3 -m sim.run_verifier --scenarios 30 --verbose` reports 30/30 scenarios passed,
+  100.0% mean coverage, 0 collisions.
+- A 50 scenario batch on unseen base seed 424242 reports 50/50 passed, 100.0% mean
+  coverage, 0 collisions.
+- `viz/flight_view.html` replays a graded run in the browser with no server and no
+  network.
+
+Every one of those numbers, with the exact command that produced it and the output pasted
+verbatim, is in [docs/RESULTS.md](docs/RESULTS.md). The live demo runbook, including the
+fallback for each step when the network is dead, is in [docs/DEMO.md](docs/DEMO.md).
+
 ---
 
 ## THE TASK (this section is Devin's brief)
@@ -82,6 +106,25 @@ covers every waypoint but clips the nacelle once is a FAIL, not a near-miss.
 
 ---
 
+## The task list
+
+One task, one file. The agent writes that file and nothing else, and the verifier decides
+whether it is done.
+
+| Version | Task                                                              | File the agent writes | Status                                    |
+| ------- | ----------------------------------------------------------------- | --------------------- | ----------------------------------------- |
+| v1      | Fly a full inspection sweep of a nacelle under randomized wind, point mass with acceleration control | `controller.py`       | done, written by Devin, merged in PR #4    |
+| v2      | Fly the same sweep on a rate controlled quadrotor whose coverage only counts when a camera is aimed at the waypoint | the v2 controller file named in `docs/SIM2_SPEC.md` | specified, not built, no v2 run measured  |
+
+The v2 simulator and its spec are the work of a parallel effort and are not on this
+branch, so the exact v2 filename and interface are whatever `docs/SIM2_SPEC.md` says and
+are deliberately not restated here. Nothing in this repository has been graded under v2,
+so treat every number here as a v1 number.
+
+The section above this one is the brief handed to the agent for v1. Keep it exact. The
+thresholds in it are the contract, and softening them would invalidate every number in
+`docs/RESULTS.md`.
+
 ## Repo layout
 
 ```
@@ -94,7 +137,8 @@ sim/run_verifier.py       Runs the controller across N scenarios, prints PASS/FA
 tests/test_controller.py  pytest wrapper so the normal test loop runs the verifier
 scripts/trigger_devin.py  Creates a Devin session against this repo via the API
 scripts/approve.py        Final human approval gate, run after a PASS
-docs/                     GOAL, IDEA, PRD, DEMO
+viz/                      Read-only replay recorder and browser flight view of a graded run
+docs/                     GOAL, IDEA, PRD, DEMO, RESULTS
 ```
 
 ## Human in the loop

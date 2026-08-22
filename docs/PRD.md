@@ -1,23 +1,34 @@
 # PRD
 
+Status of this document: it describes the repository as it stands on master, not the plan.
+Everything marked BUILT was run in the checkout and its output is pasted in
+`docs/RESULTS.md`. Everything marked SPECIFIED exists only as a written spec.
+
 ## System in one diagram
 
 ```
-scripts/trigger_devin.py
+scripts/trigger_devin.py                                    [BUILT, path exercised once]
         |  POST /v3/organizations/{org}/sessions   (prompt = README task spec)
+        |  credentials read from DEVIN_API_KEY and DEVIN_ORG_ID only
         v
-   Devin session  ---writes--->  controller.py
-        |  ^
-        |  |  pytest -q  (wraps sim/run_verifier.py)
+   Devin session  ---writes--->  controller.py               [BUILT, merged in PR #4]
+        |  ^                      commit author on that file is the Devin bot
+        |  |  pytest -q  (wraps sim/run_verifier.py)         [BUILT, prints 1 passed]
         |  +--- FAIL: coverage/collision/time report fed back automatically
         v
-      PASS
+      PASS   30/30 default scenarios, 50/50 on unseen base seed 424242
         |
+        +---> viz/replay.py --> viz/data/*.json --> viz/flight_view.html
+        |     records and replays a graded run, scores nothing  [BUILT, offline, read only]
         v
-scripts/approve.py   <- the single human touch, a safety gate, post-PASS
+scripts/approve.py   <- the single human touch, a safety gate, post-PASS   [BUILT]
         |
         v
    ARTIFACT: controller.py + verification report
+
+   simulator v2: rate controlled quadrotor, coverage gated on a camera view
+   docs/SIM2_SPEC.md                                        [SPECIFIED, not built]
+   no v2 number exists anywhere in this repository
 ```
 
 ## Components
@@ -33,6 +44,29 @@ scripts/approve.py   <- the single human touch, a safety gate, post-PASS
 | `controller.py`            | **Devin**   | The flight controller. The only file Devin writes.             |
 | `scripts/trigger_devin.py` | Claude Code | Creates the Devin session via API, polls status                |
 | `scripts/approve.py`       | Claude Code | Prints report, requires one human confirmation                 |
+| `viz/replay.py`            | Devin       | Reruns the graded scenarios and records them to `viz/data/`, scores nothing |
+| `viz/flight_view.html`     | Devin       | Browser flight view of one recorded run, Three.js vendored, no server, no network |
+| `viz/data/*.json`, `data.js` | generated | Committed recording of the graded batch and of the traced scenario, seed 1017 |
+| `docs/DEMO.md`             | Claude Code | 90 second demo runbook, with an offline fallback per step       |
+| `docs/RESULTS.md`          | Claude Code | Every claimed number, with the command that produced it         |
+| `docs/SIM2_SPEC.md`        | Claude Code | Simulator v2 spec. Specification only, no v2 code on master     |
+
+`docs/SIM2_SPEC.md` is written on the parallel v2 branch and is not on master at the time
+this table was updated, so nothing here restates its contents.
+
+### Built or specified
+
+| Part                                                               | State                                   |
+| ------------------------------------------------------------------ | --------------------------------------- |
+| Simulator v1: geometry, wind, limits, verifier                      | BUILT, a 30 scenario batch runs in under a second |
+| `tests/test_controller.py`                                         | BUILT, one test wrapping the verifier    |
+| `controller.py`                                                    | BUILT by a Devin session, merged in PR #4 |
+| `scripts/trigger_devin.py`                                         | BUILT, and the trigger to artifact path has been exercised end to end once, producing PR #4 |
+| `scripts/approve.py`                                               | BUILT, reruns the verifier then blocks on one typed answer |
+| `viz/` replay recorder and flight view                              | BUILT, read only, works with no network  |
+| Simulator v2: rate controlled quadrotor with camera gated coverage  | SPECIFIED in `docs/SIM2_SPEC.md`, no implementation on master, no measured result |
+| A v2 controller                                                    | NOT BUILT                                |
+| Real drone hardware, real flight, image processing                  | OUT OF SCOPE, see the last section       |
 
 ## Verifier spec
 
@@ -78,6 +112,10 @@ change in IDEA.md under "how the approach changed."
 
 ## Build order
 
+Steps 1 to 6 are done. Step 5, the highest uncertainty step, is the one that mattered: a
+scripted session wrote the controller and opened PR #4, which is on master.
+
+
 1. `limits.py`, `aircraft_geometry.py`, `drone_dynamics.py`, `scenarios.py`
 2. `run_verifier.py` with the PASS/FAIL report
 3. `tests/test_controller.py`, then sanity-check with a deliberately broken controller
@@ -89,6 +127,9 @@ change in IDEA.md under "how the approach changed."
 
 **Do not start the deck until step 5 has passed once.** The deck needs real coverage
 numbers and a real iteration count, not projections.
+
+Coverage numbers now exist and live in `docs/RESULTS.md`. The iteration count of the live
+session is not recorded in this repository, so it is not measured and must not be quoted.
 
 ## Out of scope
 

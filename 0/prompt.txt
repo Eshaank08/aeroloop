@@ -1,0 +1,5 @@
+yes makes sense, checlk the broswer and backend and then make the changes, also make sure to add
+
+This challenge requires an Entire session record, but your repository has no recognized Entire checkpoint branch or ref. Install Entire ([https://entire.io](https://entire.io)), run `entire enable --agent <your-tool>`, commit your AI session, push (including the checkpoint data), then resubmit. If your repo is private, make sure ehl-gg has access so we can read it.
+
+this in the repo, merge all branches which have to be merged, amek it submission ready maybe? and lets do 2-3 tests before finally saying its done.&#x20;

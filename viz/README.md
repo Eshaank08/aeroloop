@@ -34,3 +34,22 @@ budget, speed, clearance to the keep-out shell, wind magnitude, collisions, and
 the verdict. Right panel is the whole verification batch, one cell per scenario,
 green for pass. Drag to orbit, scroll to zoom, and use `jump to gust` to skip
 straight to the disturbance.
+
+## The drone model and its attitude
+
+The drone is drawn as a quadrotor: body, four arms, four spinning rotors, and the
+camera cone opening along the boresight, which turns green while the camera is
+within 35 degrees of the nacelle skin it is inspecting.
+
+v1 is a point mass, so a trace carries no attitude and the pose shown is inferred
+rather than simulated: thrust axis along acceleration plus gravity, which is the
+attitude a real quadrotor would have had to hold to fly that path, and boresight
+aimed at the radial projection onto the skin. The legend says `attitude inferred`
+whenever that is what you are looking at, and the tilt readout is marked the same
+way. Tilt costs aim, which is exactly the coupling the v2 task in
+`docs/SIM2_SPEC.md` grades.
+
+When a trace carries an `R` field per frame, a 3x3 body to world rotation matrix,
+the view uses it verbatim and drops the inferred label. That is the hook for
+replaying a v2 flight, and the camera half angle is read from `scene.camera` when
+the recorder supplies it.

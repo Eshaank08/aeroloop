@@ -102,7 +102,13 @@
 
 <script src="vendor/three.min.js"></script>
 <script src="vendor/OrbitControls.js"></script>
-<script src="data/data.js"></script>
+<script>
+(function () {
+  const dir = (new URLSearchParams(location.search).get('data') || 'data')
+    .replace(/[^A-Za-z0-9_]/g, '');
+  document.write('<script src="' + dir + '/data.js"><\/script>');
+}());
+</script>
 <script>
 (function () {
   const data = window.AEROLOOP;

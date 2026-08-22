@@ -29,6 +29,10 @@ peak, so the disturbance lands while the drone is still working the nacelle.
 Open `viz/flight_view.html` in a browser. No server, no build step, no network:
 Three.js is vendored under `viz/vendor/`.
 
+The view loads `data/data.js` by default and takes the directory from the query
+string, so `flight_view.html?data=data2` replays a recording written elsewhere
+under `viz/` without touching the committed v1 demo data.
+
 Left panel is the live flight: coverage, waypoints, elapsed against the 120 s
 budget, speed, clearance to the keep-out shell, wind magnitude, collisions, and
 the verdict. Right panel is the whole verification batch, one cell per scenario,

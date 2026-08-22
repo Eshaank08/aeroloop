@@ -25,6 +25,7 @@ class Mission:
     label: str = ""
     text: str = ""
     hold_duration: float = 8.0
+    waypoint_indexes: list[int] | None = None
 
 
 EXAMPLES = [
@@ -146,12 +147,14 @@ def parse(text: str, nacelle=DEFAULT_NACELLE) -> Mission:
                 f"Ring {invalid[0]} is out of range. Choose rings 1 through {nacelle.rings}."
             )
         selected = []
+        selected_indexes = []
         for ring in ring_numbers:
             begin = (ring - 1) * nacelle.per_ring
             selected.extend(waypoints[begin : begin + nacelle.per_ring])
+            selected_indexes.extend(range(begin, begin + nacelle.per_ring))
         ring_label = "Ring" if len(ring_numbers) == 1 else "Rings"
         label = ring_label + " " + ", ".join(str(value) for value in ring_numbers)
-        return Mission("ring", selected, start, seed, wind_scale, label, raw)
+        return Mission("ring", selected, start, seed, wind_scale, label, raw, waypoint_indexes=selected_indexes)
 
     side_match = re.search(
         r"\b(top|bottom|left|right|front|aft)(?:\s+side)?\b", lowered
@@ -161,21 +164,24 @@ def parse(text: str, nacelle=DEFAULT_NACELLE) -> Mission:
         axis_z = (nacelle.axis_start[2] + nacelle.axis_end[2]) / 2.0
         axis_x = (nacelle.axis_start[0] + nacelle.axis_end[0]) / 2.0
         epsilon = 1e-9
+        indexed = []
         if side == "top":
-            selected = [wp for wp in waypoints if wp[2] > axis_z + epsilon]
+            indexed = [(i, wp) for i, wp in enumerate(waypoints) if wp[2] > axis_z + epsilon]
         elif side == "bottom":
-            selected = [wp for wp in waypoints if wp[2] < axis_z - epsilon]
+            indexed = [(i, wp) for i, wp in enumerate(waypoints) if wp[2] < axis_z - epsilon]
         elif side == "left":
-            selected = [wp for wp in waypoints if wp[1] > epsilon]
+            indexed = [(i, wp) for i, wp in enumerate(waypoints) if wp[1] > epsilon]
         elif side == "right":
-            selected = [wp for wp in waypoints if wp[1] < -epsilon]
+            indexed = [(i, wp) for i, wp in enumerate(waypoints) if wp[1] < -epsilon]
         elif side == "front":
-            selected = [wp for wp in waypoints if wp[0] < axis_x - epsilon]
+            indexed = [(i, wp) for i, wp in enumerate(waypoints) if wp[0] < axis_x - epsilon]
         else:
-            selected = [wp for wp in waypoints if wp[0] > axis_x + epsilon]
-        if not selected:
+            indexed = [(i, wp) for i, wp in enumerate(waypoints) if wp[0] > axis_x + epsilon]
+        if not indexed:
             raise CommandError(f"The {side} side has no waypoints.")
-        return Mission("sector", selected, start, seed, wind_scale, side.title() + " side", raw)
+        selected = [wp for i, wp in indexed]
+        selected_indexes = [i for i, wp in indexed]
+        return Mission("sector", selected, start, seed, wind_scale, side.title() + " side", raw, waypoint_indexes=selected_indexes)
 
     if re.search(
         r"\bfull\s+sweep\b|\binspect\s+(?:the\s+)?engine\b|"

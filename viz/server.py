@@ -7,6 +7,10 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from inspection.adaptive import AdaptiveRunner
+from inspection.artifact import build_artifact
+from inspection.quality import QualityOracle
+from inspection.work_order import parse_work_order
 from viz.flightlab import fly
 from viz.mission import CommandError, EXAMPLES, help_text, parse
 from viz.replay import scene
@@ -55,15 +59,16 @@ class CommandHandler(SimpleHTTPRequestHandler):
             return
         super().do_GET()
 
-    def do_POST(self):
-        path = urlsplit(self.path).path
-        if path != "/api/fly":
-            self._send_json(404, {"ok": False, "reply": "Unknown API endpoint."})
-            return
+    def _bad(self, message: str, status: int = 200):
+        self._send_json(status, {"ok": False, "reply": message})
 
+    def _read_json(self):
+        length = int(self.headers.get("Content-Length", "0"))
+        return json.loads(self.rfile.read(length))
+
+    def _fly(self):
         try:
-            length = int(self.headers.get("Content-Length", "0"))
-            request = json.loads(self.rfile.read(length))
+            request = self._read_json()
             text = request.get("text") if isinstance(request, dict) else None
             mission = parse(text)
         except CommandError as error:
@@ -99,6 +104,88 @@ class CommandHandler(SimpleHTTPRequestHandler):
             )
         except Exception as error:
             self._send_json(500, {"ok": False, "reply": f"Flight command failed: {error}"})
+
+    def _inspect(self):
+        try:
+            request = self._read_json()
+            text = request.get("text") if isinstance(request, dict) else None
+            work_order = parse_work_order(text or "")
+        except Exception as error:
+            self._send_json(400, {"ok": False, "reply": f"Could not parse work order: {error}"})
+            return
+
+        try:
+            runner = AdaptiveRunner(oracle=QualityOracle())
+            result = runner.run(
+                work_order.label,
+                work_order.nacelle,
+                work_order.limits,
+                seed=work_order.seed,
+                wind_scale=work_order.wind_scale,
+                selected_waypoints=work_order.selected_waypoints,
+                selected_waypoint_indexes=work_order.selected_waypoint_indexes,
+            )
+            artifact = build_artifact(result, nacelle=work_order.nacelle, limits=work_order.limits)
+            trace = self._combine_for_display(result)
+            good = sum(1 for q in result.final_quality if q.status == "good")
+            disposition = result.final_disposition
+            reply = (
+                f"adaptive run complete: {disposition}. "
+                f"{good}/{len(result.final_quality)} captures good."
+            )
+            self._send_json(
+                200,
+                {
+                    "ok": True,
+                    "reply": reply,
+                    "trace": trace,
+                    "artifact": artifact,
+                    "captures": [c.__dict__ for c in result.final_captures],
+                    "quality": [q.__dict__ for q in result.final_quality],
+                    "mission": {
+                        "kind": "sweep",
+                        "label": work_order.label,
+                        "sector": work_order.sector,
+                        "waypoints": list(work_order.selected_waypoints or work_order.nacelle.waypoints()),
+                        "start": (0.0, 0.0, 6.0),
+                        "wind_seed": work_order.seed,
+                        "wind_scale": work_order.wind_scale,
+                    },
+                },
+            )
+        except Exception as error:
+            self._send_json(500, {"ok": False, "reply": f"Inspection run failed: {error}"})
+
+    @staticmethod
+    def _combine_for_display(result):
+        """Merge initial and follow-up traces into one scrubbable timeline."""
+        initial = result.initial.trace
+        followup = result.followup_result.trace if result.followup_result else {"frames": []}
+        combined = dict(initial)
+        combined["frames"] = []
+        elapsed = 0.0
+        for frame in initial.get("frames", []):
+            new_frame = dict(frame)
+            new_frame["phase"] = "initial"
+            combined["frames"].append(new_frame)
+        elapsed += initial.get("elapsed_s", 0.0)
+        for frame in followup.get("frames", []):
+            new_frame = dict(frame)
+            new_frame["t"] = round(frame["t"] + elapsed, 3)
+            new_frame["phase"] = "re-capture"
+            combined["frames"].append(new_frame)
+        combined["elapsed_s"] = round(elapsed + followup.get("elapsed_s", 0.0), 3)
+        combined["waypoints"] = list(combined.get("waypoints", []))
+        return combined
+
+    def do_POST(self):
+        path = urlsplit(self.path).path
+        if path == "/api/fly":
+            self._fly()
+        elif path == "/api/inspect":
+            self._inspect()
+        else:
+            self._send_json(404, {"ok": False, "reply": "Unknown API endpoint."})
 
 
 def main():

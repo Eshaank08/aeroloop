@@ -65,6 +65,18 @@
   #reticle .v { width: 1px; height: 34px; top: 50%; left: 50%; margin-top: -17px; }
   #chat { position: fixed; left: 16px; bottom: 68px; width: 330px;
     display: flex; flex-direction: column; gap: 8px; }
+  #inspection { position: fixed; left: 16px; top: 290px; width: 268px;
+    display: flex; flex-direction: column; gap: 8px; max-height: 280px; }
+  #inspection .title { font-size: 11px; letter-spacing: 0.12em; color: var(--dim);
+    text-transform: uppercase; }
+  #inspect-log { max-height: 110px; overflow-y: auto; display: flex; flex-direction: column;
+    gap: 5px; font-size: 11px; }
+  #inspect-log .msg { padding: 5px 8px; border-radius: 7px; border: 1px solid var(--line); }
+  #inspect-log .msg.ok { border-color: rgba(53, 208, 127, 0.45); color: var(--pass); }
+  #inspect-log .msg.warn { border-color: rgba(255, 179, 71, 0.45); color: var(--warn); }
+  #inspect-log .msg.err { border-color: rgba(255, 93, 102, 0.45); color: var(--fail); }
+  #inspect-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  #inspect-chips button { font-size: 10px; padding: 3px 6px; }
   #chat .title { font-size: 11px; letter-spacing: 0.12em; color: var(--dim);
     text-transform: uppercase; }
   #log { max-height: 210px; overflow-y: auto; display: flex; flex-direction: column;
@@ -130,6 +142,18 @@
   </form>
 </div>
 
+<div id="inspection" class="panel">
+  <div class="title">adaptive inspection</div>
+  <div id="inspect-log"></div>
+  <div id="inspect-chips"></div>
+  <form id="inspect-form">
+    <div id="ask" style="display:flex;gap:6px;width:100%">
+      <input id="inspect-cmd" autocomplete="off" placeholder="inspect top side, light wind" style="flex:1" />
+      <button type="submit">inspect</button>
+    </div>
+  </form>
+</div>
+
 <div id="legend">
   <span class="swatch" style="background:#35d07f"></span>visited
   <span class="swatch" style="background:#55647d"></span>pending
@@ -168,7 +192,9 @@
   const nac = scene_.nacelle, lim = scene_.limits;
   // trace and waypoints are swappable: the command console flies new missions
   let trace = data.trace, frames = trace.frames;
+  let traceDisposition = '';
   let wpList = scene_.waypoints;
+  let wpQuality = [];
 
   // three.js is y-up, the simulator is x-along-nacelle, so map sim (x,y,z) -> (y,z,x).
   const V = (p) => new THREE.Vector3(p[1], p[2], p[0]);
@@ -703,9 +729,15 @@
     wpMeshes.forEach((m, i) => {
       const on = visitedAt[i] <= f.t;
       if (on) hits++;
-      m.material.color.setHex(on ? 0x35d07f : 0x55647d);
-      m.material.emissive.setHex(on ? 0x0d3a24 : 0x0a1018);
-      m.userData.reticle.material.color.setHex(on ? 0x35d07f : 0x8698b3);
+      const quality = wpQuality[i];
+      let color = 0x55647d, emissive = 0x0a1018;
+      if (quality === 'good') { color = 0x35d07f; emissive = 0x0d3a24; }
+      else if (quality === 'marginal') { color = 0xffb347; emissive = 0x301800; }
+      else if (quality === 'missing') { color = 0xff5d66; emissive = 0x2a0506; }
+      else if (on) { color = 0x35d07f; emissive = 0x0d3a24; }
+      m.material.color.setHex(color);
+      m.material.emissive.setHex(emissive);
+      m.userData.reticle.material.color.setHex(color);
     });
 
     // the shell reacts: it brightens and a hotspot flares as clearance shrinks
@@ -747,8 +779,10 @@
     }
 
     const done = index === frames.length - 1;
-    el('verdict').textContent = done ? (trace.passed ? 'PASS' : 'FAIL') : 'flying';
-    el('verdict').className = 'big ' + (done ? (trace.passed ? 'ok' : 'bad') : '');
+    const verdict = done && traceDisposition ? traceDisposition
+      : (done ? (trace.passed ? 'PASS' : 'FAIL') : 'flying');
+    el('verdict').textContent = verdict;
+    el('verdict').className = 'big ' + (done ? ((trace.passed || traceDisposition === 'PASS') ? 'ok' : 'bad') : '');
     el('clock').textContent = f.t.toFixed(2) + 's  frame ' + (index + 1) + '/' + frames.length;
     el('scrub').value = index;
     return { wind: w, thrust: pose.thrust, fwd: pose.fwd };
@@ -851,10 +885,12 @@
 
   // --------------------------------------------------------- mission loading
   // swap in a trace the command server just flew, without rebuilding the world
-  function loadTrace(newTrace, waypoints) {
+  function loadTrace(newTrace, waypoints, captures, quality, disposition) {
     trace = newTrace;
     frames = trace.frames;
     wpList = waypoints && waypoints.length ? waypoints : wpList;
+    traceDisposition = disposition || '';
+    applyEvidence(captures, quality);
     buildWaypoints(wpList);
     if (frames.length > trailCap) {
       trailCap = frames.length;
@@ -873,6 +909,17 @@
     document.querySelectorAll('.cell').forEach((c) => c.classList.remove('active'));
     syncGust();
     Object.assign(camState, draw());
+  }
+
+  function applyEvidence(captures, quality) {
+    wpQuality = [];
+    if (!captures || !quality) return;
+    captures.forEach((c) => {
+      const q = quality.find((x) => x.capture_id === c.capture_id);
+      if (q && c.waypoint_index >= 0 && c.waypoint_index < wpList.length) {
+        wpQuality[c.waypoint_index] = q.status;
+      }
+    });
   }
 
   // ------------------------------------------------------- command console
@@ -913,7 +960,7 @@
       pending.textContent = out.reply || (out.ok ? 'done' : 'could not fly that');
       if (!out.ok) pending.className = 'msg err';
       if (out.ok && out.trace) {
-        loadTrace(out.trace, out.mission && out.mission.waypoints);
+        loadTrace(out.trace, out.mission && out.mission.waypoints, null, null, '');
         say(verdictLine(out.trace), out.trace.passed ? 'sim' : 'err');
       }
     } catch (err) {
@@ -931,6 +978,63 @@
     box.value = '';
   };
 
+  function inspectSay(text, cls) {
+    const d = document.createElement('div');
+    d.className = 'msg ' + (cls || 'sim');
+    d.textContent = text;
+    el('inspect-log').appendChild(d);
+    el('inspect-log').scrollTop = el('inspect-log').scrollHeight;
+    return d;
+  }
+
+  let inspectBusy = false;
+  async function sendInspect(text) {
+    if (inspectBusy || !text.trim()) return;
+    inspectBusy = true;
+    inspectSay(text, 'me');
+    const pending = inspectSay('running adaptive evidence loop...', 'sim');
+    try {
+      const res = await fetch(API + '/api/inspect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text })
+      });
+      const out = await res.json();
+      pending.textContent = out.reply || (out.ok ? 'done' : 'could not inspect that');
+      if (!out.ok) pending.className = 'msg err';
+      if (out.ok && out.trace) {
+        loadTrace(out.trace, out.mission && out.mission.waypoints,
+                  out.captures, out.quality, out.artifact && out.artifact.final_disposition);
+        const good = out.quality.filter((q) => q.status === 'good').length;
+        const total = out.quality.length;
+        inspectSay('captures ' + good + '/' + total + ' good, disposition '
+          + out.artifact.final_disposition + (out.artifact.synthetic ? ' (synthetic)' : ''),
+          out.artifact.final_disposition === 'PASS' ? 'ok'
+          : (out.artifact.final_disposition === 'INSUFFICIENT_EVIDENCE' ? 'warn' : 'err'));
+      }
+    } catch (err) {
+      pending.className = 'msg err';
+      pending.textContent = 'no command server. start it with python -m viz.server';
+    }
+    inspectBusy = false;
+  }
+
+  el('inspect-form').onsubmit = (e) => {
+    e.preventDefault();
+    const box = el('inspect-cmd');
+    sendInspect(box.value);
+    box.value = '';
+  };
+
+  const inspectChips = ['inspect top side, light wind seed 606076',
+    'inspect dense, calm seed 1000', 'inspect narrowbody, heavy wind'];
+  inspectChips.forEach((ex) => {
+    const b = document.createElement('button');
+    b.textContent = ex;
+    b.onclick = () => sendInspect(ex);
+    el('inspect-chips').appendChild(b);
+  });
+
   fetch(API + '/api/scene').then((r) => r.json()).then((info) => {
     say('command server ready. try one of these, or type your own.', 'sim');
     (info.examples || []).slice(0, 6).forEach((ex) => {
@@ -942,6 +1046,7 @@
   }).catch(() => {
     say('replaying the recorded verification trace. to fly new missions, run '
       + 'python -m viz.server and open http://127.0.0.1:8765/flight_view.html', 'sim');
+    inspectSay('replaying recorded trace; start python -m viz.server for inspect commands', 'sim');
   });
 
   // voice, where the browser supports it

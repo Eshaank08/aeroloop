@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { CommandDrone } from "@/components/aeroloop/CommandDrone"
-import type { CommandEntry, PreviousRun, SimulatorPlanner } from "@/types/aeroloop"
+import type { CommandEntry, SimulatorPlanner, SimulatorState } from "@/types/aeroloop"
 
 interface CommandDrawerProps {
   commandText: string
@@ -13,12 +13,21 @@ interface CommandDrawerProps {
   isMotionPaused: boolean
   isRunning: boolean
   planner: SimulatorPlanner
-  previousRuns: PreviousRun[]
+  simulatorMessage: string
+  simulatorState: SimulatorState
   onAttachContext: (label?: string) => void
   onCommandChange: (value: string) => void
   onPlannerChange: (planner: SimulatorPlanner) => void
-  onSelectRun: (runId: string) => void
   onSubmit: () => void
+}
+
+const stateLabels: Record<SimulatorState, string> = {
+  idle: "Connecting",
+  ready: "Ready",
+  starting: "Planning",
+  running: "Flying",
+  complete: "Verified",
+  failed: "Safe stop",
 }
 
 export function CommandDrawer({
@@ -28,11 +37,11 @@ export function CommandDrawer({
   isMotionPaused,
   isRunning,
   planner,
-  previousRuns,
+  simulatorMessage,
+  simulatorState,
   onAttachContext,
   onCommandChange,
   onPlannerChange,
-  onSelectRun,
   onSubmit,
 }: CommandDrawerProps) {
   const logRef = useRef<HTMLElement>(null)
@@ -54,34 +63,21 @@ export function CommandDrawer({
         </div>
         <div className="mt-4 flex items-end justify-between gap-4">
           <div>
-            <h2 className="aero-display text-[33px] font-semibold leading-none">Live mission</h2>
-            <p className="mt-2 text-[12px] text-aero-paper/60">Working simulator backend</p>
+            <h2 className="aero-display text-[33px] font-semibold leading-none">Mission Control</h2>
+            <p className="mt-2 text-[12px] text-aero-paper/60">Controls the simulator on this page</p>
           </div>
-          <span className="aero-mono border border-aero-sun px-2 py-1 text-[9px] uppercase text-aero-sun">{isRunning ? "RUNNING" : "READY"}</span>
+          <span className="aero-mono border border-aero-sun px-2 py-1 text-[9px] uppercase text-aero-sun">{stateLabels[simulatorState]}</span>
         </div>
       </header>
       <section className="shrink-0 border-b border-aero-brown px-5 py-4">
-        <div className="flex items-center justify-between">
-          <p className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-paper/55">Recorded sample runs</p>
-          <span className="aero-mono text-[9px] text-aero-paper/40">INDEXED / 03</span>
-        </div>
-        <div className="mt-2">
-          {previousRuns.slice(0, 3).map((run, index) => (
-            <Button
-              className={`flex min-h-[34px] w-full items-center justify-between rounded-none border-0 border-b border-aero-paper/15 bg-transparent px-0 text-left text-[12px] text-aero-paper/70 hover:bg-aero-paper/10 hover:text-aero-paper ${run.current ? "text-aero-paper" : ""}`}
-              key={run.id}
-              onClick={() => onSelectRun(run.id)}
-              type="button"
-              variant="ghost"
-            >
-              <span><b className={`aero-mono mr-3 text-[10px] ${run.current ? "text-aero-sun" : "text-aero-paper/40"}`}>{String(index + 1).padStart(2, "0")}</b>{run.id.split(" · ")[0]} / {run.current ? "active" : index === 1 ? "turbine" : "intake"}</span>
-              <span className="aero-mono text-[9px] text-aero-sun">{run.readiness}</span>
-            </Button>
-          ))}
+        <p className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-paper/55">Current mission</p>
+        <p aria-live="polite" className="mt-2 text-[12px] leading-5 text-aero-paper/80">{simulatorMessage}</p>
+        <div className="aero-mono mt-3 flex items-center justify-between border-t border-aero-paper/15 pt-3 text-[9px] uppercase text-aero-sun">
+          <span>Plan</span><span>→</span><span>Fly</span><span>→</span><span>Verify</span>
         </div>
       </section>
       <section aria-labelledby="command-log-title" className="command-log min-h-0 flex-1 overflow-y-auto px-5 py-4" ref={logRef}>
-        <p className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-paper/55" id="command-log-title">Recorded + live entries</p>
+        <p className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-paper/55" id="command-log-title">Mission timeline</p>
         <div className="mt-3 space-y-0" id="command-entries">
           {entries.map((entry) => (
             <article className={`command-entry border-b border-aero-paper/15 py-4 pl-3 ${entry.alert ? "command-alert" : ""}`} key={entry.id}>
@@ -94,7 +90,7 @@ export function CommandDrawer({
       </section>
       <footer className="shrink-0 border-t border-aero-brown bg-aero-brown px-5 py-4">
         <div className="flex items-center justify-between">
-          <Label className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-paper/75" htmlFor="command-input">Command AeroLoop</Label>
+          <Label className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-paper/75" htmlFor="command-input">New mission</Label>
           <span aria-live="polite" className={`aero-mono text-[9px] uppercase ${contextLabel === "No context" ? "text-aero-paper/45" : "text-aero-sun"}`}>{contextLabel}</span>
         </div>
         <label className="aero-mono mt-3 flex items-center justify-between text-[9px] uppercase tracking-[.12em] text-aero-paper/55">

@@ -152,13 +152,13 @@
   <h2>Plan a mission</h2>
   <label class="field-label" for="order">Inspection request</label>
   <input id="order" type="text"
-         placeholder="Tell the drone what to inspect"
-         value="inspect the lower end of the engine">
+         placeholder="Choose a preset or type a mission"
+         value="">
   <div class="mission-actions">
     <select id="planner" aria-label="Decision maker"><option value="devin">Devin (live API)</option><option value="baseline">Local test pilot</option></select>
     <button id="mic" title="Speak the work order">Mic</button>
   </div>
-  <div class="start-row"><button id="run">Start mission</button></div>
+  <div class="start-row"><button id="run" disabled>Start mission</button></div>
 </div>
 
 <div id="examples" class="panel">
@@ -348,7 +348,7 @@ let markers = [];
 let mission = null;
 let frames = [];
 let cursor = 0;
-let playing = true;
+let playing = false;
 let rate = 1;
 let follow = true;
 let inspectedAt = new Map();
@@ -444,11 +444,14 @@ function renderDecisions() {
   });
 }
 
-function applyMission(data) {
+function applyMission(data, { autoplay = false } = {}) {
   mission = data;
   frames = data.frames || [];
   cursor = 0;
+  playing = autoplay;
+  el('play').textContent = playing ? 'Pause' : 'Play';
   inspectedAt = new Map();
+  trailGeom.setFromPoints([]);
 
   // Reconstruct when each waypoint turned green, by walking the outcomes in order.
   let clock = 0;
@@ -464,6 +467,7 @@ function applyMission(data) {
 
   buildMarkers(data.waypoints, data.authorised_indexes);
   renderDecisions();
+  el('steps').scrollTop = 0;
 
   const v = data.artifact.verification;
   const intent = data.intent || {};
@@ -484,7 +488,9 @@ function applyMission(data) {
     ? `<span class="tag">devin session</span><br><a href="${url}" target="_blank">${url.split('/').pop()}</a>`
     : '<span class="tag">deterministic baseline</span>';
   el('scrub').max = Math.max(0, frames.length - 1);
+  el('scrub').value = 0;
   el('status').textContent = data.reply;
+  if (frames.length) updateFromFrame();
 }
 
 function frameAt(i) {
@@ -591,12 +597,14 @@ function updateFromFrame() {
 
 async function runMission() {
   const button = el('run');
-  button.disabled = true;
   const planner = el('planner').value;
   const text = el('order').value.trim();
-  el('sidebar').classList.remove('open');
-  document.body.classList.remove('menu-open');
-  el('menu-toggle').setAttribute('aria-expanded', 'false');
+  if (!text) {
+    el('status').textContent = 'Choose a mission preset or type an inspection request first.';
+    return;
+  }
+  button.disabled = true;
+  setMissionMenuOpen(false);
   el('status').textContent = planner === 'devin'
     ? `Devin is reading "${text}" and flying it decision by decision. This takes a minute.`
     : `Flying "${text}" with the deterministic baseline.`;
@@ -608,7 +616,10 @@ async function runMission() {
     });
     const data = await response.json();
     if (!data.ok) { el('status').textContent = data.reply; return; }
-    applyMission(data);
+    follow = true;
+    el('cam').classList.add('on');
+    el('cam').textContent = 'Follow';
+    applyMission(data, { autoplay: true });
   } catch (error) {
     el('status').textContent = `Mission request failed: ${error}`;
   } finally {
@@ -618,23 +629,26 @@ async function runMission() {
 
 el('run').onclick = runMission;
 el('order').addEventListener('keydown', (event) => { if (event.key === 'Enter') runMission(); });
+function syncMissionReady() {
+  el('run').disabled = !el('order').value.trim();
+}
+el('order').addEventListener('input', syncMissionReady);
 document.querySelectorAll('.ex').forEach((chip) => {
   chip.onclick = () => {
     el('order').value = chip.textContent;
+    syncMissionReady();
     el('order').focus();
   };
 });
 
-el('menu-toggle').onclick = () => {
-  const open = el('sidebar').classList.toggle('open');
+function setMissionMenuOpen(open) {
+  el('sidebar').classList.toggle('open', open);
   document.body.classList.toggle('menu-open', open);
   el('menu-toggle').setAttribute('aria-expanded', String(open));
-};
-el('menu-close').onclick = () => {
-  el('sidebar').classList.remove('open');
-  document.body.classList.remove('menu-open');
-  el('menu-toggle').setAttribute('aria-expanded', 'false');
-};
+}
+el('menu-toggle').onclick = () => setMissionMenuOpen(!el('sidebar').classList.contains('open'));
+el('menu-close').onclick = () => setMissionMenuOpen(false);
+if (matchMedia('(max-width: 1120px)').matches) setMissionMenuOpen(true);
 
 // Speech is a convenience only. Everything it can do, the text box can do.
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -648,6 +662,7 @@ if (!Recognition) {
   el('mic').onclick = () => { el('mic').classList.add('on'); recogniser.start(); };
   recogniser.onresult = (event) => {
     el('order').value = event.results[0][0].transcript;
+    syncMissionReady();
     el('mic').classList.remove('on');
     runMission();
   };
@@ -737,8 +752,8 @@ fetch('/data3/mission_trace.json').then((r) => r.ok ? r.json() : null).then((tra
       authorised_indexes: trace.authorised_indexes,
       frames: trace.frames,
       artifact,
-      reply: 'Replaying the last recorded Devin mission. Open Mission menu to run a new one.',
-    });
+      reply: 'Recorded mission ready at 0.0s. Choose a new mission or press Play to watch this one.',
+    }, { autoplay: false });
   });
 }).catch(() => {});
 </script>

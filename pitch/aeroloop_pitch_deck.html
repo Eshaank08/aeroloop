@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AeroLoop, pitch deck</title>
+<style>
+  /* Palette: #00508F #4F3815 #8F5601 #14293A #FFCD82 #ADDBFF */
+  :root {
+    --navy: #00508F;
+    --ink: #14293A;
+    --amber: #FFCD82;
+    --sky: #ADDBFF;
+    --bronze: #8F5601;
+    --umber: #4F3815;
+    --paper: #F7F4EE;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: var(--ink); overflow: hidden; }
+  body { font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: var(--paper); }
+
+  .deck { position: relative; width: 100vw; height: 100vh; }
+  .slide {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    padding: 6vh 8vw;
+    background: linear-gradient(160deg, var(--ink) 0%, #0d1c2a 55%, #102a45 100%);
+    overflow: hidden;
+  }
+  .slide.active { display: flex; animation: slideIn .55s ease both; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+  .kicker, .title-name, .title-team, h1, h2, p.lead, ul.bullets, .callout { position: relative; z-index: 2; }
+  .kicker {
+    font-size: 1.05vw; letter-spacing: .42em; text-transform: uppercase;
+    color: var(--amber); margin-bottom: 2.2vh; font-weight: 600;
+  }
+  h1 { font-size: 6.2vw; line-height: 1.02; font-weight: 800; letter-spacing: -.01em; }
+  h2 { font-size: 3.4vw; line-height: 1.08; font-weight: 800; margin-bottom: 3.5vh; }
+  h2 .accent { color: var(--amber); }
+  p.lead { font-size: 1.75vw; line-height: 1.5; max-width: 62vw; color: #E8EEF4; }
+  .hl { color: var(--amber); font-weight: 800; }
+  .hl-sky { color: var(--sky); font-weight: 800; }
+  .big-ai {
+    color: var(--amber); font-weight: 900; font-size: 1.25em;
+    text-shadow: 0 0 34px rgba(255,205,130,.55);
+    letter-spacing: .02em;
+  }
+
+  /* chrome */
+  .footer {
+    position: absolute; bottom: 3.2vh; left: 8vw; right: 8vw;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: .95vw; letter-spacing: .28em; text-transform: uppercase; color: rgba(173,219,255,.55);
+  }
+  .progress { position: absolute; bottom: 0; left: 0; height: 4px; background: var(--amber); transition: width .4s ease; }
+  .grid-bg {
+    position: absolute; inset: 0; pointer-events: none; opacity: .35;
+    background-image: linear-gradient(rgba(173,219,255,.055) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(173,219,255,.055) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+  .orbit {
+    position: absolute; border: 1px solid rgba(173,219,255,.14); border-radius: 50%;
+    pointer-events: none;
+  }
+
+  /* slide 0 title */
+  .title-name {
+    font-size: 9.5vw; font-weight: 900; letter-spacing: -.015em; line-height: 1;
+    background: linear-gradient(92deg, var(--sky) 0%, #ffffff 45%, var(--amber) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .title-team {
+    margin-top: 4vh; display: inline-flex; align-items: center; gap: 1.2vw;
+    font-size: 1.6vw; letter-spacing: .3em; text-transform: uppercase; color: var(--sky);
+  }
+  .title-team .bar { width: 4vw; height: 2px; background: var(--amber); }
+
+  /* slide 2 pipeline */
+  .pipeline { display: flex; flex-direction: column; gap: 2.6vh; margin-top: 1vh; }
+  .pipe-step {
+    display: flex; align-items: center; gap: 1.6vw;
+    opacity: 0; transform: translateX(-34px);
+    transition: opacity .7s ease, transform .7s ease;
+  }
+  .pipe-step.shown { opacity: 1; transform: none; }
+  .pipe-num {
+    flex: 0 0 auto; width: 3.4vw; height: 3.4vw; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 1.4vw; color: var(--ink); background: var(--amber);
+  }
+  .pipe-step:nth-child(odd) .pipe-num { background: var(--sky); }
+  .pipe-text { font-size: 2.1vw; font-weight: 600; }
+  .pipe-arrow {
+    margin-left: 1.55vw; color: var(--bronze); font-size: 1.8vw; line-height: .6;
+    opacity: 0; transition: opacity .7s ease .2s;
+  }
+  .pipe-arrow.shown { opacity: 1; }
+
+  /* slide 3 stats */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2.4vw; margin-top: 2vh; }
+  .stat {
+    border: 1px solid rgba(173,219,255,.22); border-radius: 14px; padding: 4vh 1.6vw;
+    background: rgba(20,41,58,.6); text-align: center;
+  }
+  .stat .num { font-size: 4.6vw; font-weight: 900; color: var(--amber); line-height: 1; }
+  .stat:nth-child(even) .num { color: var(--sky); }
+  .stat .label { margin-top: 2.2vh; font-size: 1.15vw; line-height: 1.45; color: #DCE7F0; }
+  .stat.zero { border-color: var(--amber); box-shadow: 0 0 32px rgba(255,205,130,.18); }
+
+  /* generic two-column */
+  .cols { display: grid; grid-template-columns: 1.15fr .85fr; gap: 4vw; align-items: center; }
+
+  ul.bullets { list-style: none; margin-top: 1vh; }
+  ul.bullets li {
+    position: relative; padding-left: 2.2vw; margin-bottom: 2.4vh;
+    font-size: 1.5vw; line-height: 1.45; color: #E8EEF4;
+  }
+  ul.bullets li::before {
+    content: ""; position: absolute; left: 0; top: .55em;
+    width: 1.1vw; height: 2px; background: var(--amber);
+  }
+
+  .callout {
+    border-left: 4px solid var(--amber); background: rgba(143,86,1,.18);
+    padding: 2.4vh 1.8vw; border-radius: 0 10px 10px 0; margin-top: 2.5vh;
+    font-size: 1.45vw; line-height: 1.5;
+  }
+
+  .incident-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6vw; margin-top: 2.5vh; }
+  .icard {
+    border: 1px solid rgba(173,219,255,.2); border-radius: 12px; overflow: hidden;
+    background: rgba(20,41,58,.65);
+  }
+  .icard img { width: 100%; height: 16vh; display: block; object-fit: cover; }
+  .icard .cap { padding: 1.6vh 1.1vw; font-size: 1.05vw; line-height: 1.4; color: #DCE7F0; }
+  .icard .cap b { color: var(--amber); }
+
+  .market-big { font-size: 7.4vw; font-weight: 900; color: var(--amber); line-height: 1; }
+  .market-sub { font-size: 2.1vw; margin-top: 2vh; color: var(--sky); font-weight: 700; }
+  .source { font-size: 1.05vw; color: rgba(173,219,255,.6); margin-top: 1.6vh; letter-spacing: .08em; }
+
+  .quote-card {
+    border: 1px solid rgba(255,205,130,.4); border-radius: 14px;
+    background: rgba(143,86,1,.14); padding: 3vh 2vw; margin-top: 3vh;
+    font-size: 1.5vw; line-height: 1.55;
+  }
+
+  .team { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3vw; margin-top: 3vh; }
+  .member { text-align: center; }
+  .member .avatar {
+    width: 11vw; height: 11vw; margin: 0 auto 2.4vh; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--sky); background: rgba(0,80,143,.35);
+  }
+  .member .avatar svg { width: 55%; height: 55%; }
+  .member .name { font-size: 1.7vw; font-weight: 800; }
+  .member .role { font-size: 1.1vw; color: var(--sky); margin-top: .8vh; letter-spacing: .12em; text-transform: uppercase; }
+  .thanks { text-align: center; margin-top: 6vh; font-size: 2.6vw; font-weight: 800; color: var(--amber); letter-spacing: .06em; }
+
+  .split-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 2.6vw; margin-top: 1vh; }
+  .panel {
+    border-radius: 14px; padding: 3vh 1.8vw; border: 1px solid rgba(173,219,255,.2);
+    background: rgba(20,41,58,.6);
+  }
+  .panel h3 { font-size: 1.6vw; margin-bottom: 2vh; color: var(--sky); }
+  .panel.win h3 { color: var(--amber); }
+  .panel ul.bullets li { font-size: 1.22vw; margin-bottom: 1.8vh; }
+
+  .keynav {
+    position: absolute; top: 3.2vh; right: 8vw; font-size: .95vw;
+    color: rgba(173,219,255,.55); letter-spacing: .28em; text-transform: uppercase;
+  }
+
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- PAGE 0 : title -->
+  <section class="slide" data-page="0">
+    <div class="grid-bg"></div>
+    <div class="orbit" style="width:70vw;height:70vw;right:-30vw;top:-20vw;"></div>
+    <div class="orbit" style="width:46vw;height:46vw;right:-18vw;top:-8vw;"></div>
+    <img src="assets/hero_drone.png" alt="" style="position:absolute;right:0;top:0;height:100%;width:52vw;object-fit:cover;opacity:.55;-webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 40%);mask-image:linear-gradient(90deg,transparent 0%,#000 40%);">
+    <div class="kicker">Cognition Track</div>
+    <div class="title-name">aeroloop</div>
+    <div class="title-team"><span class="bar"></span> League_Hackers</div>
+  </section>
+
+  <!-- PAGE 1 : one-liner -->
+  <section class="slide" data-page="1">
+    <div class="grid-bg"></div>
+    <div class="kicker">AeroLoop</div>
+    <p class="lead" style="font-size:2.5vw;max-width:74vw;line-height:1.45">
+      Good old autonomous flight engineering software for drone-based engine inspection
+      is now written, verified and flown by an <span class="big-ai">AI</span> engineer.
+    </p>
+    <p class="lead" style="margin-top:4vh;font-size:1.9vw;color:var(--sky)">
+      A human is only involved in the physical safety sign-off at the end.
+    </p>
+  </section>
+
+  <!-- PAGE 2 : animated pipeline -->
+  <section class="slide" data-page="2">
+    <div class="grid-bg"></div>
+    <h2>One loop, <span class="accent">no hand on the stick</span></h2>
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-step"><div class="pipe-num">1</div><div class="pipe-text">Devin writes the drone flight controller code</div></div>
+      <div class="pipe-arrow">&#8595;</div>
+      <div class="pipe-step"><div class="pipe-num">2</div><div class="pipe-text">Devin steers and flies the drone</div></div>
+      <div class="pipe-arrow">&#8595;</div>
+      <div class="pipe-step"><div class="pipe-num">3</div><div class="pipe-text">An independent verifier then judges it</div></div>
+      <div class="pipe-arrow">&#8595;</div>
+      <div class="pipe-step"><div class="pipe-num">4</div><div class="pipe-text">A human signs off</div></div>
+    </div>
+  </section>
+
+  <!-- PAGE 3 : stats -->
+  <section class="slide" data-page="3">
+    <div class="grid-bg"></div>
+    <h2>The numbers <span class="accent">behind the claim</span></h2>
+    <div class="stats">
+      <div class="stat"><div class="num">47</div><div class="label">live autonomous missions flown by the harness</div></div>
+      <div class="stat"><div class="num">30/30</div><div class="label">hidden scenarios passed by its controller</div></div>
+      <div class="stat"><div class="num">151</div><div class="label">automated tests</div></div>
+      <div class="stat zero"><div class="num">0</div><div class="label">lines of the flight controller <b class="hl">written by a human</b></div></div>
+    </div>
+  </section>
+
+  <!-- PAGE 4 : problem -->
+  <section class="slide" data-page="4">
+    <div class="grid-bg"></div>
+    <h2>The problem</h2>
+    <p class="lead" style="font-size:1.55vw;max-width:78vw">
+      A grounded aircraft costs <span class="hl">thousands an hour</span>, and the sanity inspection of its
+      jet engine parts is done by eye. An engine nacelle inspection means a technician walking a
+      surface with a torch, or flying a drone manually to do it. Coverage is only as good as whatever
+      the operator managed that day. <span class="hl-sky">There is no proof the whole engine surface was verified.</span>
+    </p>
+    <ul class="bullets" style="margin-top:2.5vh">
+      <li>The defects that matter most are the ones that need <b>complete, consistent coverage</b> to catch.</li>
+      <li>Take <b>Southwest 1380</b>: it began as a fan blade fatigue crack that surface inspection could not see.</li>
+    </ul>
+    <div class="incident-cards">
+      <div class="icard">
+        <img src="assets/incident_fanblade.png" alt="Fan blade root crack">
+        <div class="cap"><b>Fan blade root crack</b><br>Southwest 1380, 2018. NTSB AAR-19/03.</div>
+      </div>
+      <div class="icard">
+        <img src="assets/incident_cowl.png" alt="Fan cowl door loss">
+        <div class="cap"><b>Fan cowl door loss</b><br>45+ documented A320-family losses; latches sit low on the underside.</div>
+      </div>
+      <div class="icard">
+        <img src="assets/incident_torch.png" alt="Torch inspection by eye">
+        <div class="cap"><b>Unseen is not clean</b><br>A panel never covered at the right distance and angle was simply never inspected.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE 5 : software is the hard part -->
+  <section class="slide" data-page="5">
+    <div class="grid-bg"></div>
+    <h2>Why the <span class="accent">software</span> is the hard part</h2>
+    <p class="lead" style="max-width:76vw">
+      Flying a drone half a metre from a jet engine, in wind, holding a camera steady enough for
+      usable evidence, is a control problem. Every operator, aircraft type and hangar needs
+      different software, and all of it is <span class="hl">safety critical</span>.
+    </p>
+    <div class="quote-card">
+      So the bottleneck is not the airframe. It is writing and certifying the software,
+      <span class="hl" style="font-size:1.2em">over and over</span>.
+    </div>
+  </section>
+
+  <!-- PAGE 6 : market + why unsolved -->
+  <section class="slide" data-page="6">
+    <div class="grid-bg"></div>
+    <div class="cols">
+      <div>
+        <div class="kicker">The market</div>
+        <div class="market-big">$136B</div>
+        <div class="market-sub">MRO demand in 2025, approaching $193B by 2030</div>
+        <div class="source">Oliver Wyman, Global Fleet and MRO Market Forecast</div>
+      </div>
+      <div>
+        <h2 style="font-size:2.4vw">Why it was not solved</h2>
+        <p class="lead" style="font-size:1.5vw;max-width:100%">
+          Autonomy was never blocked by intelligence. It was blocked by <span class="hl">trust</span>.
+        </p>
+        <ul class="bullets" style="margin-top:2.5vh">
+          <li style="font-size:1.25vw">You cannot put an agent near a $12M engine if it decides its own success criteria.</li>
+          <li style="font-size:1.25vw">A model that says "inspection complete" is worth nothing without something independent that can say no.</li>
+          <li style="font-size:1.25vw">Nobody wants an autonomy layer that keeps flying when it loses contact.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE 7 : what we built -->
+  <section class="slide" data-page="7">
+    <div class="grid-bg"></div>
+    <h2>What we built <span class="accent">to solve it</span></h2>
+    <ul class="bullets">
+      <li>An <b>adversarial verifier</b> that existed before the agent wrote a line, and grades every mission whatever the agent claims.</li>
+      <li>A <b>safety envelope</b> that bounds every action and hands rejections back to the agent instead of quietly fixing them.</li>
+      <li><b>Fail closed by default.</b> Lose the agent and the drone returns home. The mission can never report PASS.</li>
+      <li>Humans keep four authorities: <b>authorise, confirm identity, intervene, sign off</b>.</li>
+    </ul>
+    <div class="callout">
+      It has caught the agent twice. Devin claimed a mission complete with 3 of 9 views captured;
+      the verifier returned 33% against a 95% bar and refused it.<br>
+      <span class="hl">That refusal is our product. Not the flying.</span>
+    </div>
+  </section>
+
+  <!-- PAGE 8 : how, with Devin -->
+  <section class="slide" data-page="8">
+    <div class="grid-bg"></div>
+    <h2>How we solved it <span class="accent">with Devin</span></h2>
+    <p class="lead" style="font-size:1.5vw;max-width:78vw">
+      We did not train a model. We used an <span class="hl">agent harness</span> as the autonomy layer.
+      A model endpoint returns text. A harness comes with persistent sessions, its own shell, editor,
+      tests and version control, and the judgement to use them.
+    </p>
+    <div class="quote-card">
+      <b class="hl-sky">An API alone cannot do this.</b><br>
+      Devin found a ZeroDivisionError in the flight controller it had written, reproduced it, derived
+      a fix, proved the routing was unchanged over 2000 random cases, added a regression test and
+      opened a pull request. Thirteen of its PRs are merged. <span class="hl">No text completion does that.</span>
+    </div>
+  </section>
+
+  <!-- PAGE 9 : one harness both jobs -->
+  <section class="slide" data-page="9">
+    <div class="grid-bg"></div>
+    <h2>One harness, <span class="accent">both jobs</span></h2>
+    <div class="split-panels">
+      <div class="panel">
+        <h3>Engineer and mission agent in one</h3>
+        <ul class="bullets">
+          <li>The same harness is the engineer that writes and repairs controller2.py, and the mission agent that chooses every inspection action in flight.</li>
+          <li>One resumable session per mission, so later decisions reflect what earlier ones revealed.</li>
+          <li>The boundary is a typed action contract, not a prompt. Devin v3 sits behind it today; a stronger version drops in without touching the simulator, envelope or verifier. Swap our controller for a certified autopilot and the autonomy layer is unchanged.</li>
+        </ul>
+      </div>
+      <div class="panel win">
+        <h3>Why a harness is the right bet</h3>
+        <ul class="bullets">
+          <li>No training data, no eval framework, no agent scaffolding to maintain.</li>
+          <li>Our engineering goes into the verifier and the safety envelope, which is where aviation rigour belongs.</li>
+          <li>The harness is the part we should not be building ourselves.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:3vh">
+      <b>Cost of the honesty:</b> 20 to 30 seconds per decision, metered spend, non-deterministic. All bounded.
+    </div>
+  </section>
+
+  <!-- PAGE 10 : working today -->
+  <section class="slide" data-page="10">
+    <div class="grid-bg"></div>
+    <h2>Working <span class="accent">today</span></h2>
+    <p class="lead" style="font-size:1.6vw">
+      A judge types a sentence. The drone flies. Something independent grades it.
+    </p>
+    <ul class="bullets" style="margin-top:2.5vh">
+      <li>Plain English in: <i>"inspect the underside on a random scene."</i> The area is authorised locally, then Devin chooses every action.</li>
+      <li>A rate-controlled quadrotor simulator where a view only counts within 0.5 m, aimed within 60&deg;, and steady.</li>
+      <li>Seeded wind and gusts the agent is never shown, only sensed.</li>
+      <li>Every observation and decision hashed into a signed, replayable artifact.</li>
+    </ul>
+  </section>
+
+  <!-- PAGE 11 : what is next -->
+  <section class="slide" data-page="11">
+    <div class="grid-bg"></div>
+    <h2>What is <span class="accent">next</span></h2>
+    <ul class="bullets">
+      <li>Real perception: camera, audio and thermal into the same observation contract.</li>
+      <li>Swap our controller for a certified autopilot over MAVLink. The mission layer does not change.</li>
+      <li>Independent hardware emergency stop, outside every software authority.</li>
+      <li>Cage trial on a real component, then inspector-led validation with a regulator in the room.</li>
+    </ul>
+    <div class="callout">
+      Everything here is simulated, and it verifies inspection coverage rather than detecting defects.<br>
+      <span class="hl">We would rather tell you that than have you find it in the demo.</span>
+    </div>
+  </section>
+
+  <!-- PAGE 12 : team -->
+  <section class="slide" data-page="12">
+    <div class="grid-bg"></div>
+    <div class="orbit" style="width:60vw;height:60vw;left:-25vw;bottom:-30vw;"></div>
+    <h2 style="text-align:center">Meet the team</h2>
+    <div class="team">
+      <div class="member">
+        <div class="avatar">
+          <svg viewBox="0 0 64 64" fill="none" stroke="#ADDBFF" stroke-width="3">
+            <circle cx="32" cy="22" r="11"/><path d="M12 54 q20 -18 40 0"/>
+          </svg>
+        </div>
+        <div class="name">Eshaan</div><div class="role">Harness &amp; Verifier</div>
+      </div>
+      <div class="member">
+        <div class="avatar" style="border-color:#FFCD82;background:rgba(143,86,1,.3)">
+          <svg viewBox="0 0 64 64" fill="none" stroke="#FFCD82" stroke-width="3">
+            <circle cx="32" cy="22" r="11"/><path d="M12 54 q20 -18 40 0"/>
+          </svg>
+        </div>
+        <div class="name">Douaa</div><div class="role">Mission &amp; Safety</div>
+      </div>
+      <div class="member">
+        <div class="avatar">
+          <svg viewBox="0 0 64 64" fill="none" stroke="#ADDBFF" stroke-width="3">
+            <circle cx="32" cy="22" r="11"/><path d="M12 54 q20 -18 40 0"/>
+          </svg>
+        </div>
+        <div class="name">Harismitha</div><div class="role">Simulation &amp; Evidence</div>
+      </div>
+    </div>
+    <div class="thanks">Thank you.</div>
+  </section>
+
+  <div class="footer"><span>aeroloop</span><span id="pageNo">0 / 12</span></div>
+  <div class="keynav">&#8592; &#8594; to navigate</div>
+  <div class="progress" id="progress"></div>
+</div>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  let idx = 0;
+  function show(i) {
+    idx = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, j) => s.classList.toggle('active', j === idx));
+    document.getElementById('pageNo').textContent = idx + ' / ' + (slides.length - 1);
+    document.getElementById('progress').style.width = ((idx + 1) / slides.length * 100) + '%';
+    if (slides[idx].dataset.page === '2') animatePipeline();
+  }
+  function animatePipeline() {
+    const items = [...document.querySelectorAll('#pipeline > *')];
+    items.forEach(el => el.classList.remove('shown'));
+    items.forEach((el, i) => setTimeout(() => el.classList.add('shown'), 500 + i * 650));
+  }
+  document.addEventListener('keydown', e => {
+    if (['ArrowRight', ' ', 'PageDown'].includes(e.key)) show(idx + 1);
+    if (['ArrowLeft', 'PageUp'].includes(e.key)) show(idx - 1);
+    if (e.key === 'Home') show(0);
+    if (e.key === 'End') show(slides.length - 1);
+  });
+  document.addEventListener('click', e => {
+    if (e.clientX > window.innerWidth / 2) show(idx + 1); else show(idx - 1);
+  });
+  show(0);
+</script>
+</body>
+</html>

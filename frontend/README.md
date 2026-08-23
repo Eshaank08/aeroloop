@@ -1,11 +1,9 @@
-# AeroLoop — Flight Record
+# AeroLoop — Project Website
 
-AeroLoop is a Vite + React + TypeScript command center wrapped around the working
-Python/Three.js inspection simulator. The polished flight record, engine cutaway,
-telemetry, and evidence archive are clearly labelled recorded examples. The live
-simulator and command drawer communicate with `viz/mission_view.html` through a
-same-origin message bridge, so backend progress and verifier outcomes remain the
-source of truth.
+AeroLoop is a Vite + React + TypeScript project website for the working Python/Three.js
+inspection simulator. The website explains the problem, autonomous loop, running proof,
+and honest simulation boundary. It deliberately does not embed or imitate the simulator:
+its launch links open `/mission_view.html` as the dedicated technical workspace.
 
 ## Run locally
 
@@ -32,11 +30,10 @@ it and fails if the committed output is stale.
 
 ## Main files
 
-- `src/components/aeroloop/` — reusable AeroLoop sections and command drawer
+- `src/components/aeroloop/AeroLoopShell.tsx` — website composition and navigation
+- `src/components/aeroloop/ProjectStory.tsx` — problem, loop, proof, and demo narrative
+- `src/components/aeroloop/HeroFlightRecorder.tsx` — landing hero and simulator CTA
 - `src/components/ui/` — shadcn Radix primitives used by the UI
-- `src/data/aeroloop.ts` — typed, explicitly labelled recorded sample data
-- `src/hooks/useCommandRunner.ts` — live simulator command/progress state
-- `src/components/aeroloop/LiveSimulator.tsx` — embedded working 3D simulator
 - `src/hooks/useFlightMotion.ts` — aircraft flight loop and scroll influence
 - `src/index.css` — AeroLoop design tokens, responsive rules, and custom visual utilities
 - `components.json` — shadcn configuration

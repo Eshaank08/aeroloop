@@ -375,9 +375,10 @@
 
   @media (max-width: 640px) {
     .inspection-layout, .finding-layout { grid-template-columns: 1fr !important; }
-    .hero-copy { bottom: 128px !important; left: 20px !important; max-width: calc(100% - 40px) !important; }
-    .hero-copy h1 { font-size: 54px !important; }
-    .hero-plate { right: 20px; left: 20px; width: auto !important; }
+    .hero-surface { min-height: 760px !important; }
+    .hero-copy { bottom: 86px !important; left: 20px !important; max-width: calc(100% - 40px) !important; }
+    .hero-copy h1 { font-size: 50px !important; }
+    .hero-plate, .craft-stage { display: none !important; }
     .record-main section { padding-right: 20px !important; padding-left: 20px !important; }
     .mission-metrics { overflow-x: auto; }
     .mission-metric { min-width: 145px; }

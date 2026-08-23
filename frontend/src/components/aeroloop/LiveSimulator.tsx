@@ -44,12 +44,15 @@ export const LiveSimulator = forwardRef<HTMLIFrameElement, LiveSimulatorProps>(
               title="Live AeroLoop 3D simulator"
             />
             {active ? (
-              <div className="pointer-events-none absolute left-4 top-4 flex items-center gap-2 border border-aero-sun bg-aero-navy/95 px-3 py-2 text-aero-paper shadow-lg">
-                <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin text-aero-sun" />
-                <span className="aero-mono text-[9px] uppercase tracking-[.13em]">{stateLabels[state]}</span>
+              <div aria-live="assertive" className="pointer-events-none absolute left-4 right-4 top-4 z-10 flex items-center gap-3 border border-aero-sun bg-aero-sun px-4 py-3 text-aero-navy shadow-lg">
+                <LoaderCircle aria-hidden="true" className="h-5 w-5 shrink-0 animate-spin" />
+                <div>
+                  <p className="aero-mono text-[11px] font-bold uppercase tracking-[.13em]">Please wait — mission in progress</p>
+                  <p className="mt-1 text-[11px]">{state === "starting" ? "The decision maker is planning the safe route." : "The drone is flying; evidence and Mission Decisions update automatically."}</p>
+                </div>
               </div>
             ) : null}
-            <div className="pointer-events-none absolute right-4 top-4 max-w-[280px] border border-aero-paper/25 bg-aero-navy/95 px-4 py-3 text-aero-paper shadow-lg">
+            <div className={`pointer-events-none absolute right-4 max-w-[280px] border border-aero-paper/25 bg-aero-navy/95 px-4 py-3 text-aero-paper shadow-lg ${active ? "top-24" : "top-4"}`}>
               <div className="flex items-center gap-2 text-aero-sun">
                 <Radio aria-hidden="true" className={`h-3.5 w-3.5 ${active ? "animate-pulse" : ""}`} />
                 <span className="aero-mono text-[9px] uppercase tracking-[.16em]">{stateLabels[state]}</span>

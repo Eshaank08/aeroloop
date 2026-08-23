@@ -113,7 +113,6 @@ export function AeroLoopShell({ data }: AeroLoopShellProps) {
         commandText={command.commandText}
         contextLabel={command.contextLabel}
         entries={command.entries}
-        isMotionPaused={isMotionPaused}
         isRunning={command.isRunning}
         planner={command.planner}
         simulatorMessage={command.simulatorMessage}

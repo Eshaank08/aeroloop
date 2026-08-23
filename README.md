@@ -102,16 +102,16 @@ python -m viz.server
 
 The mission page auto loads the last recorded mission from `viz/data3/` so it is never
 empty, and **Start mission** runs a fresh mission from the plain-English request and
-chosen planner. The deployed root opens the React command center in `viz/dashboard/`;
-it embeds the working mission view and relays commands and genuine backend progress
-through a same-origin message bridge. `/mission_view.html` remains the full-screen
-simulator and `/backend_view.html` is the auditable protocol and API record.
+chosen planner. The deployed root opens the project website in `viz/dashboard/`, which
+explains the problem, autonomous loop, verification proof, and simulation boundary.
+Its launch links open `/mission_view.html` as the separate full-screen simulator;
+`/backend_view.html` remains the auditable protocol and API record.
 
 ### Deploy on Railway
 
 `railway.json` runs the same frontend and Python mission API as one service. Railway
 supplies `PORT`; the server binds publicly only when that variable is present, exposes
-`/health`, and sends `/` to the integrated command center. Baseline missions and the
+`/health`, and sends `/` to the project website. Baseline missions and the
 recorded Devin run work without credentials.
 
 Live Devin missions require these server-side variables:

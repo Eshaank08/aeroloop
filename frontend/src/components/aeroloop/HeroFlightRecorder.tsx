@@ -40,7 +40,7 @@ export function HeroFlightRecorder({
       <div className="absolute left-7 right-7 top-6 z-10 flex items-center justify-between border-b border-aero-blue/35 pb-3">
         <div className="flex items-center gap-3 aero-mono text-[10px] font-semibold uppercase tracking-[.19em] text-aero-blue">
           <span aria-hidden="true" className="h-2 w-2 bg-aero-amber" />
-          AeroLoop / flight record
+          AeroLoop / autonomous inspection
           <span className="tracking-normal text-aero-blue/65">/ 00:00:00</span>
         </div>
       </div>
@@ -103,42 +103,48 @@ export function HeroFlightRecorder({
       <div aria-hidden="true" className="absolute bottom-[149px] left-0 right-0 z-[4] border-t border-aero-blue/30" />
       <div className="hero-copy absolute bottom-[78px] left-8 z-10 max-w-[470px]">
         <p className="aero-mono mb-4 text-[10px] uppercase tracking-[.2em] text-aero-blue">
-          Drone engine inspection, powered by Devin
+          Devin for autonomous physical inspection
         </p>
         <h1 className="aero-display max-w-[450px] text-[78px] font-semibold leading-[.8] tracking-[-.04em] text-aero-navy">
-          Inspect.
+          Give physical work
           <br />
-          Record.
-          <br />
-          Decide.
+          a feedback loop.
         </h1>
         <p className="mt-4 max-w-[355px] text-[14px] leading-5 text-aero-ink/75">
-            AeroLoop puts Devin inside a measurable flight loop: observe, command, execute, verify, and try again.
+            Devin chooses bounded inspection actions. The simulator executes them, an independent verifier scores the evidence, and failures trigger another attempt.
         </p>
-        <div className="mt-5 flex items-center">
+        <div className="mt-5 flex flex-wrap items-center gap-3">
           <Button
             className="h-auto rounded-none border-0 border-l-4 border-aero-blue bg-aero-sun px-4 py-3 text-[13px] font-bold text-aero-navy hover:bg-aero-sun/85"
-            onClick={() => onNavigate("live-simulator")}
+            onClick={() => window.location.assign("/mission_view.html")}
             type="button"
           >
-            Open live simulator
+            Launch simulator
             <ArrowUpRight aria-hidden="true" className="ml-2 h-4 w-4" />
+          </Button>
+          <Button
+            className="h-auto rounded-none border border-aero-blue bg-transparent px-4 py-3 text-[13px] font-bold text-aero-navy hover:bg-aero-blue hover:text-aero-paper"
+            onClick={() => onNavigate("problem")}
+            type="button"
+            variant="outline"
+          >
+            Why AeroLoop
           </Button>
         </div>
       </div>
       <div className="hero-plate chamfer absolute bottom-[78px] right-6 z-10 w-[210px] border border-aero-blue bg-aero-paper p-4 text-aero-navy">
         <div className="flex items-center justify-between">
-          <p className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-blue">Recorded proof / sample</p>
+          <p className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-blue">Closed loop / autonomous</p>
           <span aria-hidden="true" className="h-2 w-2 bg-aero-amber" />
         </div>
-        <p className="aero-display mt-3 text-[34px] font-semibold leading-none">AL-208</p>
-        <p className="mt-1 text-[12px]">Turbofan 02</p>
+        <p className="aero-display mt-3 text-[30px] font-semibold leading-none">Decide → Fly</p>
+        <p className="mt-1 text-[12px]">Verify → Retry</p>
         <div className="mt-3 border-t border-aero-blue/25 pt-2 text-[12px]">
-          Combustor sweep <strong className="text-aero-amber">· HOLD</strong>
+          Trigger to artifact <strong className="text-aero-blue">· NO COPILOT</strong>
         </div>
       </div>
       <div className="absolute bottom-6 left-8 z-10 aero-mono text-[9px] uppercase tracking-[.15em] text-aero-blue/70">
-        ALT 38,000 FT · ROUTE 04 / 07
+        DEVIN FOR X · X = THE AUTONOMOUS INSPECTION LAYER
       </div>
     </section>
   )

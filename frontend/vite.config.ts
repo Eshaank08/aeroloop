@@ -3,7 +3,6 @@ import { fileURLToPath } from "node:url"
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
-import svgr from "vite-plugin-svgr"
 
 const projectRoot = fileURLToPath(new URL(".", import.meta.url))
 
@@ -13,7 +12,7 @@ export default defineConfig(({ command }) => ({
     emptyOutDir: true,
     outDir: path.resolve(projectRoot, "../viz/dashboard"),
   },
-  plugins: [react(), tailwindcss(), svgr()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(projectRoot, "./src"),

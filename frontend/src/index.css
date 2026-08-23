@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -48,9 +49,9 @@
   --color-aero-danger: var(--aero-danger);
   --color-aero-cyan: var(--aero-cyan);
   --color-aero-copper: var(--aero-copper);
-  --font-display: 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
-  --font-sans: 'Avenir Next', Inter, system-ui, sans-serif;
-  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --font-display: 'Barlow Condensed', sans-serif;
+  --font-sans: 'DM Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
@@ -82,7 +83,7 @@
     margin: 0;
     background: var(--aero-paper);
     color: var(--aero-ink);
-    font-family: 'Avenir Next', Inter, system-ui, sans-serif;
+    font-family: 'DM Sans', sans-serif;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -122,11 +123,11 @@
   }
 
   .aero-display {
-    font-family: 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+    font-family: 'Barlow Condensed', sans-serif;
   }
 
   .aero-mono {
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-variant-numeric: tabular-nums;
   }
 
@@ -232,7 +233,7 @@
   .craft-hot { fill: var(--aero-amber); stroke: var(--aero-navy); stroke-width: 1.8; }
   .craft-light { fill: var(--aero-sun); }
   .craft-window { fill: var(--aero-navy); stroke: var(--aero-blue); stroke-width: 1.6; }
-  .craft-label { fill: var(--aero-navy); font-family: 'SFMono-Regular', Consolas, monospace; font-size: 9px; letter-spacing: .12em; }
+  .craft-label { fill: var(--aero-navy); font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .12em; }
 
   .chamfer {
     clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
@@ -286,8 +287,8 @@
   .engine-bracket { stroke: var(--aero-sun); stroke-width: 2; fill: none; }
   .engine-callout { fill: none; stroke: var(--aero-sun); stroke-width: 1.4; stroke-dasharray: 3 4; opacity: .9; }
   .engine-dot { fill: var(--aero-sun); stroke: var(--aero-navy); stroke-width: 1.5; }
-  .engine-caption { fill: var(--aero-paper); font-family: 'SFMono-Regular', Consolas, monospace; font-size: 10px; letter-spacing: .1em; }
-  .engine-caption-hot { fill: var(--aero-sun); font-family: 'SFMono-Regular', Consolas, monospace; font-size: 10px; letter-spacing: .1em; }
+  .engine-caption { fill: var(--aero-paper); font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .1em; }
+  .engine-caption-hot { fill: var(--aero-sun); font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .1em; }
   .engine-flow-core { fill: none; stroke: var(--aero-sun); stroke-width: 2.4; stroke-dasharray: 9 7; marker-end: url(#engine-flow-arrow); opacity: .95; }
   .engine-flow-bypass { fill: none; stroke: var(--aero-sky); stroke-width: 2; stroke-dasharray: 7 8; marker-end: url(#engine-flow-arrow); opacity: .82; }
 
@@ -375,10 +376,9 @@
 
   @media (max-width: 640px) {
     .inspection-layout, .finding-layout { grid-template-columns: 1fr !important; }
-    .hero-surface { min-height: 760px !important; }
-    .hero-copy { bottom: 86px !important; left: 20px !important; max-width: calc(100% - 40px) !important; }
-    .hero-copy h1 { font-size: 50px !important; }
-    .hero-plate, .craft-stage { display: none !important; }
+    .hero-copy { bottom: 128px !important; left: 20px !important; max-width: calc(100% - 40px) !important; }
+    .hero-copy h1 { font-size: 54px !important; }
+    .hero-plate { right: 20px; left: 20px; width: auto !important; }
     .record-main section { padding-right: 20px !important; padding-left: 20px !important; }
     .mission-metrics { overflow-x: auto; }
     .mission-metric { min-width: 145px; }

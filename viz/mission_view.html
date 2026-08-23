@@ -836,6 +836,15 @@ function syncMissionReady() {
   el('run').disabled = !el('order').value.trim();
 }
 el('order').addEventListener('input', syncMissionReady);
+
+// The dashboard command drawer hands the operator's words over in the URL, so the
+// request a judge typed on the front page is the request that gets flown here.
+const incomingOrder = new URLSearchParams(location.search);
+let autostartPending = incomingOrder.get('autostart') === '1';
+if (incomingOrder.get('order')) {
+  el('order').value = incomingOrder.get('order');
+  syncMissionReady();
+}
 addEventListener('message', (event) => {
   if (
     event.origin !== window.location.origin
@@ -947,6 +956,15 @@ function animate(now) {
 }
 requestAnimationFrame(animate);
 
+// Autostart waits for the capability check, so a handed-over mission never fires at a
+// planner this server cannot actually reach.
+function maybeAutostart() {
+  if (!autostartPending) return;
+  autostartPending = false;
+  if (!el('order').value.trim()) return;
+  runMission();
+}
+
 // Ask the server whether it can fly a live mission at all, so the Devin option is
 // never offered by a server that was started without credentials.
 fetch('/api/capabilities').then((r) => r.json()).then((caps) => {
@@ -960,6 +978,7 @@ fetch('/api/capabilities').then((r) => r.json()).then((caps) => {
       message: 'Simulator connected. Choose Devin or the local test pilot, then send a mission.',
       devinAvailable: true,
     });
+    maybeAutostart();
     return;
   }
   const option = el('planner').querySelector('option[value="devin"]');
@@ -971,6 +990,7 @@ fetch('/api/capabilities').then((r) => r.json()).then((caps) => {
     message: 'Simulator connected. Local test pilot available; live Devin is disabled here.',
     devinAvailable: false,
   });
+  maybeAutostart();
 }).catch(() => {
   notifyDashboard('failed', { message: 'The simulator capability check failed.' });
 });

@@ -85,6 +85,8 @@
   .start-row { display:flex; gap:6px; margin-top:6px; }
   .start-row #run { flex:1; background:var(--devin); color:white; border-color:var(--devin); }
   .playback-label { color:var(--dim); font-size:11px; display:flex; align-items:center; gap:5px; }
+  .zoom-group { display:flex; gap:4px; }
+  .zoom-group button { min-width:34px; padding:6px 8px; }
   @media (max-width: 1120px) {
     #menu-toggle { display:block; position:fixed; z-index:10; top:12px; left:12px;
       background:var(--devin); color:white; border-color:var(--devin); }
@@ -188,6 +190,11 @@
     <select id="rate"><option value="1">1x</option><option value="2">2x</option></select>
   </label>
   <button id="cam">Follow</button>
+  <div class="zoom-group" aria-label="Camera zoom controls">
+    <button id="zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
+    <button id="zoom-in" title="Zoom in" aria-label="Zoom in">+</button>
+    <button id="zoom-reset" title="Reset camera view">Reset</button>
+  </div>
   <input id="scrub" type="range" min="0" max="0" value="0">
   <span id="clock">0.0s</span>
 </div>
@@ -231,6 +238,10 @@ el('scene').appendChild(renderer.domElement);
 const orbit = new OrbitControls(camera, renderer.domElement);
 orbit.target.set(0, 0, NACELLE_LENGTH / 2);
 orbit.enableDamping = true;
+orbit.enableZoom = true;
+orbit.zoomSpeed = 1.15;
+orbit.minDistance = 1.2;
+orbit.maxDistance = 45;
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x6f7d8c, 1.55));
 const key = new THREE.DirectionalLight(0xffffff, 2.1);
@@ -341,6 +352,8 @@ let playing = true;
 let rate = 1;
 let follow = true;
 let inspectedAt = new Map();
+const DEFAULT_CAMERA_POSITION = new THREE.Vector3(7.5, 5.4, 9.5);
+const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, NACELLE_LENGTH / 2);
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
   '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
 }[char]));
@@ -646,6 +659,31 @@ el('cam').onclick = () => {
   el('cam').textContent = follow ? 'Follow' : 'Orbit';
 };
 el('cam').classList.add('on');
+function leaveFollowMode() {
+  if (!follow) return;
+  follow = false;
+  el('cam').classList.remove('on');
+  el('cam').textContent = 'Orbit';
+}
+function zoomCamera(factor) {
+  leaveFollowMode();
+  const offset = camera.position.clone().sub(orbit.target);
+  const distance = Math.max(orbit.minDistance, Math.min(orbit.maxDistance, offset.length() * factor));
+  if (offset.lengthSq() < 1e-8) offset.set(1, 0.6, 1);
+  camera.position.copy(orbit.target).add(offset.setLength(distance));
+  orbit.update();
+}
+orbit.addEventListener('start', leaveFollowMode);
+el('zoom-in').onclick = () => zoomCamera(0.78);
+el('zoom-out').onclick = () => zoomCamera(1.28);
+el('zoom-reset').onclick = () => {
+  follow = false;
+  el('cam').classList.remove('on');
+  el('cam').textContent = 'Orbit';
+  camera.position.copy(DEFAULT_CAMERA_POSITION);
+  orbit.target.copy(DEFAULT_CAMERA_TARGET);
+  orbit.update();
+};
 el('scrub').oninput = (event) => { cursor = Number(event.target.value); updateFromFrame(); };
 
 addEventListener('resize', () => {

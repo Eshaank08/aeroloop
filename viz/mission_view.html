@@ -18,16 +18,25 @@
   html, body { margin: 0; height: 100%; background: #d8e3ed; color: var(--ink);
     font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, sans-serif; overflow: hidden; }
   #scene { position: fixed; inset: 0; }
-  .panel { position: fixed; background: var(--panel); border: 1px solid var(--line);
+  .panel { background: var(--panel); border: 1px solid var(--line);
     border-radius: 10px; padding: 12px 14px; backdrop-filter: blur(9px); }
-  #hud { top: 16px; left: 16px; width: 286px; }
-  #sensors { top: 16px; left: 318px; width: 300px; }
-  #legend { bottom: 128px; left: 16px; width: 286px; }
-  #decisions { top: 16px; right: 16px; width: 410px; max-height: calc(100vh - 150px);
+  #sidebar { position: fixed; z-index: 7; top: 16px; bottom: 16px; left: 16px;
+    width: 302px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto;
+    scrollbar-width: thin; }
+  #sidebar .panel { flex: 0 0 auto; }
+  #mission-setup { order: 0; }
+  #examples { order: 1; }
+  #hud { order: 2; }
+  #sensors { order: 3; }
+  #legend { order: 4; }
+  .sidebar-head { display:none; }
+  #menu-toggle, #menu-close { display: none; }
+  #decisions { position: fixed; top: 16px; right: 16px; width: 410px;
+    max-height: calc(100vh - 112px);
     display: flex; flex-direction: column; }
   #controls { bottom: 16px; left: 50%; transform: translateX(-50%);
-    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center;
-    max-width: calc(100vw - 32px); }
+    position: fixed; display: flex; gap: 8px; align-items: center; justify-content: center;
+    max-width: calc(100vw - 760px); min-width: 420px; z-index: 6; }
   h2 { margin: 0 0 9px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
     color: var(--dim); font-weight: 750; }
   h3 { margin: 0; font-size: 14px; }
@@ -67,11 +76,43 @@
   .sensor-reading { margin-top:7px; padding-top:7px; border-top:1px solid var(--line); }
   .sensor-reading:first-of-type { margin-top:0; padding-top:0; border-top:0; }
   .plain { color:var(--dim); font-size:12px; }
-  @media (max-width: 1050px) { #sensors, #legend { display:none; } #decisions { width:360px; } }
+  .preset-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .preset-grid button { text-align:left; font-size:12px; line-height:1.25; padding:7px 8px; }
+  .field-label { display:block; color:var(--dim); font-size:11px; margin:7px 0 3px; }
+  #order { width:100%; }
+  .mission-actions { display:grid; grid-template-columns:1fr auto; gap:6px; margin-top:6px; }
+  .mission-actions #planner { width:100%; }
+  .start-row { display:flex; gap:6px; margin-top:6px; }
+  .start-row #run { flex:1; background:var(--devin); color:white; border-color:var(--devin); }
+  .playback-label { color:var(--dim); font-size:11px; display:flex; align-items:center; gap:5px; }
+  @media (max-width: 1120px) {
+    #menu-toggle { display:block; position:fixed; z-index:10; top:12px; left:12px;
+      background:var(--devin); color:white; border-color:var(--devin); }
+    #menu-close { display:block; float:right; padding:2px 7px; }
+    .sidebar-head { order:-1; display:flex; position:sticky; top:0; z-index:2;
+      align-items:center; justify-content:space-between; background:var(--panel);
+      border:1px solid var(--line); border-radius:10px; padding:8px 10px; }
+    .sidebar-head #menu-close { float:none; }
+    body.menu-open #menu-toggle { display:none; }
+    #sidebar { width:min(330px, calc(100vw - 32px)); transform:translateX(calc(-100% - 24px));
+      transition:transform .2s ease; }
+    #sidebar.open { transform:translateX(0); }
+    #decisions { top:58px; width:min(410px, calc(100vw - 32px)); max-height:calc(100vh - 166px); }
+    #controls { min-width:0; width:calc(100vw - 32px); max-width:620px; padding:8px 10px; }
+    #status { display:none; }
+  }
+  @media (max-width: 560px) {
+    #decisions { left:12px; right:12px; width:auto; }
+    #scrub { width:120px; }
+    #controls { gap:5px; }
+  }
 </style>
 </head>
 <body>
 <div id="scene"></div>
+<button id="menu-toggle" aria-controls="sidebar" aria-expanded="false">Mission menu</button>
+<aside id="sidebar" aria-label="Mission menu">
+<div class="sidebar-head"><strong>Mission menu</strong><button id="menu-close" aria-label="Close mission menu">×</button></div>
 
 <div id="hud" class="panel">
   <h2>Mission result</h2>
@@ -105,28 +146,47 @@
   <div class="plain">A green dot is a passed pose, aim and stability check—not a detected defect.</div>
 </div>
 
+<div id="mission-setup" class="panel">
+  <h2>Plan a mission</h2>
+  <label class="field-label" for="order">Inspection request</label>
+  <input id="order" type="text"
+         placeholder="Tell the drone what to inspect"
+         value="inspect the lower end of the engine">
+  <div class="mission-actions">
+    <select id="planner" aria-label="Decision maker"><option value="devin">Devin (live API)</option><option value="baseline">Local test pilot</option></select>
+    <button id="mic" title="Speak the work order">Mic</button>
+  </div>
+  <div class="start-row"><button id="run">Start mission</button></div>
+</div>
+
+<div id="examples" class="panel">
+  <h2>Mission presets</h2>
+  <div class="preset-grid">
+    <button class="ex">full engine, random scene</button>
+    <button class="ex">inspect the top side</button>
+    <button class="ex">inspect the underside</button>
+    <button class="ex">check the inlet</button>
+    <button class="ex">inspect the rear</button>
+    <button class="ex">inspect the port side</button>
+    <button class="ex">inspect the starboard side</button>
+    <button class="ex">inspect ring 2, seed 606076</button>
+  </div>
+  <div class="plain" style="margin-top:7px">A preset fills the request. Press Start mission when ready.</div>
+</div>
+</aside>
+
 <div id="decisions" class="panel">
   <h2>What Devin decided</h2>
   <div class="steps" id="steps"><div style="color:var(--dim)">Run a mission to see every observation, decision and safety ruling.</div></div>
 </div>
 
-<div id="status">Ask in plain English. Try "inspect the underside on a random scene" or "sweep the whole nacelle, seed 1027".</div>
-<div id="examples" class="panel" style="bottom:112px; left:50%; transform:translateX(-50%); display:flex; gap:6px; padding:7px 9px;">
-  <button class="ex">inspect the lower end of the engine</button>
-  <button class="ex">check the inlet on a random scene</button>
-  <button class="ex">full sweep, seed 1027</button>
-  <button class="ex">inspect the top side in a random scenario</button>
-</div>
+<div id="status">Choose a preset or write an inspection request in the Mission menu.</div>
 
 <div id="controls" class="panel">
-  <input id="order" type="text" style="width:390px"
-         placeholder="tell the drone what to inspect, then press enter"
-         value="inspect the lower end of the engine">
-  <button id="mic" title="speak the work order">mic</button>
-  <select id="planner"><option value="devin">Devin (live API)</option><option value="baseline">baseline agent</option></select>
-  <button id="run">Start mission</button>
   <button id="play">Pause</button>
-  <button id="rate">4x</button>
+  <label class="playback-label" for="rate">Speed
+    <select id="rate"><option value="1">1x</option><option value="2">2x</option></select>
+  </label>
   <button id="cam">Follow</button>
   <input id="scrub" type="range" min="0" max="0" value="0">
   <span id="clock">0.0s</span>
@@ -278,7 +338,7 @@ let mission = null;
 let frames = [];
 let cursor = 0;
 let playing = true;
-let rate = 4;
+let rate = 1;
 let follow = true;
 let inspectedAt = new Map();
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -515,6 +575,9 @@ async function runMission() {
   button.disabled = true;
   const planner = el('planner').value;
   const text = el('order').value.trim();
+  el('sidebar').classList.remove('open');
+  document.body.classList.remove('menu-open');
+  el('menu-toggle').setAttribute('aria-expanded', 'false');
   el('status').textContent = planner === 'devin'
     ? `Devin is reading "${text}" and flying it decision by decision. This takes a minute.`
     : `Flying "${text}" with the deterministic baseline.`;
@@ -537,8 +600,22 @@ async function runMission() {
 el('run').onclick = runMission;
 el('order').addEventListener('keydown', (event) => { if (event.key === 'Enter') runMission(); });
 document.querySelectorAll('.ex').forEach((chip) => {
-  chip.onclick = () => { el('order').value = chip.textContent; runMission(); };
+  chip.onclick = () => {
+    el('order').value = chip.textContent;
+    el('order').focus();
+  };
 });
+
+el('menu-toggle').onclick = () => {
+  const open = el('sidebar').classList.toggle('open');
+  document.body.classList.toggle('menu-open', open);
+  el('menu-toggle').setAttribute('aria-expanded', String(open));
+};
+el('menu-close').onclick = () => {
+  el('sidebar').classList.remove('open');
+  document.body.classList.remove('menu-open');
+  el('menu-toggle').setAttribute('aria-expanded', 'false');
+};
 
 // Speech is a convenience only. Everything it can do, the text box can do.
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -562,10 +639,7 @@ if (!Recognition) {
   recogniser.onend = () => el('mic').classList.remove('on');
 }
 el('play').onclick = () => { playing = !playing; el('play').textContent = playing ? 'Pause' : 'Play'; };
-el('rate').onclick = () => {
-  rate = rate === 1 ? 4 : (rate === 4 ? 12 : 1);
-  el('rate').textContent = `${rate}x`;
-};
+el('rate').onchange = () => { rate = Number(el('rate').value); };
 el('cam').onclick = () => {
   follow = !follow;
   el('cam').classList.toggle('on', follow);
@@ -618,7 +692,7 @@ fetch('/data3/mission_trace.json').then((r) => r.ok ? r.json() : null).then((tra
       authorised_indexes: trace.authorised_indexes,
       frames: trace.frames,
       artifact,
-      reply: 'Replaying the last recorded Devin mission. Press Fly mission to run a new one.',
+      reply: 'Replaying the last recorded Devin mission. Open Mission menu to run a new one.',
     });
   });
 }).catch(() => {});

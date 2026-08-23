@@ -328,7 +328,8 @@ class CommandHandler(SimpleHTTPRequestHandler):
             "Content-Security-Policy",
             "default-src 'self'; script-src 'self' 'unsafe-inline'; "
             "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
-            "connect-src 'self'; media-src 'self'; object-src 'none'; "
+            "connect-src 'self' blob:; worker-src 'self' blob:; "
+            "media-src 'self' blob:; object-src 'none'; "
             "base-uri 'none'; frame-ancestors 'none'",
         )
         super().end_headers()

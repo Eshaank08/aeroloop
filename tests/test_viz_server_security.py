@@ -62,6 +62,8 @@ def test_root_health_and_security_headers_are_cloud_ready(http_server):
     assert headers["X-Content-Type-Options"] == "nosniff"
     assert headers["X-Frame-Options"] == "DENY"
     assert "frame-ancestors 'none'" in headers["Content-Security-Policy"]
+    assert "connect-src 'self' blob:" in headers["Content-Security-Policy"]
+    assert "worker-src 'self' blob:" in headers["Content-Security-Policy"]
     assert "Access-Control-Allow-Origin" not in headers
 
 

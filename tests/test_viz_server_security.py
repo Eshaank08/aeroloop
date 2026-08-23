@@ -18,7 +18,9 @@ def http_server(monkeypatch):
     monkeypatch.delenv("DEVIN_API_KEY", raising=False)
     monkeypatch.delenv("DEVIN_ORG_ID", raising=False)
     monkeypatch.delenv("AEROLOOP_DEVIN_MAX_ACU", raising=False)
+    monkeypatch.delenv("AEROLOOP_PUBLIC_DEMO", raising=False)
     server_module.REQUEST_LIMITER.clear()
+    server_module.PUBLIC_DEVIN_LIMITER.clear()
 
     handler = partial(server_module.CommandHandler, directory=str(server_module.VIZ_DIR))
     instance = server_module.ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -31,6 +33,7 @@ def http_server(monkeypatch):
         instance.server_close()
         thread.join(timeout=2)
         server_module.REQUEST_LIMITER.clear()
+        server_module.PUBLIC_DEVIN_LIMITER.clear()
 
 
 def request(address, method, path, *, payload=None, headers=None):
@@ -131,6 +134,11 @@ def test_live_devin_requires_constant_time_bearer_check(http_server, monkeypatch
     monkeypatch.setattr(server_module, "start_mission_job", lambda _request: "job-123")
     payload = {"planner": "devin", "text": "inspect the top"}
 
+    status, _, body = request(http_server, "GET", "/api/capabilities")
+    assert status == 200
+    assert json.loads(body)["devin_requires_access_code"] is True
+    assert json.loads(body)["public_demo"] is False
+
     status, _, body = request(
         http_server, "POST", "/api/mission/start",
         payload=payload, headers=same_origin(http_server),
@@ -144,6 +152,65 @@ def test_live_devin_requires_constant_time_bearer_check(http_server, monkeypatch
     )
     assert status == 202
     assert json.loads(body)["job_id"] == "job-123"
+
+
+def test_public_demo_runs_without_browser_secret_and_reports_capability(
+    http_server, monkeypatch,
+):
+    monkeypatch.setenv("AEROLOOP_PUBLIC_DEMO", "true")
+    monkeypatch.setenv("DEVIN_API_KEY", "not-a-real-key")
+    monkeypatch.setenv("DEVIN_ORG_ID", "not-a-real-org")
+    monkeypatch.setenv("AEROLOOP_DEVIN_MAX_ACU", "3")
+    monkeypatch.setattr(server_module, "start_mission_job", lambda _request: "job-public")
+
+    status, _, body = request(http_server, "GET", "/api/capabilities")
+    assert status == 200
+    assert json.loads(body) == {
+        "devin_available": True,
+        "devin_requires_access_code": False,
+        "public_demo": True,
+        "reason": "",
+    }
+
+    status, _, body = request(
+        http_server,
+        "POST",
+        "/api/mission/start",
+        payload={"planner": "devin", "text": "inspect the top"},
+        headers=same_origin(http_server),
+    )
+    assert status == 202
+    assert json.loads(body)["job_id"] == "job-public"
+
+
+def test_public_demo_restricts_endpoint_and_per_client_requests(http_server, monkeypatch):
+    monkeypatch.setenv("AEROLOOP_PUBLIC_DEMO", "1")
+    monkeypatch.setenv("DEVIN_API_KEY", "not-a-real-key")
+    monkeypatch.setenv("DEVIN_ORG_ID", "not-a-real-org")
+    monkeypatch.setenv("AEROLOOP_DEVIN_MAX_ACU", "3")
+    monkeypatch.setattr(server_module, "start_mission_job", lambda _request: "job-public")
+    payload = {"planner": "devin", "text": "inspect the top"}
+
+    status, _, body = request(
+        http_server, "POST", "/api/mission", payload=payload,
+        headers=same_origin(http_server),
+    )
+    assert status == 403
+    assert "bounded mission endpoint" in json.loads(body)["reply"]
+
+    for _ in range(server_module.PUBLIC_DEVIN_REQUESTS_PER_CLIENT):
+        status, _, _ = request(
+            http_server, "POST", "/api/mission/start", payload=payload,
+            headers=same_origin(http_server),
+        )
+        assert status == 202
+
+    status, _, body = request(
+        http_server, "POST", "/api/mission/start", payload=payload,
+        headers=same_origin(http_server),
+    )
+    assert status == 429
+    assert "public Devin demo limit" in json.loads(body)["reply"]
 
 
 def test_rate_limiter_and_concurrency_limit_are_bounded(monkeypatch):
@@ -165,6 +232,25 @@ def test_rate_limiter_and_concurrency_limit_are_bounded(monkeypatch):
     try:
         with pytest.raises(RuntimeError, match="capacity is full"):
             server_module.start_mission_job({"planner": "baseline", "text": "inspect"})
+    finally:
+        with server_module.MISSION_JOBS_LOCK:
+            server_module.MISSION_JOBS.clear()
+            server_module.MISSION_JOBS.update(original)
+
+
+def test_public_demo_allows_only_one_concurrent_devin_mission(monkeypatch):
+    monkeypatch.setenv("AEROLOOP_PUBLIC_DEMO", "true")
+    with server_module.MISSION_JOBS_LOCK:
+        original = dict(server_module.MISSION_JOBS)
+        server_module.MISSION_JOBS.clear()
+        server_module.MISSION_JOBS["live-devin"] = {
+            "status": "running",
+            "planner": "devin",
+            "created_at": 1.0,
+        }
+    try:
+        with pytest.raises(RuntimeError, match="public Devin demo is already running"):
+            server_module.start_mission_job({"planner": "devin", "text": "inspect"})
     finally:
         with server_module.MISSION_JOBS_LOCK:
             server_module.MISSION_JOBS.clear()

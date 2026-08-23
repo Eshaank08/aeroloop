@@ -46,8 +46,9 @@ ALLOWED_ROOTS = tuple(
 FORBIDDEN_PATH = str(REPO_ROOT / "artifacts" / ".aeroloop-forbidden")
 
 # The command endpoints run real work and can spend Devin credits. Browser POSTs
-# must be same-origin (or explicitly allow-listed), and live Devin requests need
-# a separate server-side demo token. The token is never shipped in this frontend.
+# must be same-origin (or explicitly allow-listed). Live Devin requests need a
+# separate server-side demo token unless the operator explicitly enables the
+# short-lived, tightly rate-limited public judging mode.
 LOCAL_ORIGINS = ("http://127.0.0.1", "http://localhost", "http://[::1]")
 MAX_REQUEST_BODY_BYTES = 16_384
 MAX_REQUEST_TEXT_CHARS = 500
@@ -55,6 +56,10 @@ MAX_CONCURRENT_MISSIONS = 2
 RATE_LIMIT_REQUESTS = 30
 RATE_LIMIT_WINDOW_S = 60.0
 MAX_DEVIN_ACU_PER_MISSION = 20
+MAX_CONCURRENT_PUBLIC_DEVIN_MISSIONS = 1
+PUBLIC_DEVIN_REQUESTS_PER_CLIENT = 2
+PUBLIC_DEVIN_REQUESTS_GLOBAL = 12
+PUBLIC_DEVIN_RATE_WINDOW_S = 3_600.0
 
 
 class RequestRejected(ValueError):
@@ -89,6 +94,15 @@ class SlidingWindowLimiter:
 
 
 REQUEST_LIMITER = SlidingWindowLimiter()
+PUBLIC_DEVIN_LIMITER = SlidingWindowLimiter()
+
+
+def _env_enabled(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _public_demo_enabled() -> bool:
+    return _env_enabled("AEROLOOP_PUBLIC_DEMO")
 
 
 def _devin_max_acu() -> int:
@@ -104,11 +118,10 @@ def _devin_max_acu() -> int:
     return value
 
 
-def _devin_is_configured() -> bool:
+def _devin_credentials_are_configured() -> bool:
     if not (
         os.environ.get("DEVIN_API_KEY")
         and os.environ.get("DEVIN_ORG_ID")
-        and os.environ.get("AEROLOOP_DEMO_TOKEN")
     ):
         return False
     try:
@@ -116,6 +129,12 @@ def _devin_is_configured() -> bool:
     except ValueError:
         return False
     return True
+
+
+def _devin_is_configured() -> bool:
+    return _devin_credentials_are_configured() and bool(
+        _public_demo_enabled() or os.environ.get("AEROLOOP_DEMO_TOKEN")
+    )
 
 
 def _inspection_planner(request: dict):
@@ -281,9 +300,11 @@ def _run_mission_job(job_id: str, request: dict) -> None:
 def start_mission_job(request: dict) -> str:
     job_id = uuid4().hex
     now = time.time()
+    planner = str(request.get("planner", "baseline")).lower()
     job = {
         "ok": True,
         "job_id": job_id,
+        "planner": planner,
         "status": "running",
         "stage": "preparing",
         "message": _job_message("preparing", str(request.get("planner", "baseline")), None),
@@ -298,6 +319,15 @@ def start_mission_job(request: dict) -> str:
         running = sum(1 for value in MISSION_JOBS.values() if value["status"] == "running")
         if running >= MAX_CONCURRENT_MISSIONS:
             raise RuntimeError("The mission capacity is full; wait for a running mission to finish")
+        if planner == "devin" and _public_demo_enabled():
+            running_public_devin = sum(
+                1 for value in MISSION_JOBS.values()
+                if value["status"] == "running" and value.get("planner") == "devin"
+            )
+            if running_public_devin >= MAX_CONCURRENT_PUBLIC_DEVIN_MISSIONS:
+                raise RuntimeError(
+                    "A public Devin demo is already running; wait for it to finish"
+                )
         if len(MISSION_JOBS) >= MAX_MISSION_JOBS:
             finished = [
                 key for key, value in MISSION_JOBS.items()
@@ -408,7 +438,23 @@ class CommandHandler(SimpleHTTPRequestHandler):
             self._client_key(path), RATE_LIMIT_REQUESTS, RATE_LIMIT_WINDOW_S,
         )
 
+    def _public_devin_rate_limit_ok(self) -> bool:
+        client_ok = PUBLIC_DEVIN_LIMITER.allow(
+            f"{self._client_key('')}:DEVIN",
+            PUBLIC_DEVIN_REQUESTS_PER_CLIENT,
+            PUBLIC_DEVIN_RATE_WINDOW_S,
+        )
+        if not client_ok:
+            return False
+        return PUBLIC_DEVIN_LIMITER.allow(
+            "global:DEVIN",
+            PUBLIC_DEVIN_REQUESTS_GLOBAL,
+            PUBLIC_DEVIN_RATE_WINDOW_S,
+        )
+
     def _has_devin_access(self) -> bool:
+        if _public_demo_enabled():
+            return True
         expected = os.environ.get("AEROLOOP_DEMO_TOKEN", "")
         supplied = self.headers.get("Authorization", "")
         if not expected or not supplied.startswith("Bearer "):
@@ -441,7 +487,8 @@ class CommandHandler(SimpleHTTPRequestHandler):
             configured = _devin_is_configured()
             self._send_json(200, {
                 "devin_available": configured,
-                "devin_requires_access_code": configured,
+                "devin_requires_access_code": configured and not _public_demo_enabled(),
+                "public_demo": configured and _public_demo_enabled(),
                 "reason": "" if configured else (
                     "Live Devin missions are disabled on this server. "
                     "The verified baseline and recorded Devin mission remain available."
@@ -676,10 +723,22 @@ class CommandHandler(SimpleHTTPRequestHandler):
                     "reply": "Live Devin missions are disabled on this server.",
                 })
                 return
+            if _public_demo_enabled() and path != "/api/mission/start":
+                self._send_json(403, {
+                    "ok": False,
+                    "reply": "Public Devin demos must use the bounded mission endpoint.",
+                })
+                return
             if not self._has_devin_access():
                 self._send_json(401, {
                     "ok": False,
                     "reply": "A valid judge access code is required for live Devin missions.",
+                })
+                return
+            if _public_demo_enabled() and not self._public_devin_rate_limit_ok():
+                self._send_json(429, {
+                    "ok": False,
+                    "reply": "The public Devin demo limit has been reached. Try again later.",
                 })
                 return
         if path == "/api/fly":

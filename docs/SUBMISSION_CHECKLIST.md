@@ -36,8 +36,10 @@ replace the run artifact or the Devin session URL produced by AeroLoop.
 - [ ] `python -m pytest -q` passes.
 - [ ] The deployed `/health` endpoint returns `200` and the root URL opens Mission View.
 - [ ] A deployed baseline mission completes without any process running on a laptop.
-- [ ] Live Devin is either disabled or protected by a temporary access token and an
+- [ ] Live Devin is disabled, protected by a temporary access token, or intentionally
+      running in the rate-limited `AEROLOOP_PUBLIC_DEMO=true` judging mode, with an
       `AEROLOOP_DEVIN_MAX_ACU` ceiling no greater than 20.
+- [ ] Password-free public demo mode is disabled immediately after the judging window.
 - [ ] `python -m sim.run_verifier --scenarios 30 --seed 1000` passes.
 - [ ] `python -m sim2.run_verifier --scenarios 30 --seed 1000` produces the recorded
       expected result, including the honestly documented seed 1027 miss.

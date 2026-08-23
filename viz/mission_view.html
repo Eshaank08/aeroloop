@@ -360,6 +360,7 @@ let markers = [];
 let viewMarkers = [];
 let mission = null;
 let devinAccessToken = '';
+let devinRequiresAccessCode = true;
 let frames = [];
 let cursor = 0;
 let playing = false;
@@ -747,7 +748,7 @@ async function runMission() {
     return;
   }
   if (button.disabled) return;
-  if (planner === 'devin' && !devinAccessToken) {
+  if (planner === 'devin' && devinRequiresAccessCode && !devinAccessToken) {
     const entered = window.prompt('Enter the temporary judge access code for a live Devin mission:');
     if (!entered) {
       el('status').textContent = 'Live Devin mission cancelled. No access code was sent.';
@@ -761,7 +762,9 @@ async function runMission() {
   el('status').textContent = 'Submitting the mission to the backend…';
   try {
     const headers = { 'Content-Type': 'application/json' };
-    if (planner === 'devin') headers.Authorization = `Bearer ${devinAccessToken}`;
+    if (planner === 'devin' && devinAccessToken) {
+      headers.Authorization = `Bearer ${devinAccessToken}`;
+    }
     const response = await fetch('/api/mission/start', {
       method: 'POST',
       headers,
@@ -894,7 +897,10 @@ requestAnimationFrame(animate);
 fetch('/api/capabilities').then((r) => r.json()).then((caps) => {
   if (caps.devin_available) {
     const option = el('planner').querySelector('option[value="devin"]');
-    option.textContent = 'Devin (live API, access code required)';
+    devinRequiresAccessCode = Boolean(caps.devin_requires_access_code);
+    option.textContent = devinRequiresAccessCode
+      ? 'Devin (live API, access code required)'
+      : 'Devin (live public demo)';
     return;
   }
   const option = el('planner').querySelector('option[value="devin"]');

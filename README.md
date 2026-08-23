@@ -112,19 +112,34 @@ supplies `PORT`; the server binds publicly only when that variable is present, e
 `/health`, and sends `/` to the judge-facing mission view. Baseline missions and the
 recorded Devin run work without credentials.
 
-Live Devin missions remain disabled until all four server-side variables are set:
+Live Devin missions require these server-side variables:
 
 ```text
 DEVIN_API_KEY
 DEVIN_ORG_ID
-AEROLOOP_DEMO_TOKEN
 AEROLOOP_DEVIN_MAX_ACU     # integer from 1 through 20
 ```
 
-The access token is entered by a judge at runtime and kept only in that page's memory.
-It is never embedded in frontend JavaScript. The HTTP boundary also enforces same-origin
-POSTs, bounded bodies and mission inputs, request-rate and concurrent-mission limits,
-security headers, and an independent per-mission Devin spending ceiling.
+Private mode is the safe default. Set `AEROLOOP_DEMO_TOKEN` and give that temporary
+code directly to a judge. The code is kept only in that page's memory and is never
+embedded in frontend JavaScript.
+
+For a short password-free judging window, set:
+
+```text
+AEROLOOP_PUBLIC_DEMO=true
+```
+
+Public mode accepts live Devin only through the bounded asynchronous mission endpoint,
+allows one live Devin mission at a time, limits each visitor to two starts per hour and
+the deployment to twelve starts per hour, and retains the independent per-mission ACU
+ceiling. Keep `AEROLOOP_DEVIN_MAX_ACU` low (for example `3`) and remove or set
+`AEROLOOP_PUBLIC_DEMO=false` immediately after judging. An existing
+`AEROLOOP_DEMO_TOKEN` may remain configured; it becomes required again when public mode
+is disabled.
+
+Both modes also enforce same-origin POSTs, bounded bodies and mission inputs, general
+request-rate and concurrent-mission limits, and security headers.
 
 ### Submission requirement
 

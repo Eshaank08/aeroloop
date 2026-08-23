@@ -5,16 +5,15 @@
 <title>AeroLoop flight view</title>
 <style>
   :root {
-    --bg: #0a0e14;
-    --panel: rgba(16, 22, 32, 0.88);
+    --bg: #05080d;
+    --panel: rgba(12, 18, 27, 0.86);
     --line: #1f2a3a;
     --text: #e6edf6;
     --dim: #7d8da5;
     --pass: #35d07f;
     --fail: #ff5d66;
     --accent: #4ea1ff;
-    --visited: #35d07f;
-    --pending: #55647d;
+    --warn: #ffb347;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
@@ -22,34 +21,80 @@
   #stage { position: fixed; inset: 0; }
   .panel { position: fixed; background: var(--panel); border: 1px solid var(--line);
     border-radius: 10px; padding: 12px 14px; backdrop-filter: blur(6px); }
-  #hud { top: 16px; left: 16px; min-width: 260px; }
+  #hud { top: 16px; left: 16px; min-width: 268px; }
   #hud h1 { margin: 0 0 2px; font-size: 15px; letter-spacing: 0.04em; }
   #hud .sub { color: var(--dim); font-size: 11px; margin-bottom: 10px; }
   .row { display: flex; justify-content: space-between; gap: 18px; padding: 2px 0; }
   .row span:first-child { color: var(--dim); }
   .big { font-size: 22px; letter-spacing: 0.06em; margin-top: 8px; padding-top: 8px;
     border-top: 1px solid var(--line); }
-  .ok { color: var(--pass); } .bad { color: #ff5d66; }
+  .ok { color: var(--pass); } .bad { color: var(--fail); } .warn { color: var(--warn); }
   #grid { top: 16px; right: 16px; width: 250px; }
   #grid .title { color: var(--dim); font-size: 11px; margin-bottom: 8px; }
   #cells { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
   .cell { aspect-ratio: 1; border-radius: 3px; background: var(--pass); opacity: 0.85;
     cursor: pointer; }
-  .cell.fail { background: #ff5d66; }
+  .cell.fail { background: var(--fail); }
   .cell.active { outline: 2px solid var(--accent); outline-offset: 1px; opacity: 1; }
   #tip { color: var(--dim); font-size: 11px; margin-top: 8px; min-height: 30px; }
   #controls { bottom: 16px; left: 16px; right: 16px; display: flex; align-items: center;
-    gap: 14px; }
+    gap: 10px; flex-wrap: wrap; }
   button { background: #16202e; color: var(--text); border: 1px solid var(--line);
     border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
   button:hover { border-color: var(--accent); }
   button.on { border-color: var(--accent); color: var(--accent); }
-  #scrub { flex: 1; accent-color: var(--accent); }
-  #clock { color: var(--dim); min-width: 132px; text-align: right; }
-  #legend { position: fixed; bottom: 74px; left: 16px; color: var(--dim); font-size: 11px; }
+  button:disabled { opacity: 0.45; cursor: default; }
+  .sep { width: 1px; height: 22px; background: var(--line); }
+  #scrub { flex: 1; min-width: 180px; accent-color: var(--accent); }
+  #clock { color: var(--dim); min-width: 138px; text-align: right; }
+  #legend { position: fixed; bottom: 68px; right: 16px; color: var(--dim); font-size: 11px; }
   .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px;
     margin: 0 5px 0 14px; vertical-align: middle; }
   #legend .swatch:first-child { margin-left: 0; }
+  #alert { position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    padding: 7px 16px; border-radius: 999px; border: 1px solid var(--warn);
+    background: rgba(70, 44, 8, 0.8); color: var(--warn); letter-spacing: 0.08em;
+    font-size: 12px; opacity: 0; transition: opacity 0.18s; pointer-events: none; }
+  #alert.show { opacity: 1; }
+  #alert.hot { border-color: var(--fail); color: var(--fail);
+    background: rgba(74, 12, 18, 0.85); }
+  #reticle { position: fixed; inset: 0; display: none; pointer-events: none; }
+  #reticle.on { display: block; }
+  #reticle i { position: absolute; background: rgba(120, 200, 255, 0.5); }
+  #reticle .h { width: 34px; height: 1px; top: 50%; left: 50%; margin-left: -17px; }
+  #reticle .v { width: 1px; height: 34px; top: 50%; left: 50%; margin-top: -17px; }
+  #chat { position: fixed; left: 16px; bottom: 68px; width: 330px;
+    display: flex; flex-direction: column; gap: 8px; }
+  #inspection { position: fixed; left: 16px; top: 290px; width: 268px;
+    display: flex; flex-direction: column; gap: 8px; max-height: 280px; }
+  #inspection .title { font-size: 11px; letter-spacing: 0.12em; color: var(--dim);
+    text-transform: uppercase; }
+  #inspect-log { max-height: 110px; overflow-y: auto; display: flex; flex-direction: column;
+    gap: 5px; font-size: 11px; }
+  #inspect-log .msg { padding: 5px 8px; border-radius: 7px; border: 1px solid var(--line); }
+  #inspect-log .msg.ok { border-color: rgba(53, 208, 127, 0.45); color: var(--pass); }
+  #inspect-log .msg.warn { border-color: rgba(255, 179, 71, 0.45); color: var(--warn); }
+  #inspect-log .msg.err { border-color: rgba(255, 93, 102, 0.45); color: var(--fail); }
+  #inspect-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  #inspect-chips button { font-size: 10px; padding: 3px 6px; }
+  #chat .title { font-size: 11px; letter-spacing: 0.12em; color: var(--dim);
+    text-transform: uppercase; }
+  #log { max-height: 210px; overflow-y: auto; display: flex; flex-direction: column;
+    gap: 6px; font-size: 12px; line-height: 1.45; }
+  #log .msg { padding: 6px 9px; border-radius: 8px; border: 1px solid var(--line); }
+  #log .me { background: rgba(78, 161, 255, 0.12); border-color: rgba(78, 161, 255, 0.35); }
+  #log .sim { background: rgba(255, 255, 255, 0.03); }
+  #log .err { border-color: rgba(255, 93, 102, 0.5); color: var(--fail); }
+  #ask { display: flex; gap: 6px; }
+  #ask input { flex: 1; background: #0b1017; color: var(--text); font: inherit;
+    font-size: 12px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; }
+  #ask input:focus { outline: none; border-color: rgba(78, 161, 255, 0.6); }
+  #mic.live { border-color: var(--fail); color: var(--fail); }
+  #chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  #chips button { font-size: 11px; padding: 4px 8px; }
+  #reticle .tag { position: absolute; top: calc(50% + 26px); left: 50%;
+    transform: translateX(-50%); color: rgba(120, 200, 255, 0.65); font-size: 11px;
+    letter-spacing: 0.16em; }
 </style>
 </head>
 <body>
@@ -57,7 +102,8 @@
 
 <div id="hud" class="panel">
   <h1>AeroLoop</h1>
-  <div class="sub">nacelle inspection sweep, seed <b id="seed">-</b></div>
+  <div class="sub"><span id="mission">nacelle inspection sweep</span>, seed
+    <b id="seed">-</b></div>
   <div class="row"><span>coverage</span><b id="coverage">-</b></div>
   <div class="row"><span>waypoints</span><b id="wps">-</b></div>
   <div class="row"><span>elapsed / budget</span><b id="time">-</b></div>
@@ -65,7 +111,10 @@
   <div class="row"><span>clearance to keep-out</span><b id="clearance">-</b></div>
   <div class="row"><span>wind</span><b id="wind">-</b></div>
   <div class="row"><span>collisions</span><b id="collisions">-</b></div>
+  <div class="row"><span>tilt from level</span><b id="tilt">-</b></div>
+  <div class="row"><span>camera off nacelle</span><b id="aim">-</b></div>
   <div class="big" id="verdict">-</div>
+  <div class="sub" id="attsrc" style="margin:6px 0 0">-</div>
 </div>
 
 <div id="grid" class="panel">
@@ -76,6 +125,36 @@
   <div class="row"><span>mean coverage</span><b id="bcov">-</b></div>
   <div class="row"><span>total collisions</span><b id="bcol">-</b></div>
   <div class="big" id="bverdict">-</div>
+</div>
+
+<div id="alert">proximity</div>
+
+<div id="reticle">
+  <i class="h"></i><i class="v"></i>
+  <div class="tag">NOSE CAM</div>
+</div>
+
+<div id="chat" class="panel">
+  <div class="title">flight command</div>
+  <div id="log"></div>
+  <div id="chips"></div>
+  <form id="ask">
+    <input id="cmd" autocomplete="off" placeholder="fly from 6 2 8 to 1 0 4" />
+    <button id="mic" type="button" title="speak a command">mic</button>
+    <button id="send" type="submit">fly</button>
+  </form>
+</div>
+
+<div id="inspection" class="panel">
+  <div class="title">adaptive inspection</div>
+  <div id="inspect-log"></div>
+  <div id="inspect-chips"></div>
+  <form id="inspect-form">
+    <div id="ask" style="display:flex;gap:6px;width:100%">
+      <input id="inspect-cmd" autocomplete="off" placeholder="inspect top side, light wind" style="flex:1" />
+      <button type="submit">inspect</button>
+    </div>
+  </form>
 </div>
 
 <div id="legend">
@@ -91,6 +170,11 @@
   <button class="rate" data-rate="1">1x</button>
   <button class="rate on" data-rate="4">4x</button>
   <button class="rate" data-rate="12">12x</button>
+  <span class="sep"></span>
+  <button class="cam on" data-cam="orbit">orbit</button>
+  <button class="cam" data-cam="follow">follow</button>
+  <button class="cam" data-cam="pilot">pilot view</button>
+  <span class="sep"></span>
   <button id="gust">jump to gust</button>
   <input id="scrub" type="range" min="0" max="100" value="0" step="1" />
   <span id="clock">0.00s</span>
@@ -98,7 +182,15 @@
 
 <script src="vendor/three.min.js"></script>
 <script src="vendor/OrbitControls.js"></script>
-<script src="data/data.js"></script>
+<script>
+// the recording to replay comes from the query string, so one view serves both
+// simulators: no argument reads viz/data, ?data=data2 reads viz/data2.
+(function () {
+  const dir = (new URLSearchParams(location.search).get('data') || 'data')
+    .replace(/[^A-Za-z0-9_]/g, '');
+  document.write('<script src="' + dir + '/data.js"><\/script>');
+}());
+</script>
 <script>
 (function () {
   const data = window.AEROLOOP;
@@ -107,64 +199,287 @@
       + '<code>python -m viz.replay</code> first.</p>';
     return;
   }
-  const scene_ = data.scene, trace = data.trace, batch = data.batch;
-  const nac = scene_.nacelle, lim = scene_.limits, frames = trace.frames;
+  const scene_ = data.scene, batch = data.batch;
+  const nac = scene_.nacelle, lim = scene_.limits;
+  // trace and waypoints are swappable: the command console flies new missions
+  let trace = data.trace, frames = trace.frames;
+  let traceDisposition = '';
+  let wpList = scene_.waypoints;
+  let wpQuality = [];
 
   // three.js is y-up, the simulator is x-along-nacelle, so map sim (x,y,z) -> (y,z,x).
   const V = (p) => new THREE.Vector3(p[1], p[2], p[0]);
 
+  // v2 traces carry the airframe's own attitude, body rates and thrust, so the
+  // pose is measured rather than reconstructed, and a waypoint only counts when
+  // the camera was pointed at the nacelle and the shot was steady.
+  const cam = scene_.camera || {};
+  let MEASURED = !!(frames[0] && frames[0].R);
+  const FOV_HALF = cam.fov_half_deg || 35;
+  const GATE_TOL = cam.inspection_tolerance || 0.5;
+  const GATE_RATE = cam.max_blur_rate || 1.5;
+  const GATE_SPEED = cam.max_blur_speed || 2.5;
+
+  // the closest point on the nacelle skin, the same radial projection the
+  // simulator grades against
+  function surfacePoint(p) {
+    const x = Math.max(nac.axis_start[0], Math.min(nac.axis_end[0], p[0]));
+    const r = Math.hypot(p[1], p[2]);
+    if (r < 1e-9) return [x, nac.radius, 0];
+    return [x, p[1] / r * nac.radius, p[2] / r * nac.radius];
+  }
+
+  const col = (R, j) => [R[0][j], R[1][j], R[2][j]];
+
+  function angleBetween(a, b) {
+    const na = Math.hypot(a[0], a[1], a[2]), nb = Math.hypot(b[0], b[1], b[2]);
+    if (na < 1e-9 || nb < 1e-9) return 180;
+    const d = (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (na * nb);
+    return Math.acos(Math.max(-1, Math.min(1, d))) * 180 / Math.PI;
+  }
+
+  // boresight is body +x, and it is aimed at the nearest skin point
+  function aimDeg(f) {
+    if (!f.R) return null;
+    const s = surfacePoint(f.p);
+    return angleBetween(col(f.R, 0), [s[0] - f.p[0], s[1] - f.p[1], s[2] - f.p[2]]);
+  }
+
+  function tiltDeg(f) {
+    return f.R ? angleBetween(col(f.R, 2), [0, 0, 1]) : null;
+  }
+
+  const FLOOR_Y = -4.6;
+  const HANGAR = 64;          // floor half extent is HANGAR / 2
+  const WALL_H = 17;
+  const length = nac.axis_end[0] - nac.axis_start[0];
+  const mid = (nac.axis_start[0] + nac.axis_end[0]) / 2;
+
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const stage = document.getElementById('stage');
   renderer.setSize(stage.clientWidth, stage.clientHeight);
   stage.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0a0e14);
-  scene.fog = new THREE.Fog(0x0a0e14, 18, 46);
+  scene.background = new THREE.Color(0x05080d);
+  scene.fog = new THREE.FogExp2(0x05080d, 0.021);
 
-  const camera = new THREE.PerspectiveCamera(50, stage.clientWidth / stage.clientHeight, 0.1, 200);
-  camera.position.set(9, 7, 12);
-  const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 0, (nac.axis_start[0] + nac.axis_end[0]) / 2);
+  const aspect = () => stage.clientWidth / stage.clientHeight;
+  const orbitCam = new THREE.PerspectiveCamera(50, aspect(), 0.1, 400);
+  orbitCam.position.set(8, 5, 11);
+  const followCam = new THREE.PerspectiveCamera(46, aspect(), 0.05, 400);
+  const pilotCam = new THREE.PerspectiveCamera(72, aspect(), 0.03, 400);
+  const controls = new THREE.OrbitControls(orbitCam, renderer.domElement);
+  controls.target.set(0, 0, mid);
   controls.enableDamping = true;
+  let camMode = 'orbit';
+  const activeCam = () => (camMode === 'orbit' ? orbitCam
+    : camMode === 'follow' ? followCam : pilotCam);
+  orbitCam.layers.enable(1);
+  followCam.layers.enable(1);
+  pilotCam.layers.enable(2);
 
-  scene.add(new THREE.AmbientLight(0x8899bb, 0.7));
-  const key = new THREE.DirectionalLight(0xffffff, 0.8);
-  key.position.set(6, 10, 8);
+  // ----------------------------------------------------------------- hangar
+  scene.add(new THREE.HemisphereLight(0x9fb6d8, 0x14181f, 0.45));
+  const key = new THREE.DirectionalLight(0xfff0d8, 0.85);
+  key.position.set(9, 16, 7);
+  key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.camera.near = 1;
+  key.shadow.camera.far = 60;
+  key.shadow.camera.left = -18;
+  key.shadow.camera.right = 18;
+  key.shadow.camera.top = 18;
+  key.shadow.camera.bottom = -18;
+  key.shadow.bias = -0.0008;
   scene.add(key);
+  const fill = new THREE.DirectionalLight(0x6fa8ff, 0.28);
+  fill.position.set(-11, 5, -8);
+  scene.add(fill);
 
-  const grid = new THREE.GridHelper(40, 40, 0x1b2534, 0x121a26);
-  grid.position.y = -5;
-  scene.add(grid);
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(HANGAR, HANGAR),
+    new THREE.MeshStandardMaterial({ color: 0x1a1f28, roughness: 0.92, metalness: 0.05 })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set(0, FLOOR_Y, mid);
+  floor.receiveShadow = true;
+  scene.add(floor);
 
-  const length = nac.axis_end[0] - nac.axis_start[0];
-  const mid = (nac.axis_start[0] + nac.axis_end[0]) / 2;
+  // painted floor markings: work circle under the nacelle, lane lines, hatched border
+  function paint(w, d, x, z, color, opacity, rot) {
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, d),
+      new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: opacity })
+    );
+    m.rotation.x = -Math.PI / 2;
+    if (rot) m.rotation.z = rot;
+    m.position.set(x, FLOOR_Y + 0.012, z);
+    scene.add(m);
+    return m;
+  }
+  function paintRing(inner, outer, color, opacity) {
+    const m = new THREE.Mesh(
+      new THREE.RingGeometry(inner, outer, 96),
+      new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: opacity,
+        side: THREE.DoubleSide })
+    );
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(0, FLOOR_Y + 0.014, mid);
+    scene.add(m);
+  }
+  paintRing(7.4, 7.55, 0xffb347, 0.5);
+  paintRing(nac.inspection_radius - 0.05, nac.inspection_radius + 0.05, 0x4ea1ff, 0.28);
+  for (let i = 0; i < 28; i++) {           // hatched safety border
+    const a = (i / 28) * Math.PI * 2;
+    paint(0.9, 0.16, Math.cos(a) * 8.3, mid + Math.sin(a) * 8.3, 0xffb347, 0.32, -a);
+  }
+  paint(0.14, 30, -11, mid, 0x39435a, 0.7);
+  paint(0.14, 30, 11, mid, 0x39435a, 0.7);
+  paint(24, 0.14, 0, mid - 13, 0x39435a, 0.7);
+  for (let i = -5; i <= 5; i++) {          // taxi centreline dashes
+    paint(0.16, 1.4, 0, mid + i * 2.6, 0x2c3648, 0.85);
+  }
 
-  function cylinder(radius, material, openEnded) {
-    const geo = new THREE.CylinderGeometry(radius, radius, length, 64, 1, !!openEnded);
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x121722, roughness: 0.95,
+    metalness: 0.04, side: THREE.DoubleSide });
+  [[0, mid - HANGAR / 2, 0], [0, mid + HANGAR / 2, Math.PI],
+   [-HANGAR / 2, mid, Math.PI / 2], [HANGAR / 2, mid, -Math.PI / 2]].forEach((w) => {
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(HANGAR, WALL_H), wallMat);
+    wall.position.set(w[0], FLOOR_Y + WALL_H / 2, w[1]);
+    wall.rotation.y = w[2];
+    scene.add(wall);
+  });
+
+  // roof trusses and hangar lamps
+  const trussMat = new THREE.LineBasicMaterial({ color: 0x1c2532 });
+  for (let i = -3; i <= 3; i++) {
+    const pts = [
+      new THREE.Vector3(-14, FLOOR_Y + WALL_H - 3.4, mid + i * 5),
+      new THREE.Vector3(0, FLOOR_Y + WALL_H - 2.1, mid + i * 5),
+      new THREE.Vector3(14, FLOOR_Y + WALL_H - 3.4, mid + i * 5),
+    ];
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), trussMat));
+  }
+  [[-6, mid - 6], [6, mid - 6], [-6, mid + 6], [6, mid + 6]].forEach((p) => {
+    const lamp = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.5, 1.5),
+      new THREE.MeshBasicMaterial({ color: 0xffe9c4, transparent: true, opacity: 0.5 })
+    );
+    lamp.rotation.x = Math.PI / 2;
+    lamp.position.set(p[0], FLOOR_Y + WALL_H - 3.6, p[1]);
+    scene.add(lamp);
+    const pl = new THREE.PointLight(0xffe3b8, 0.32, 26);
+    pl.position.set(p[0], FLOOR_Y + WALL_H - 4, p[1]);
+    scene.add(pl);
+  });
+
+  // ---------------------------------------------------------------- nacelle
+  function cylinder(radius, material, openEnded, segs) {
+    const geo = new THREE.CylinderGeometry(radius, radius, length, segs || 64, 1, !!openEnded);
     const mesh = new THREE.Mesh(geo, material);
     mesh.rotation.x = Math.PI / 2;   // align the cylinder axis with sim +x
     mesh.position.set(0, 0, mid);
     return mesh;
   }
 
-  scene.add(cylinder(nac.radius, new THREE.MeshStandardMaterial({
-    color: 0x8fa3bd, metalness: 0.65, roughness: 0.35 })));
+  const skin = cylinder(nac.radius, new THREE.MeshStandardMaterial({
+    color: 0x93a6bd, metalness: 0.6, roughness: 0.46 }));
+  skin.castShadow = true;
+  skin.receiveShadow = true;
+  scene.add(skin);
+
+  // panel seams, so the skin reads as an airframe rather than a bare cylinder
+  const seamMat = new THREE.MeshStandardMaterial({ color: 0x5c6a7d, metalness: 0.5,
+    roughness: 0.6 });
+  [0.22, 0.45, 0.68, 0.9].forEach((frac) => {
+    const seam = new THREE.Mesh(new THREE.TorusGeometry(nac.radius + 0.005, 0.022, 8, 72),
+      seamMat);
+    seam.position.set(0, 0, nac.axis_start[0] + length * frac);
+    scene.add(seam);
+  });
+
+  const intakeLip = new THREE.Mesh(
+    new THREE.TorusGeometry(nac.radius, 0.12, 16, 72),
+    new THREE.MeshStandardMaterial({ color: 0xc9d6e6, metalness: 0.9, roughness: 0.22 })
+  );
+  intakeLip.position.set(0, 0, nac.axis_start[0]);
+  scene.add(intakeLip);
+  const fan = new THREE.Mesh(
+    new THREE.CircleGeometry(nac.radius * 0.94, 48),
+    new THREE.MeshStandardMaterial({ color: 0x0b0f16, metalness: 0.6, roughness: 0.7 })
+  );
+  fan.position.set(0, 0, nac.axis_start[0] - 0.02);
+  fan.rotation.y = Math.PI;
+  scene.add(fan);
+  const spinner = new THREE.Mesh(
+    new THREE.ConeGeometry(0.32, 0.9, 24),
+    new THREE.MeshStandardMaterial({ color: 0xd7e2ee, metalness: 0.8, roughness: 0.25 })
+  );
+  spinner.rotation.x = -Math.PI / 2;
+  spinner.position.set(0, 0, nac.axis_start[0] - 0.45);
+  scene.add(spinner);
+  const exhaust = new THREE.Mesh(
+    new THREE.CylinderGeometry(nac.radius * 0.72, nac.radius * 0.55, 0.7, 48, 1, true),
+    new THREE.MeshStandardMaterial({ color: 0x3c4452, metalness: 0.75, roughness: 0.5,
+      side: THREE.DoubleSide })
+  );
+  exhaust.rotation.x = Math.PI / 2;
+  exhaust.position.set(0, 0, nac.axis_end[0] + 0.35);
+  scene.add(exhaust);
+
+  // mounting: two cradles on pylons standing on the hangar floor
+  [nac.axis_start[0] + 0.9, nac.axis_end[0] - 0.9].forEach((x) => {
+    const cradle = new THREE.Mesh(
+      new THREE.TorusGeometry(nac.radius + 0.14, 0.1, 12, 60, Math.PI),
+      new THREE.MeshStandardMaterial({ color: 0xff8a3d, metalness: 0.3, roughness: 0.6 })
+    );
+    cradle.rotation.z = Math.PI;
+    cradle.position.set(0, 0, x);
+    cradle.castShadow = true;
+    scene.add(cradle);
+    const pylon = new THREE.Mesh(
+      new THREE.BoxGeometry(0.42, Math.abs(FLOOR_Y) - nac.radius, 0.42),
+      new THREE.MeshStandardMaterial({ color: 0x39414f, metalness: 0.35, roughness: 0.7 })
+    );
+    pylon.position.set(0, (FLOOR_Y - nac.radius) / 2, x);
+    pylon.castShadow = true;
+    scene.add(pylon);
+    const foot = new THREE.Mesh(
+      new THREE.BoxGeometry(1.5, 0.16, 1.5),
+      new THREE.MeshStandardMaterial({ color: 0x2b3341, metalness: 0.3, roughness: 0.8 })
+    );
+    foot.position.set(0, FLOOR_Y + 0.08, x);
+    foot.receiveShadow = true;
+    scene.add(foot);
+  });
+
   const keepOut = cylinder(nac.keep_out_radius, new THREE.MeshBasicMaterial({
-    color: 0xff5d66, transparent: true, opacity: 0.07, side: THREE.DoubleSide,
+    color: 0xff5d66, transparent: true, opacity: 0.06, side: THREE.DoubleSide,
     depthWrite: false }), true);
   scene.add(keepOut);
   const keepOutEdges = new THREE.LineSegments(
     new THREE.EdgesGeometry(new THREE.CylinderGeometry(
-      nac.keep_out_radius, nac.keep_out_radius, length, 32, 1, true)),
-    new THREE.LineBasicMaterial({ color: 0xff5d66, transparent: true, opacity: 0.28 })
+      nac.keep_out_radius, nac.keep_out_radius, length, 36, 1, true)),
+    new THREE.LineBasicMaterial({ color: 0xff5d66, transparent: true, opacity: 0.22 })
   );
   keepOutEdges.rotation.x = Math.PI / 2;
   keepOutEdges.position.set(0, 0, mid);
   scene.add(keepOutEdges);
 
-  // inspection shell the controller flies on, drawn as three faint rings
+  // the spot on the keep-out shell nearest the drone, lit up when it closes in
+  const hotspot = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 20, 14),
+    new THREE.MeshBasicMaterial({ color: 0xff5d66, transparent: true, opacity: 0,
+      depthWrite: false })
+  );
+  scene.add(hotspot);
+
+  // inspection shell the controller flies on, drawn as faint rings
   const ringMat = new THREE.LineBasicMaterial({ color: 0x2f4a6b });
   const xs = [...new Set(scene_.waypoints.map((w) => w[0]))];
   xs.forEach((x) => {
@@ -177,29 +492,157 @@
     scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), ringMat));
   });
 
+  // Layer 1 is everything the pilot camera must not see, because it sits inside
+  // the airframe and flies straight through the waypoint markers.
+  const CHASE_ONLY = 1, PILOT_ONLY = 2;
+
   const wpGeo = new THREE.SphereGeometry(nac.waypoint_tolerance * 0.55, 18, 12);
-  const wpMeshes = scene_.waypoints.map((w) => {
-    const m = new THREE.Mesh(wpGeo, new THREE.MeshStandardMaterial({
-      color: 0x55647d, emissive: 0x0a1018, roughness: 0.5 }));
-    m.position.copy(V(w));
-    scene.add(m);
-    return m;
+  const reticleGeo = new THREE.RingGeometry(nac.waypoint_tolerance * 0.8,
+    nac.waypoint_tolerance * 0.92, 24);
+  let wpMeshes = [];
+
+  function buildWaypoints(list) {
+    wpMeshes.forEach((m) => {
+      scene.remove(m.userData.reticle);
+      m.userData.reticle.material.dispose();
+      scene.remove(m);
+      m.material.dispose();
+    });
+    wpMeshes = list.map((w) => {
+      const m = new THREE.Mesh(wpGeo, new THREE.MeshStandardMaterial({
+        color: 0x55647d, emissive: 0x0a1018, roughness: 0.5 }));
+      m.position.copy(V(w));
+      m.layers.set(CHASE_ONLY);
+      scene.add(m);
+
+      // the same target as a flat reticle, for the pilot view
+      const r = new THREE.Mesh(reticleGeo, new THREE.MeshBasicMaterial({
+        color: 0x55647d, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+      r.position.copy(m.position);
+      r.lookAt(new THREE.Vector3(0, 0, w[0]));
+      r.layers.set(PILOT_ONLY);
+      scene.add(r);
+      m.userData.reticle = r;
+      return m;
+    });
+  }
+  buildWaypoints(wpList);
+
+  // ------------------------------------------------------------ quadcopter
+  const rotors = [];
+  const drone = new THREE.Group();
+  const carbon = new THREE.MeshStandardMaterial({ color: 0x1d2430, metalness: 0.5,
+    roughness: 0.45 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.09, 0.40), carbon);
+  body.castShadow = true;
+  drone.add(body);
+  const canopy = new THREE.Mesh(
+    new THREE.SphereGeometry(0.11, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: 0x9ed1ff, metalness: 0.2, roughness: 0.1,
+      transparent: true, opacity: 0.75 })
+  );
+  canopy.position.set(0, 0.05, 0.09);
+  drone.add(canopy);
+  const camPod = new THREE.Mesh(
+    new THREE.SphereGeometry(0.055, 14, 10),
+    new THREE.MeshStandardMaterial({ color: 0x0b0f16, metalness: 0.6, roughness: 0.25 })
+  );
+  camPod.position.set(0, -0.06, 0.16);
+  drone.add(camPod);
+
+  const ARM = 0.26;
+  [[1, 1], [-1, 1], [-1, -1], [1, -1]].forEach((s, i) => {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.03, ARM * 1.42), carbon);
+    arm.position.set(s[0] * ARM / 2, 0, s[1] * ARM / 2);
+    arm.rotation.y = s[0] * s[1] > 0 ? -Math.PI / 4 : Math.PI / 4;
+    arm.castShadow = true;
+    drone.add(arm);
+
+    const motor = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.038, 0.038, 0.06, 14),
+      new THREE.MeshStandardMaterial({ color: 0x8b98ab, metalness: 0.8, roughness: 0.3 })
+    );
+    motor.position.set(s[0] * ARM, 0.045, s[1] * ARM);
+    drone.add(motor);
+
+    const hub = new THREE.Group();
+    hub.position.set(s[0] * ARM, 0.082, s[1] * ARM);
+    for (let b = 0; b < 2; b++) {
+      const blade = new THREE.Mesh(
+        new THREE.BoxGeometry(0.20, 0.006, 0.032),
+        new THREE.MeshStandardMaterial({ color: 0x2b3442, metalness: 0.3, roughness: 0.6 })
+      );
+      blade.position.x = 0;
+      blade.rotation.y = b * Math.PI / 2;
+      hub.add(blade);
+    }
+    const disc = new THREE.Mesh(
+      new THREE.CircleGeometry(0.115, 24),
+      new THREE.MeshBasicMaterial({ color: 0x9ed1ff, transparent: true, opacity: 0.14,
+        side: THREE.DoubleSide, depthWrite: false })
+    );
+    disc.rotation.x = -Math.PI / 2;
+    hub.add(disc);
+    hub.userData.dir = i % 2 === 0 ? 1 : -1;   // counter-rotating pairs
+    rotors.push(hub);
+    drone.add(hub);
+
+    const skid = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.09, 0.022), carbon);
+    skid.position.set(s[0] * ARM * 0.7, -0.07, s[1] * ARM * 0.7);
+    drone.add(skid);
   });
 
-  const drone = new THREE.Mesh(
-    new THREE.SphereGeometry(0.22, 20, 14),
-    new THREE.MeshStandardMaterial({ color: 0x4ea1ff, emissive: 0x0d2a4d, roughness: 0.3 })
+  const navFront = new THREE.Mesh(
+    new THREE.SphereGeometry(0.028, 10, 8),
+    new THREE.MeshBasicMaterial({ color: 0x35d07f })
   );
+  navFront.position.set(0, 0, 0.21);
+  drone.add(navFront);
+  const navRear = new THREE.Mesh(
+    new THREE.SphereGeometry(0.028, 10, 8),
+    new THREE.MeshBasicMaterial({ color: 0xff5d66 })
+  );
+  navRear.position.set(0, 0, -0.21);
+  drone.add(navRear);
+  const beacon = new THREE.PointLight(0x66b3ff, 0.5, 4.5);
+  drone.add(beacon);
+
+  // what the inspection camera can actually see, at the gate's half angle
+  const CONE_LEN = 1.0;
+  const coneGeo = new THREE.ConeGeometry(
+    CONE_LEN * Math.tan(FOV_HALF * Math.PI / 180), CONE_LEN, 28, 1, true);
+  coneGeo.rotateX(Math.PI / 2);
+  coneGeo.translate(0, 0, CONE_LEN / 2);
+  const coneMat = new THREE.MeshBasicMaterial({ color: 0x4ea1ff, transparent: true,
+    opacity: 0.06, side: THREE.DoubleSide, depthWrite: false });
+  const cone = new THREE.Mesh(coneGeo, coneMat);
+  cone.position.copy(camPod.position);
+  drone.add(cone);
+  const coneEdgeMat = new THREE.LineBasicMaterial({ color: 0x4ea1ff, transparent: true,
+    opacity: 0.22 });
+  const coneEdges = new THREE.LineSegments(new THREE.EdgesGeometry(coneGeo, 30),
+    coneEdgeMat);
+  coneEdges.position.copy(camPod.position);
+  drone.add(coneEdges);
+
   scene.add(drone);
+
+  drone.traverse((o) => o.layers.set(CHASE_ONLY));
+
+  // rotor downwash, drawn under the airframe
   const halo = new THREE.Mesh(
-    new THREE.SphereGeometry(0.42, 20, 14),
-    new THREE.MeshBasicMaterial({ color: 0x4ea1ff, transparent: true, opacity: 0.14 })
+    new THREE.CircleGeometry(0.55, 28),
+    new THREE.MeshBasicMaterial({ color: 0x4ea1ff, transparent: true, opacity: 0.07,
+      side: THREE.DoubleSide, depthWrite: false })
   );
+  halo.rotation.x = -Math.PI / 2;
+  halo.layers.set(CHASE_ONLY);
   scene.add(halo);
 
   const trailGeo = new THREE.BufferGeometry();
+  let trailCap = Math.max(frames.length, 3200);
   trailGeo.setAttribute('position', new THREE.BufferAttribute(
-    new Float32Array(frames.length * 3), 3));
+    new Float32Array(trailCap * 3), 3));
   const trail = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ color: 0x4ea1ff }));
   scene.add(trail);
 
@@ -207,21 +650,97 @@
     new THREE.Vector3(0, 1, 0), new THREE.Vector3(), 1, 0xffb347, 0.3, 0.18);
   scene.add(windArrow);
 
-  // waypoint ordering is the controller's business, so credit them the way the
-  // verifier does: by proximity, in trace order
-  const visitedAt = new Array(wpMeshes.length).fill(Infinity);
-  (function precompute() {
-    const hit = new Array(wpMeshes.length).fill(false);
+  // ------------------------------------------------------------ wind streaks
+  const STREAKS = 900;
+  const BOX = 30, BOX_H = 16;
+  const streakPos = new Float32Array(STREAKS * 6);
+  const seeds = [];
+  for (let i = 0; i < STREAKS; i++) {
+    seeds.push(new THREE.Vector3(
+      (Math.random() - 0.5) * BOX,
+      FLOOR_Y + Math.random() * BOX_H,
+      mid + (Math.random() - 0.5) * BOX));
+  }
+  const streakGeo = new THREE.BufferGeometry();
+  streakGeo.setAttribute('position', new THREE.BufferAttribute(streakPos, 3));
+  const streakMat = new THREE.LineBasicMaterial({ color: 0x86b9ff, transparent: true,
+    opacity: 0.0 });
+  scene.add(new THREE.LineSegments(streakGeo, streakMat));
+
+  function updateStreaks(windVec, dt) {
+    const mag = windVec.length();
+    streakMat.opacity = Math.min(0.42, mag * 0.09);
+    if (mag < 1e-3) return;
+    const dir = windVec.clone().normalize();
+    const step = dir.clone().multiplyScalar(Math.min(mag * 1.6, 9) * dt);
+    const tail = dir.clone().multiplyScalar(-(0.35 + mag * 0.22));
+    for (let i = 0; i < STREAKS; i++) {
+      const p = seeds[i];
+      p.add(step);
+      if (Math.abs(p.x) > BOX / 2) p.x -= Math.sign(p.x) * BOX;
+      if (Math.abs(p.z - mid) > BOX / 2) p.z -= Math.sign(p.z - mid) * BOX;
+      if (p.y < FLOOR_Y) p.y += BOX_H;
+      if (p.y > FLOOR_Y + BOX_H) p.y -= BOX_H;
+      streakPos[i * 6] = p.x;
+      streakPos[i * 6 + 1] = p.y;
+      streakPos[i * 6 + 2] = p.z;
+      streakPos[i * 6 + 3] = p.x + tail.x;
+      streakPos[i * 6 + 4] = p.y + tail.y;
+      streakPos[i * 6 + 5] = p.z + tail.z;
+    }
+    streakGeo.attributes.position.needsUpdate = true;
+  }
+
+  // ------------------------------------------------------------- trace prep
+  // v2 replays carry full-tick gate credits from the simulator. Use those
+  // authoritative times instead of re-deriving visitation from sampled frames.
+  // Traces without them fall back to the client-side gate approximation.
+  let visitedAt = [];
+  function precompute() {
+    MEASURED = !!(frames[0] && frames[0].R);
+    visitedAt = new Array(wpList.length).fill(Infinity);
+    if (Array.isArray(trace.inspection_times)
+        && trace.inspection_times.length === wpList.length) {
+      visitedAt = trace.inspection_times.map((time) =>
+        Number.isFinite(time) ? time : Infinity);
+      return;
+    }
+    const hit = new Array(wpList.length).fill(false);
     frames.forEach((f) => {
-      scene_.waypoints.forEach((w, i) => {
+      const tol = MEASURED ? GATE_TOL : nac.waypoint_tolerance;
+      const steady = !MEASURED || (
+        Math.hypot(f.rates[0], f.rates[1], f.rates[2]) <= GATE_RATE
+        && Math.hypot(f.v[0], f.v[1], f.v[2]) <= GATE_SPEED);
+      const aimed = !MEASURED || aimDeg(f) <= FOV_HALF;
+      if (!steady || !aimed) return;
+      wpList.forEach((w, i) => {
         if (hit[i]) return;
         const d = Math.hypot(f.p[0] - w[0], f.p[1] - w[1], f.p[2] - w[2]);
-        if (d <= nac.waypoint_tolerance) { hit[i] = true; visitedAt[i] = f.t; }
+        if (d <= tol) { hit[i] = true; visitedAt[i] = f.t; }
       });
     });
-  })();
+  }
+  precompute();
+
+  // acceleration per frame, so the airframe can bank the way a real quad does
+  let accel = [];
+  function differentiate() {
+    accel = frames.map((f, i) => {
+      const n = frames[Math.min(i + 1, frames.length - 1)];
+      const dt = Math.max(n.t - f.t, 1e-6);
+      return new THREE.Vector3(
+        (n.v[1] - f.v[1]) / dt, (n.v[2] - f.v[2]) / dt, (n.v[0] - f.v[0]) / dt);
+    });
+  }
+  differentiate();
 
   const el = (id) => document.getElementById(id);
+  function showAttitudeSource() {
+    el('attsrc').textContent = MEASURED
+      ? 'attitude, body rates and thrust as the simulator recorded them'
+      : 'attitude reconstructed from the recorded acceleration';
+  }
+  showAttitudeSource();
   el('seed').textContent = trace.seed;
   el('batchseed').textContent = batch.base_seed;
   el('bpass').textContent = batch.passed + '/' + batch.scenarios;
@@ -248,10 +767,42 @@
   const budget = lim.time_budget_s;
   el('scrub').max = frames.length - 1;
 
+  const GRAVITY = 9.81;
+  const up = new THREE.Vector3(0, 1, 0);
+  const attitude = new THREE.Quaternion();
+  const basis = new THREE.Matrix4();
+  const forward = new THREE.Vector3(0, 0, 1);
+
+  function poseDrone(f, a) {
+    drone.position.copy(V(f.p));
+    halo.position.copy(drone.position).add(new THREE.Vector3(0, -0.12, 0));
+
+    if (f.R) {
+      // measured attitude: body x is the nose and camera, body z is the thrust axis
+      const fwdM = V(col(f.R, 0)), upM = V(col(f.R, 2)), sideM = V(col(f.R, 1));
+      basis.makeBasis(sideM, upM, fwdM);
+      attitude.setFromRotationMatrix(basis);
+      drone.quaternion.copy(attitude);
+      return { thrust: f.thrust, fwd: fwdM };
+    }
+
+    // thrust axis: what the airframe must push along to make this acceleration
+    const thrust = a.clone().add(up.clone().multiplyScalar(GRAVITY)).normalize();
+    const vel = new THREE.Vector3(f.v[1], f.v[2], f.v[0]);
+    let fwd = vel.lengthSq() > 0.04 ? vel.clone().normalize() : forward.clone();
+    fwd.projectOnPlane(thrust);
+    if (fwd.lengthSq() < 1e-6) fwd = new THREE.Vector3(0, 0, 1).projectOnPlane(thrust);
+    fwd.normalize();
+    const side = new THREE.Vector3().crossVectors(thrust, fwd).normalize();
+    basis.makeBasis(side, thrust, fwd);
+    attitude.setFromRotationMatrix(basis);
+    drone.quaternion.slerp(attitude, 0.35);
+    return { thrust: a.clone().add(up.clone().multiplyScalar(GRAVITY)).length(), fwd: fwd };
+  }
+
   function draw() {
     const f = frames[index];
-    drone.position.copy(V(f.p));
-    halo.position.copy(drone.position);
+    const pose = poseDrone(f, accel[index]);
 
     const pos = trailGeo.attributes.position;
     for (let i = 0; i <= index; i++) {
@@ -276,12 +827,33 @@
     wpMeshes.forEach((m, i) => {
       const on = visitedAt[i] <= f.t;
       if (on) hits++;
-      m.material.color.setHex(on ? 0x35d07f : 0x55647d);
-      m.material.emissive.setHex(on ? 0x0d3a24 : 0x0a1018);
+      const quality = wpQuality[i];
+      let color = 0x55647d, emissive = 0x0a1018;
+      if (quality === 'good') { color = 0x35d07f; emissive = 0x0d3a24; }
+      else if (quality === 'marginal') { color = 0xffb347; emissive = 0x301800; }
+      else if (quality === 'missing') { color = 0xff5d66; emissive = 0x2a0506; }
+      else if (on) { color = 0x35d07f; emissive = 0x0d3a24; }
+      m.material.color.setHex(color);
+      m.material.emissive.setHex(emissive);
+      m.userData.reticle.material.color.setHex(color);
     });
 
+    // the shell reacts: it brightens and a hotspot flares as clearance shrinks
     const breached = f.clearance < 0;
-    keepOut.material.opacity = breached ? 0.32 : 0.1;
+    const near = Math.max(0, Math.min(1, (1.0 - f.clearance) / 1.0));
+    keepOut.material.opacity = breached ? 0.44 : 0.06 + near * 0.22;
+    keepOutEdges.material.opacity = breached ? 0.85 : 0.22 + near * 0.35;
+    const axisPt = new THREE.Vector3(0, 0,
+      Math.max(nac.axis_start[0], Math.min(nac.axis_end[0], f.p[0])));
+    const radial = drone.position.clone().sub(axisPt);
+    radial.z = 0;
+    if (radial.lengthSq() > 1e-9) {
+      hotspot.position.copy(axisPt).add(
+        radial.normalize().multiplyScalar(nac.keep_out_radius));
+      hotspot.position.z = axisPt.z;
+    }
+    hotspot.material.opacity = breached ? 0.7 : near * near * 0.5;
+    hotspot.scale.setScalar(0.7 + near * 0.9);
 
     el('coverage').textContent = (hits / wpMeshes.length * 100).toFixed(1) + '%';
     el('wps').textContent = hits + ' / ' + wpMeshes.length;
@@ -289,18 +861,81 @@
     el('speed').textContent = Math.hypot(f.v[0], f.v[1], f.v[2]).toFixed(2)
       + ' / ' + lim.max_speed.toFixed(1) + ' m/s';
     el('clearance').textContent = f.clearance.toFixed(2) + ' m';
-    el('clearance').className = breached ? 'bad' : (f.clearance < 0.3 ? '' : 'ok');
+    el('clearance').className = breached ? 'bad' : (f.clearance < 0.3 ? 'warn' : 'ok');
     el('wind').textContent = mag.toFixed(2) + ' m/s^2';
     el('collisions').textContent = breached ? 1 : 0;
 
+    const tilt = tiltDeg(f), aim = aimDeg(f);
+    el('tilt').textContent = tilt === null ? 'reconstructed' : tilt.toFixed(1) + ' deg';
+    const onTarget = aim !== null && aim <= FOV_HALF;
+    el('aim').textContent = aim === null ? 'not recorded'
+      : aim.toFixed(1) + ' deg / ' + FOV_HALF.toFixed(0) + ' deg';
+    el('aim').className = aim === null ? '' : (onTarget ? 'ok' : 'warn');
+    coneMat.color.setHex(onTarget ? 0x35d07f : 0x4ea1ff);
+    coneMat.opacity = onTarget ? 0.13 : 0.06;
+    coneEdgeMat.color.setHex(onTarget ? 0x35d07f : 0x4ea1ff);
+
+    const alert = el('alert');
+    if (breached) {
+      alert.textContent = 'KEEP-OUT BREACH';
+      alert.className = 'show hot';
+    } else if (f.clearance < 0.35) {
+      alert.textContent = 'PROXIMITY  ' + f.clearance.toFixed(2) + ' m';
+      alert.className = 'show';
+    } else {
+      alert.className = '';
+    }
+
     const done = index === frames.length - 1;
-    const verdict = done
-      ? (trace.passed ? 'PASS' : 'FAIL')
-      : 'flying';
+    const verdict = done && traceDisposition ? traceDisposition
+      : (done ? (trace.passed ? 'PASS' : 'FAIL') : 'flying');
     el('verdict').textContent = verdict;
-    el('verdict').className = 'big ' + (done ? (trace.passed ? 'ok' : 'bad') : '');
+    el('verdict').className = 'big ' + (done ? ((trace.passed || traceDisposition === 'PASS') ? 'ok' : 'bad') : '');
     el('clock').textContent = f.t.toFixed(2) + 's  frame ' + (index + 1) + '/' + frames.length;
     el('scrub').value = index;
+    return { wind: w, thrust: pose.thrust, fwd: pose.fwd };
+  }
+
+  // ------------------------------------------------------------- cameras
+  const camState = { wind: new THREE.Vector3(), thrust: GRAVITY,
+    fwd: new THREE.Vector3(0, 0, 1) };
+  const followPos = new THREE.Vector3(12, 6, 14);
+  const followAim = new THREE.Vector3(0, 0, mid);
+
+  // a chase camera that trails a drone flying 3 m from a 2.1 m cylinder ends up
+  // inside the skin, so push it back out along the radius
+  const CAM_SHELL = nac.keep_out_radius + 0.45;
+  function pushOutside(p) {
+    const z = Math.max(nac.axis_start[0] - 0.6, Math.min(nac.axis_end[0] + 0.6, p.z));
+    if (z !== p.z) return p;                   // clear of the barrel ends
+    const r = Math.hypot(p.x, p.y);
+    if (r >= CAM_SHELL) return p;
+    if (r < 1e-4) { p.x = CAM_SHELL; return p; }
+    const k = CAM_SHELL / r;
+    p.x *= k;
+    p.y *= k;
+    return p;
+  }
+
+  function updateCameras(dt) {
+    const target = drone.position;
+    const back = camState.fwd.clone().setY(0);
+    if (back.lengthSq() < 1e-6) back.set(0, 0, 1);
+    back.normalize();
+    const want = target.clone()
+      .add(back.clone().multiplyScalar(-2.6))
+      .add(new THREE.Vector3(0, 1.15, 0));
+    followPos.lerp(pushOutside(want), Math.min(1, dt * 2.2));
+    pushOutside(followPos);
+    followAim.lerp(target, Math.min(1, dt * 4.5));
+    followCam.position.copy(followPos);
+    followCam.lookAt(followAim);
+
+    pilotCam.position.copy(target).add(camState.fwd.clone().multiplyScalar(0.16))
+      .add(new THREE.Vector3(0, -0.02, 0));
+    pilotCam.quaternion.copy(drone.quaternion);
+    pilotCam.rotateY(Math.PI);          // the model's nose is +z, the camera looks -z
+    pilotCam.rotateX(-0.18);
   }
 
   el('play').onclick = () => {
@@ -315,45 +950,259 @@
       b.classList.add('on');
     };
   });
-  const lastT = frames[frames.length - 1].t;
-  if (trace.gust.start_s > lastT) {
-    el('gust').disabled = true;
-    el('gust').textContent = 'gust after sweep';
-    el('gust').title = 'the gust for this seed starts at '
-      + trace.gust.start_s.toFixed(1) + 's, after the sweep finished';
+  document.querySelectorAll('.cam').forEach((b) => {
+    b.onclick = () => {
+      camMode = b.dataset.cam;
+      controls.enabled = camMode === 'orbit';
+      el('reticle').className = camMode === 'pilot' ? 'on' : '';
+      document.querySelectorAll('.cam').forEach((o) => o.classList.remove('on'));
+      b.classList.add('on');
+    };
+  });
+  function syncGust() {
+    const lastT = frames[frames.length - 1].t;
+    const after = trace.gust.start_s > lastT;
+    el('gust').disabled = after;
+    el('gust').textContent = after ? 'gust after sweep' : 'jump to gust';
+    el('gust').title = after ? 'the gust for this seed starts at '
+      + trace.gust.start_s.toFixed(1) + 's, after the flight finished' : '';
   }
+  syncGust();
   el('gust').onclick = () => {
-    const target = trace.gust.start_s;
+    // the gust envelope is a half sine, so its peak is the interesting frame
+    const target = trace.gust.start_s + trace.gust.duration_s / 2;
     let best = 0;
     frames.forEach((f, i) => {
       if (Math.abs(f.t - target) < Math.abs(frames[best].t - target)) best = i;
     });
     index = best;
-    draw();
+    Object.assign(camState, draw());
   };
-  el('scrub').oninput = (e) => { index = Number(e.target.value); draw(); };
+  el('scrub').oninput = (e) => {
+    index = Number(e.target.value);
+    Object.assign(camState, draw());
+  };
 
   window.addEventListener('resize', () => {
-    camera.aspect = stage.clientWidth / stage.clientHeight;
-    camera.updateProjectionMatrix();
+    [orbitCam, followCam, pilotCam].forEach((c) => {
+      c.aspect = aspect();
+      c.updateProjectionMatrix();
+    });
     renderer.setSize(stage.clientWidth, stage.clientHeight);
   });
 
+  // --------------------------------------------------------- mission loading
+  // swap in a trace the command server just flew, without rebuilding the world
+  function loadTrace(newTrace, waypoints, captures, quality, disposition) {
+    trace = newTrace;
+    frames = trace.frames;
+    wpList = waypoints && waypoints.length ? waypoints : wpList;
+    traceDisposition = disposition || '';
+    applyEvidence(captures, quality);
+    buildWaypoints(wpList);
+    if (frames.length > trailCap) {
+      trailCap = frames.length;
+      trailGeo.setAttribute('position', new THREE.BufferAttribute(
+        new Float32Array(trailCap * 3), 3));
+    }
+    precompute();
+    differentiate();
+    showAttitudeSource();
+    el('seed').textContent = trace.seed;
+    if (trace.label) el('mission').textContent = trace.label;
+    el('scrub').max = frames.length - 1;
+    frameDt = frames.length > 1 ? frames[1].t - frames[0].t : lim.dt;
+    index = 0;
+    playing = true;
+    el('play').textContent = 'pause';
+    document.querySelectorAll('.cell').forEach((c) => c.classList.remove('active'));
+    syncGust();
+    Object.assign(camState, draw());
+  }
+
+  function applyEvidence(captures, quality) {
+    wpQuality = [];
+    if (!captures || !quality) return;
+    captures.forEach((c) => {
+      const q = quality.find((x) => x.capture_id === c.capture_id);
+      if (q && c.waypoint_index >= 0 && c.waypoint_index < wpList.length) {
+        wpQuality[c.waypoint_index] = q.status;
+      }
+    });
+  }
+
+  // ------------------------------------------------------- command console
+  // the page is useful on its own from file://, so the console degrades to a
+  // hint when the command server is not running
+  const API = location.protocol === 'file:' ? 'http://127.0.0.1:8765' : '';
+  const log = el('log');
+
+  function say(text, cls) {
+    const d = document.createElement('div');
+    d.className = 'msg ' + (cls || 'sim');
+    d.textContent = text;
+    log.appendChild(d);
+    log.scrollTop = log.scrollHeight;
+    return d;
+  }
+
+  function verdictLine(tr) {
+    const cov = (tr.coverage * 100).toFixed(1);
+    return 'flew ' + tr.elapsed_s.toFixed(1) + 's, coverage ' + cov + '%, '
+      + tr.collisions + ' collision' + (tr.collisions === 1 ? '' : 's')
+      + ', ' + (tr.passed ? 'PASS' : 'FAIL');
+  }
+
+  let busy = false;
+  async function send(text) {
+    if (busy || !text.trim()) return;
+    busy = true;
+    say(text, 'me');
+    const pending = say('flying that now', 'sim');
+    try {
+      const res = await fetch(API + '/api/fly', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text })
+      });
+      const out = await res.json();
+      pending.textContent = out.reply || (out.ok ? 'done' : 'could not fly that');
+      if (!out.ok) pending.className = 'msg err';
+      if (out.ok && out.trace) {
+        loadTrace(out.trace, out.mission && out.mission.waypoints, null, null, '');
+        say(verdictLine(out.trace), out.trace.passed ? 'sim' : 'err');
+      }
+    } catch (err) {
+      pending.className = 'msg err';
+      pending.textContent = 'no command server. start it with '
+        + 'python -m viz.server, then open http://127.0.0.1:8765/flight_view.html';
+    }
+    busy = false;
+  }
+
+  el('ask').onsubmit = (e) => {
+    e.preventDefault();
+    const box = el('cmd');
+    send(box.value);
+    box.value = '';
+  };
+
+  function inspectSay(text, cls) {
+    const d = document.createElement('div');
+    d.className = 'msg ' + (cls || 'sim');
+    d.textContent = text;
+    el('inspect-log').appendChild(d);
+    el('inspect-log').scrollTop = el('inspect-log').scrollHeight;
+    return d;
+  }
+
+  let inspectBusy = false;
+  async function sendInspect(text) {
+    if (inspectBusy || !text.trim()) return;
+    inspectBusy = true;
+    inspectSay(text, 'me');
+    const pending = inspectSay('running adaptive evidence loop...', 'sim');
+    try {
+      const res = await fetch(API + '/api/inspect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text })
+      });
+      const out = await res.json();
+      pending.textContent = out.reply || (out.ok ? 'done' : 'could not inspect that');
+      if (!out.ok) pending.className = 'msg err';
+      if (out.ok && out.trace) {
+        loadTrace(out.trace, out.mission && out.mission.waypoints,
+                  out.captures, out.quality, out.artifact && out.artifact.final_disposition);
+        const good = out.quality.filter((q) => q.status === 'good').length;
+        const total = out.quality.length;
+        inspectSay('captures ' + good + '/' + total + ' good, disposition '
+          + out.artifact.final_disposition + (out.artifact.synthetic ? ' (synthetic)' : ''),
+          out.artifact.final_disposition === 'PASS' ? 'ok'
+          : (out.artifact.final_disposition === 'INSUFFICIENT_EVIDENCE' ? 'warn' : 'err'));
+      }
+    } catch (err) {
+      pending.className = 'msg err';
+      pending.textContent = 'no command server. start it with python -m viz.server';
+    }
+    inspectBusy = false;
+  }
+
+  el('inspect-form').onsubmit = (e) => {
+    e.preventDefault();
+    const box = el('inspect-cmd');
+    sendInspect(box.value);
+    box.value = '';
+  };
+
+  const inspectChips = ['inspect top side, light wind seed 606076',
+    'inspect dense, calm seed 1000', 'inspect narrowbody, heavy wind'];
+  inspectChips.forEach((ex) => {
+    const b = document.createElement('button');
+    b.textContent = ex;
+    b.onclick = () => sendInspect(ex);
+    el('inspect-chips').appendChild(b);
+  });
+
+  fetch(API + '/api/scene').then((r) => r.json()).then((info) => {
+    say('command server ready. try one of these, or type your own.', 'sim');
+    (info.examples || []).slice(0, 6).forEach((ex) => {
+      const b = document.createElement('button');
+      b.textContent = ex;
+      b.onclick = () => send(ex);
+      el('chips').appendChild(b);
+    });
+  }).catch(() => {
+    say('replaying the recorded verification trace. to fly new missions, run '
+      + 'python -m viz.server and open http://127.0.0.1:8765/flight_view.html', 'sim');
+    inspectSay('replaying recorded trace; start python -m viz.server for inspect commands', 'sim');
+  });
+
+  // voice, where the browser supports it
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    el('mic').disabled = true;
+    el('mic').title = 'this browser has no speech recognition';
+  } else {
+    const rec = new SR();
+    rec.lang = 'en-US';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    let listening = false;
+    rec.onresult = (e) => {
+      const heard = e.results[0][0].transcript;
+      el('cmd').value = heard;
+      send(heard);
+    };
+    rec.onerror = (e) => say('voice input failed: ' + e.error, 'err');
+    rec.onend = () => { listening = false; el('mic').className = ''; };
+    el('mic').onclick = () => {
+      if (listening) { rec.stop(); return; }
+      listening = true;
+      el('mic').className = 'live';
+      rec.start();
+    };
+  }
+
   let last = performance.now(), acc = 0;
-  const frameDt = frames.length > 1 ? frames[1].t - frames[0].t : lim.dt;
+  let frameDt = frames.length > 1 ? frames[1].t - frames[0].t : lim.dt;
   function loop(now) {
-    const dt = (now - last) / 1000;
+    const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
     if (playing && index < frames.length - 1) {
       acc += dt * rate;
       while (acc >= frameDt && index < frames.length - 1) { acc -= frameDt; index++; }
-      draw();
+      Object.assign(camState, draw());
     }
+    const spin = 26 + camState.thrust * 4.5;
+    rotors.forEach((h) => { h.rotation.y += h.userData.dir * spin * dt; });
+    updateStreaks(camState.wind, dt);
+    updateCameras(dt);
     controls.update();
-    renderer.render(scene, camera);
+    renderer.render(scene, activeCam());
     requestAnimationFrame(loop);
   }
-  draw();
+  Object.assign(camState, draw());
   requestAnimationFrame(loop);
 })();
 </script>

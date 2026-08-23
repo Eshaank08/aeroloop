@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AeroLoop mission view: Devin flying simulator v2</title>
+<style>
+  :root {
+    --ink: #172033;
+    --dim: #5e6b7f;
+    --panel: rgba(249, 252, 255, 0.92);
+    --line: rgba(42, 64, 94, 0.22);
+    --good: #168553;
+    --warn: #b66500;
+    --bad: #c83b42;
+    --devin: #285ed1;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #d8e3ed; color: var(--ink);
+    font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, sans-serif; overflow: hidden; }
+  #scene { position: fixed; inset: 0; }
+  .panel { background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; backdrop-filter: blur(9px); }
+  #sidebar { position: fixed; z-index: 7; top: 16px; bottom: 16px; left: 16px;
+    width: 302px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto;
+    scrollbar-width: thin; }
+  #sidebar .panel { flex: 0 0 auto; }
+  #mission-setup { order: 0; }
+  #examples { order: 1; }
+  #hud { order: 2; }
+  #sensors { order: 3; }
+  #legend { order: 4; }
+  .sidebar-head { display:none; }
+  #menu-toggle, #menu-close { display: none; }
+  #decisions { position: fixed; top: 16px; right: 16px; width: 410px;
+    max-height: calc(100vh - 112px);
+    display: flex; flex-direction: column; }
+  #controls { bottom: 16px; left: 50%; transform: translateX(-50%);
+    position: fixed; display: flex; gap: 8px; align-items: center; justify-content: center;
+    max-width: calc(100vw - 760px); min-width: 420px; z-index: 6; }
+  h2 { margin: 0 0 9px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--dim); font-weight: 750; }
+  h3 { margin: 0; font-size: 14px; }
+  .row { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
+  .row span:last-child { color: var(--ink); font-weight: 650; text-align: right; }
+  .steps { overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+  .waiting-banner { display: flex; gap: 10px; align-items: center; margin: 1px 0 10px;
+    padding: 11px 12px; border: 1px solid rgba(40, 94, 209, .24); border-radius: 9px;
+    background: rgba(40, 94, 209, .09); color: var(--ink); }
+  .waiting-pulse { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%;
+    background: var(--devin); box-shadow: 0 0 0 0 rgba(40, 94, 209, .42);
+    animation: waiting-pulse 1.35s ease-out infinite; }
+  .waiting-banner strong { display: block; font-size: 13px; }
+  .waiting-banner span { display: block; margin-top: 2px; color: var(--dim); font-size: 11.5px; }
+  @keyframes waiting-pulse { 70% { box-shadow: 0 0 0 7px rgba(40, 94, 209, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(40, 94, 209, 0); } }
+  @media (prefers-reduced-motion: reduce) { .waiting-pulse { animation: none; } }
+  .step { border-left: 2px solid var(--devin); padding: 7px 0 7px 9px; margin-bottom: 8px; }
+  .step.rejected { border-left-color: var(--bad); }
+  .step.safety { border-left-color: var(--warn); }
+  .step.active { background: rgba(40, 94, 209, 0.09); }
+  .step .head { display: flex; justify-content: space-between; gap: 8px; }
+  .step .prim { color: var(--devin); font-weight: 600; }
+  .step.rejected .prim { color: var(--bad); }
+  .step .verdict { font-size: 11px; color: var(--dim); }
+  .step .why { color: var(--dim); font-size: 12px; margin-top: 4px; }
+  .step .got { font-size: 12px; margin-top: 4px; color: var(--good); }
+  .step .miss { font-size: 12px; color: var(--bad); }
+  .step .saw { font-size: 11.5px; color: var(--dim); margin: 3px 0; }
+  details { margin-top: 5px; color: var(--dim); font-size: 11px; }
+  summary { cursor: pointer; }
+  button { background: rgba(255, 255, 255, .94); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 7px; padding: 6px 11px; cursor: pointer; font: inherit; }
+  button:hover { border-color: rgba(150, 190, 240, .5); }
+  button.on { background: var(--devin); color: white; border-color: var(--devin); }
+  button:disabled { opacity: .45; cursor: default; }
+  select, input { background: rgba(255, 255, 255, .96); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; font: inherit; }
+  #scrub { width: 260px; }
+  .pass { color: var(--good); } .insufficient { color: var(--warn); } .aborted { color: var(--bad); }
+  a { color: var(--devin); }
+  #status { position: fixed; bottom: 74px; left: 50%; transform: translateX(-50%);
+    color: var(--dim); font-size: 12px; text-align: center; }
+  .tag { display: inline-block; font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+    border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; color: var(--dim); }
+  .legend-row { display:flex; align-items:center; gap:8px; margin:5px 0; color:var(--dim); font-size:12px; }
+  .dot { width:10px; height:10px; border-radius:50%; flex:0 0 auto; }
+  .sensor-reading { margin-top:7px; padding-top:7px; border-top:1px solid var(--line); }
+  .sensor-reading:first-of-type { margin-top:0; padding-top:0; border-top:0; }
+  .plain { color:var(--dim); font-size:12px; }
+  .preset-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .preset-grid button { text-align:left; font-size:12px; line-height:1.25; padding:7px 8px; }
+  .field-label { display:block; color:var(--dim); font-size:11px; margin:7px 0 3px; }
+  #order { width:100%; }
+  .mission-actions { display:grid; grid-template-columns:1fr auto; gap:6px; margin-top:6px; }
+  .mission-actions #planner { width:100%; }
+  .start-row { display:flex; gap:6px; margin-top:6px; }
+  .start-row #run { flex:1; background:var(--devin); color:white; border-color:var(--devin); }
+  .playback-label { color:var(--dim); font-size:11px; display:flex; align-items:center; gap:5px; }
+  .zoom-group { display:flex; gap:4px; }
+  .zoom-group button { min-width:34px; padding:6px 8px; }
+  @media (max-width: 1120px) {
+    #menu-toggle { display:block; position:fixed; z-index:10; top:12px; left:12px;
+      background:var(--devin); color:white; border-color:var(--devin); }
+    #menu-close { display:block; float:right; padding:2px 7px; }
+    .sidebar-head { order:-1; display:flex; position:sticky; top:0; z-index:2;
+      align-items:center; justify-content:space-between; background:var(--panel);
+      border:1px solid var(--line); border-radius:10px; padding:8px 10px; }
+    .sidebar-head #menu-close { float:none; }
+    body.menu-open #menu-toggle { display:none; }
+    #sidebar { width:min(330px, calc(100vw - 32px)); transform:translateX(calc(-100% - 24px));
+      transition:transform .2s ease; }
+    #sidebar.open { transform:translateX(0); }
+    #decisions { top:58px; width:min(410px, calc(100vw - 32px)); max-height:calc(100vh - 166px); }
+    #controls { min-width:0; width:calc(100vw - 32px); max-width:620px; padding:8px 10px; }
+    #status { display:none; }
+  }
+  @media (max-width: 560px) {
+    #decisions { left:12px; right:12px; width:auto; }
+    #scrub { width:120px; }
+    #controls { gap:5px; }
+  }
+  body.embedded #sidebar,
+  body.embedded #menu-toggle,
+  body.embedded #decisions { display:none !important; }
+  body.embedded #controls { width:calc(100vw - 24px); max-width:680px; min-width:0; bottom:12px; }
+  body.embedded #status { display:block; top:12px; bottom:auto; max-width:calc(100vw - 32px);
+    padding:7px 10px; border:1px solid var(--line); border-radius:7px; background:var(--panel); }
+  @media (max-width: 480px) {
+    body.embedded .playback-label,
+    body.embedded .zoom-group { display:none; }
+    body.embedded #scrub { width:82px; }
+  }
+</style>
+</head>
+<body>
+<script>if (new URLSearchParams(location.search).get('embedded') === '1') document.body.classList.add('embedded');</script>
+<div id="scene"></div>
+<button id="menu-toggle" aria-controls="sidebar" aria-expanded="false">Mission menu</button>
+<aside id="sidebar" aria-label="Mission menu">
+<div class="sidebar-head"><strong>Mission menu</strong><button id="menu-close" aria-label="Close mission menu">×</button></div>
+
+<div id="hud" class="panel">
+  <h2>Mission result</h2>
+  <div class="row"><span>Scenario ID</span><span id="m-seed">-</span></div>
+  <div class="row"><span>Inspection area</span><span id="m-region">-</span></div>
+  <div class="row"><span>Decision maker</span><span id="m-agent">-</span></div>
+  <div class="row"><span>Flight time</span><span id="m-clock">0.0s</span></div>
+  <div class="row"><span>Usable views</span><span id="m-inspected">0/0</span></div>
+  <div class="row"><span>Evidence coverage</span><span id="m-coverage">0%</span></div>
+  <div class="row"><span>Drone speed</span><span id="m-speed">0.00 m/s</span></div>
+  <div class="row"><span>Drone tilt</span><span id="m-tilt">0&deg;</span></div>
+  <div class="row"><span>Engine clearance</span><span id="m-clearance">-</span></div>
+  <div class="row"><span>Agent decisions</span><span id="m-actions">0 accepted / 0 blocked</span></div>
+  <div class="row"><span>Independent check</span><span id="m-verdict">-</span></div>
+  <div style="margin-top:9px" id="m-session"></div>
+</div>
+
+<div id="sensors" class="panel">
+  <h2>What the drone senses</h2>
+  <div class="sensor-reading"><div class="row"><span>Wind now</span><span id="s-wind">0.0 m/s²</span></div><div class="plain" id="s-wind-note">Seeded and repeatable</div></div>
+  <div class="sensor-reading"><div class="row"><span>Vision</span><span id="s-vision">clear</span></div><div class="plain" id="s-vision-note">Synthetic object detector</div></div>
+  <div class="sensor-reading"><div class="row"><span>Audio</span><span id="s-audio">normal</span></div><div class="plain" id="s-audio-note">Synthetic microphone signal</div></div>
+  <div class="sensor-reading"><div class="row"><span>Floor clearance</span><span id="s-ground">-</span></div><div class="plain">Contact now fails the independent check</div></div>
+</div>
+
+<div id="legend" class="panel">
+  <h2>What the dots mean</h2>
+  <div class="legend-row"><span class="dot" style="background:#708197"></span>Required surface evidence</div>
+  <div class="legend-row"><span class="dot" style="background:#54d8ff"></span>Agent-chosen camera position</div>
+  <div class="legend-row"><span class="dot" style="background:#285ed1"></span>Target being attempted now</div>
+  <div class="legend-row"><span class="dot" style="background:#19a667"></span>Usable simulated evidence captured</div>
+  <div class="plain">Surface targets stay fixed. Camera positions can move closer or farther for each decision.</div>
+</div>
+
+<div id="mission-setup" class="panel">
+  <h2>Plan a mission</h2>
+  <label class="field-label" for="order">Inspection request</label>
+  <input id="order" type="text"
+         placeholder="Choose a preset or type a mission"
+         value="">
+  <div class="mission-actions">
+    <select id="planner" aria-label="Decision maker"><option value="devin">Devin (live API)</option><option value="baseline">Local test pilot</option></select>
+    <button id="mic" title="Speak the work order">Mic</button>
+  </div>
+  <div class="start-row"><button id="run" disabled>Start mission</button></div>
+</div>
+
+<div id="examples" class="panel">
+  <h2>Mission presets</h2>
+  <div class="preset-grid">
+    <button class="ex">full engine, random scene</button>
+    <button class="ex">inspect the top side</button>
+    <button class="ex">inspect the underside</button>
+    <button class="ex">check the inlet</button>
+    <button class="ex">inspect the rear</button>
+    <button class="ex">inspect the port side</button>
+    <button class="ex">inspect the starboard side</button>
+    <button class="ex">inspect ring 2, seed 606076</button>
+  </div>
+  <div class="plain" style="margin-top:7px">A preset fills the request. Press Start mission when ready.</div>
+</div>
+</aside>
+
+<div id="decisions" class="panel">
+  <h2 id="decision-title">Mission decisions</h2>
+  <div class="steps" id="steps"><div style="color:var(--dim)">Run a mission to see every observation, decision and safety ruling.</div></div>
+</div>
+
+<div id="status">Choose a preset or write an inspection request in the Mission menu.</div>
+
+<div id="controls" class="panel">
+  <button id="play">Pause</button>
+  <label class="playback-label" for="rate">Speed
+    <select id="rate"><option value="1">1x</option><option value="2">2x</option></select>
+  </label>
+  <button id="cam">Follow</button>
+  <div class="zoom-group" aria-label="Camera zoom controls">
+    <button id="zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
+    <button id="zoom-in" title="Zoom in" aria-label="Zoom in">+</button>
+    <button id="zoom-reset" title="Frame the engine and drone together">Frame all</button>
+  </div>
+  <input id="scrub" type="range" min="0" max="0" value="0">
+  <span id="clock">0.0s</span>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js",
+    "three/addons/": "./vendor/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
+import { OrbitControls } from './vendor/controls/OrbitControls.module.js';
+
+// The simulator works in x along the nacelle axis, y and z across it. Three.js is
+// y-up, so sim (x, y, z) maps to three (y, z, x), the same convention the existing
+// flight view and the engine reference viewer use.
+const toScene = (p) => new THREE.Vector3(p[1], p[2], p[0]);
+
+const NACELLE_LENGTH = 4.5;
+const KEEP_OUT_RADIUS = 2.1;
+const GROUND_Z_M = -4.5;
+
+const el = (id) => document.getElementById(id);
+const notifyDashboard = (type, payload = {}) => {
+  if (window.parent === window) return;
+  window.parent.postMessage({ source: 'aeroloop-simulator', type, ...payload }, window.location.origin);
+};
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xd8e3ed);
+scene.fog = new THREE.Fog(0xd8e3ed, 25, 75);
+
+const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 400);
+camera.position.set(7.5, 5.4, 9.5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+el('scene').appendChild(renderer.domElement);
+
+const orbit = new OrbitControls(camera, renderer.domElement);
+orbit.target.set(0, 0, NACELLE_LENGTH / 2);
+orbit.enableDamping = true;
+orbit.enableZoom = true;
+orbit.zoomSpeed = 1.15;
+orbit.minDistance = 1.2;
+orbit.maxDistance = 45;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x6f7d8c, 1.55));
+const key = new THREE.DirectionalLight(0xffffff, 2.1);
+key.position.set(8, 12, 6);
+key.castShadow = true;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x8ab4ff, 0.9);
+rim.position.set(-7, 3, -6);
+scene.add(rim);
+
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(90, 90),
+  new THREE.MeshStandardMaterial({ color: 0xb9c6d2, roughness: 0.92, metalness: 0.04 })
+);
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = GROUND_Z_M;
+floor.receiveShadow = true;
+scene.add(floor);
+const grid = new THREE.GridHelper(90, 60, 0x718397, 0x9eacba);
+grid.position.y = GROUND_Z_M + 0.01;
+scene.add(grid);
+
+const windArrow = new THREE.ArrowHelper(
+  new THREE.Vector3(1, 0, 0), new THREE.Vector3(-4, GROUND_Z_M + 0.35, 0),
+  0.01, 0x285ed1, 0.35, 0.18
+);
+scene.add(windArrow);
+
+// A simple seeded moving-object marker. It represents a synthetic detector target,
+// not a claim that the simulator is processing real camera pixels.
+const obstacle = new THREE.Group();
+const obstacleBody = new THREE.Mesh(
+  new THREE.SphereGeometry(0.18, 18, 12),
+  new THREE.MeshStandardMaterial({ color: 0xe88924, emissive: 0x4a2100 })
+);
+const obstacleWing = new THREE.Mesh(
+  new THREE.ConeGeometry(0.22, 0.55, 3),
+  new THREE.MeshStandardMaterial({ color: 0xf4ad47, side: THREE.DoubleSide })
+);
+obstacleWing.rotation.z = Math.PI / 2;
+obstacle.add(obstacleBody, obstacleWing);
+obstacle.visible = false;
+scene.add(obstacle);
+
+// The graded keep-out volume, drawn as a wireframe so what the verifier actually
+// checks stays visible next to the decorative engine model.
+const keepOut = new THREE.Mesh(
+  new THREE.CylinderGeometry(KEEP_OUT_RADIUS, KEEP_OUT_RADIUS, NACELLE_LENGTH, 40, 1, true),
+  new THREE.MeshBasicMaterial({ color: 0xff5b6e, wireframe: true, transparent: true, opacity: 0.12 })
+);
+keepOut.rotation.x = Math.PI / 2;
+keepOut.position.set(0, 0, NACELLE_LENGTH / 2);
+scene.add(keepOut);
+
+const loader = new GLTFLoader();
+let engineReady = false;
+
+// Real turbofan model contributed alongside the defect research. It is visual only:
+// the collision geometry the verifier grades is the wireframe cylinder above.
+loader.load('/engine-reference/assets/turbofan_engine.glb', (gltf) => {
+  const model = gltf.scene;
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const axes = [['x', size.x], ['y', size.y], ['z', size.z]].sort((a, b) => b[1] - a[1]);
+  const scale = NACELLE_LENGTH / axes[0][1];
+  model.scale.setScalar(scale);
+  if (axes[0][0] === 'x') model.rotation.y = Math.PI / 2;
+  else if (axes[0][0] === 'y') model.rotation.z = Math.PI / 2;
+  const after = new THREE.Box3().setFromObject(model);
+  const centre = after.getCenter(new THREE.Vector3());
+  model.position.sub(new THREE.Vector3(centre.x, centre.y, after.min.z));
+  model.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+  scene.add(model);
+  engineReady = true;
+}, undefined, () => {
+  el('status').textContent = 'Engine model missing, showing the graded cylinder only.';
+});
+
+let drone = new THREE.Group();
+scene.add(drone);
+loader.load('/engine-reference/assets/quadcopter_drone.glb', (gltf) => {
+  const model = gltf.scene;
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  model.scale.setScalar(0.62 / Math.max(size.x, size.y, size.z));
+  const centre = new THREE.Box3().setFromObject(model).getCenter(new THREE.Vector3());
+  model.position.sub(centre);
+  model.traverse((child) => { if (child.isMesh) child.castShadow = true; });
+  drone.add(model);
+});
+const beam = new THREE.Mesh(
+  new THREE.ConeGeometry(0.34, 1.15, 22, 1, true),
+  new THREE.MeshBasicMaterial({ color: 0x7aa2ff, transparent: true, opacity: 0.2, side: THREE.DoubleSide })
+);
+beam.rotation.z = Math.PI / 2;
+beam.position.x = 0.58;
+drone.add(beam);
+
+const trailGeom = new THREE.BufferGeometry();
+const trail = new THREE.Line(trailGeom, new THREE.LineBasicMaterial({ color: 0x7aa2ff, transparent: true, opacity: 0.55 }));
+scene.add(trail);
+
+let markers = [];
+let viewMarkers = [];
+let mission = null;
+let devinAccessToken = '';
+let devinRequiresAccessCode = true;
+let frames = [];
+let cursor = 0;
+let playing = false;
+let rate = 1;
+let follow = true;
+let inspectedAt = new Map();
+const ENGINE_CENTRE = new THREE.Vector3(0, 0, NACELLE_LENGTH / 2);
+
+function missionFraming() {
+  const centre = ENGINE_CENTRE.clone().lerp(drone.position, 0.5);
+  const separation = ENGINE_CENTRE.distanceTo(drone.position);
+  const distance = Math.max(7.2, Math.min(15, separation + 5.0));
+  const offset = new THREE.Vector3(1.05, 0.7, 1.15).normalize().multiplyScalar(distance);
+  return { centre, position: centre.clone().add(offset) };
+}
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+}[char]));
+
+function actionTitle(action) {
+  const count = (action.waypoint_indexes || []).length;
+  if (action.primitive === 'inspect_waypoints') return `Inspect ${count} required camera view${count === 1 ? '' : 's'}`;
+  if (action.primitive === 'quiet_hover') return 'Pause so the camera can stabilise';
+  if (action.primitive === 'return_home') return 'Return to the safe home position';
+  if (action.primitive === 'complete') return 'Finish and ask the verifier for a verdict';
+  if (action.primitive === 'abort') return 'Stop the mission safely';
+  return action.primitive;
+}
+
+function observationSummary(observation) {
+  const events = observation.events || [];
+  const visual = events.find((event) => event.type === 'visual_object_detected');
+  if (visual) return `Observed: ${visual.label} detected ${visual.distance_m} m away (synthetic vision)`;
+  const audio = events.find((event) => event.type === 'acoustic_anomaly_detected');
+  if (audio) return `Observed: acoustic anomaly at ${audio.level_db} dB (synthetic audio)`;
+  const missing = (observation.available_targets || []).length;
+  const wind = ((observation.flight || {}).wind_estimate_mps2 || 0).toFixed(1);
+  return `Observed: ${missing} view${missing === 1 ? '' : 's'} missing · wind estimate ${wind} m/s²`;
+}
+
+function clearMarkers() {
+  markers.forEach((m) => scene.remove(m));
+  markers = [];
+  viewMarkers.forEach((m) => scene.remove(m));
+  viewMarkers = [];
+}
+
+function buildMarkers(waypoints, authorised) {
+  clearMarkers();
+  drone.position.copy(toScene([0, 0, 6]));
+  const allowed = new Set(authorised);
+  waypoints.forEach((wp, index) => {
+    const marker = new THREE.Mesh(
+      new THREE.SphereGeometry(allowed.has(index) ? 0.12 : 0.07, 16, 16),
+      new THREE.MeshStandardMaterial({
+        color: allowed.has(index) ? 0x8fa3bd : 0x33404f,
+        emissive: 0x000000,
+        transparent: !allowed.has(index),
+        opacity: allowed.has(index) ? 1 : 0.35,
+      })
+    );
+    marker.position.copy(toScene(wp));
+    marker.userData.index = index;
+    scene.add(marker);
+    markers.push(marker);
+  });
+}
+
+function buildViewMarkers(data) {
+  const targets = data.evidence_targets || data.waypoints || [];
+  (data.artifact.steps || []).forEach((step) => {
+    const execution = step.execution;
+    if (!execution || !execution.flight_waypoints) return;
+    execution.flight_waypoints.forEach((point, position) => {
+      const targetIndex = execution.target_indexes[position];
+      const target = targets[targetIndex];
+      if (!target) return;
+      const group = new THREE.Group();
+      group.userData.actionId = execution.action_id;
+      const pose = new THREE.Mesh(
+        new THREE.SphereGeometry(0.105, 12, 12),
+        new THREE.MeshBasicMaterial({ color: 0x54d8ff, wireframe: true, transparent: true, opacity: 0.82 })
+      );
+      pose.position.copy(toScene(point));
+      group.add(pose);
+      const connector = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([toScene(target), toScene(point)]),
+        new THREE.LineBasicMaterial({ color: 0x54d8ff, transparent: true, opacity: 0.28 })
+      );
+      group.add(connector);
+      scene.add(group);
+      viewMarkers.push(group);
+    });
+  });
+}
+
+function stepClass(step) {
+  if (step.action && step.action.chosen_by === 'safety_envelope') return 'step safety';
+  if (step.decision && step.decision.decision === 'rejected') return 'step rejected';
+  return 'step';
+}
+
+function renderDecisionSteps(steps) {
+  const host = el('steps');
+  host.innerHTML = '';
+  (steps || []).forEach((step, i) => {
+    if (!step.action) return;
+    const div = document.createElement('div');
+    div.className = stepClass(step);
+    div.dataset.step = i;
+    const a = step.action;
+    const d = step.decision || {};
+    const o = step.outcome;
+    const execution = step.execution || {};
+    const targets = a.waypoint_indexes.length ? a.waypoint_indexes.join(', ') : 'none';
+    const accepted = d.decision === 'accepted';
+    div.innerHTML =
+      `<div class="saw">${escapeHtml(observationSummary(step.observation || {}))}</div>` +
+      `<div class="head"><span class="prim">${escapeHtml(actionTitle(a))}</span>` +
+      `<span class="verdict">${accepted ? 'allowed' : (d.decision === 'rejected' ? 'blocked' : 'pending')}</span></div>` +
+      (o && o.newly_inspected.length ? `<div class="got">${o.newly_inspected.length} usable simulated view${o.newly_inspected.length === 1 ? '' : 's'} captured</div>` : '') +
+      (d.decision === 'rejected' ? `<div class="miss">Safety blocked this: ${escapeHtml(d.reason)}</div>` : '') +
+      (o && o.failure ? `<div class="miss">Mission stopped safely: ${escapeHtml(o.failure.replaceAll('_', ' '))}</div>` : '') +
+      `<details><summary>Why and technical details</summary><div class="why">${escapeHtml(a.reason || '')}</div>` +
+      (execution.max_speed_mps ? `<div>flight: ${escapeHtml(execution.max_speed_mps)} m/s · camera ${escapeHtml(execution.view_distance_m)} m from surface</div>` : '') +
+      `<div>command: ${escapeHtml(a.primitive)} · view IDs: ${escapeHtml(targets)}</div></details>`;
+    host.appendChild(div);
+  });
+}
+
+function renderDecisions() {
+  renderDecisionSteps(mission ? mission.artifact.steps : []);
+}
+
+function showWaitingBanner(message) {
+  const banner = document.createElement('div');
+  banner.className = 'waiting-banner';
+  banner.setAttribute('role', 'status');
+  banner.setAttribute('aria-live', 'polite');
+  banner.innerHTML =
+    `<div class="waiting-pulse" aria-hidden="true"></div>` +
+    `<div><strong>Please wait — preparing the drone</strong>` +
+    `<span>${escapeHtml(message || 'Flight will begin when the mission is ready.')}</span></div>`;
+  el('steps').prepend(banner);
+}
+
+function renderJobProgress(job) {
+  renderDecisionSteps(job.steps || []);
+  const host = el('steps');
+  showWaitingBanner(job.message || 'Checking the mission and planning a safe route.');
+  const live = document.createElement('div');
+  live.className = 'step active';
+  const observation = (job.current_step || {}).observation || {};
+  live.innerHTML =
+    `<div class="saw">Live backend update · ${escapeHtml(job.stage.replaceAll('_', ' '))}</div>` +
+    `<div class="head"><span class="prim">${escapeHtml(job.message)}</span>` +
+    `<span class="verdict">working</span></div>` +
+    (observation.observation_id
+      ? `<div class="why">${escapeHtml(observationSummary(observation))}</div>`
+      : '');
+  host.appendChild(live);
+  host.scrollTop = host.scrollHeight;
+  const accepted = (job.steps || []).filter((step) =>
+    (step.decision || {}).decision === 'accepted').length;
+  const blocked = (job.steps || []).filter((step) =>
+    (step.decision || {}).decision === 'rejected').length;
+  el('m-actions').textContent = `${accepted} accepted / ${blocked} blocked`;
+  el('status').textContent = job.message;
+  notifyDashboard('progress', {
+    message: job.message,
+    stage: job.stage,
+    planner: el('planner').value,
+  });
+}
+
+function resetMissionForStart(planner, text) {
+  mission = null;
+  frames = [];
+  cursor = 0;
+  playing = false;
+  inspectedAt = new Map();
+  trailGeom.setFromPoints([]);
+  clearMarkers();
+  el('play').textContent = 'Play';
+  el('scrub').max = 0;
+  el('scrub').value = 0;
+  el('clock').textContent = '0.0s';
+  el('m-clock').textContent = '0.0s';
+  el('m-inspected').textContent = '0/0';
+  el('m-coverage').textContent = '0%';
+  el('m-speed').textContent = '0.00 m/s';
+  el('m-tilt').innerHTML = '0&deg;';
+  el('m-clearance').textContent = '-';
+  el('m-actions').textContent = '0 accepted / 0 blocked';
+  el('m-verdict').textContent = 'RUNNING';
+  el('m-agent').textContent = planner === 'devin' ? 'Devin API' : 'Local test pilot';
+  el('decision-title').textContent = planner === 'devin'
+    ? 'Live Devin decisions'
+    : 'Live local test-pilot decisions';
+  el('m-session').innerHTML = '<span class="tag">backend mission running</span>';
+  el('steps').innerHTML = '';
+  showWaitingBanner(`Starting “${text}”. Flight will begin when planning and safety checks finish.`);
+}
+
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function waitForMission(jobId) {
+  while (true) {
+    await wait(700);
+    const response = await fetch(
+      `/api/mission/status?job_id=${encodeURIComponent(jobId)}`,
+      { cache: 'no-store' },
+    );
+    const job = await response.json();
+    if (!response.ok || !job.ok) throw new Error(job.reply || 'Mission job disappeared.');
+    if (job.status === 'failed') throw new Error(job.message || job.error || 'Mission failed.');
+    if (job.status === 'complete') return job.result;
+    renderJobProgress(job);
+  }
+}
+
+function applyMission(data, { autoplay = false } = {}) {
+  mission = data;
+  frames = data.frames || [];
+  cursor = 0;
+  playing = autoplay;
+  el('play').textContent = playing ? 'Pause' : 'Play';
+  inspectedAt = new Map();
+  trailGeom.setFromPoints([]);
+
+  // Reconstruct when each waypoint turned green, by walking the outcomes in order.
+  let clock = 0;
+  const durations = data.artifact.steps.filter((s) => s.outcome);
+  durations.forEach((step) => {
+    step._start = clock;
+    clock += step.outcome.duration_s;
+    step._end = clock;
+    step.outcome.newly_inspected.forEach((index) => {
+      if (!inspectedAt.has(index)) inspectedAt.set(index, clock);
+    });
+  });
+
+  buildMarkers(data.evidence_targets || data.waypoints, data.authorised_indexes);
+  buildViewMarkers(data);
+  renderDecisions();
+  el('steps').scrollTop = 0;
+
+  const v = data.artifact.verification;
+  const intent = data.intent || {};
+  el('m-seed').textContent = intent.seed_was_random ? `${data.seed} (random)` : data.seed;
+  el('m-region').textContent = intent.region
+    ? `${intent.region}, ${intent.waypoint_count} wp`
+    : `${(data.authorised_indexes || []).length} wp`;
+  el('m-agent').textContent = data.artifact.planner === 'devin' ? 'Devin API' : 'Local test pilot';
+  el('decision-title').textContent = data.artifact.planner === 'devin'
+    ? 'What Devin commanded'
+    : 'What the local test pilot commanded';
+  el('m-inspected').textContent = `${v.inspected_count}/${v.waypoint_count}`;
+  el('m-coverage').textContent = `${(v.coverage * 100).toFixed(1)}%`;
+  const disposition = data.artifact.final_disposition;
+  const klass = disposition === 'PASS' ? 'pass' : (disposition === 'ABORTED' ? 'aborted' : 'insufficient');
+  el('m-verdict').innerHTML = `<span class="${klass}">${disposition}</span>`;
+  const accepted = data.artifact.steps.filter((s) => (s.decision || {}).decision === 'accepted').length;
+  el('m-actions').textContent = `${accepted} accepted / ${data.artifact.rejections.length} blocked`;
+  const url = (data.artifact.planner_metadata || {}).session_url;
+  el('m-session').innerHTML = url
+    ? `<span class="tag">devin session</span><br><a href="${url}" target="_blank">${url.split('/').pop()}</a>`
+    : '<span class="tag">deterministic baseline</span>';
+  el('scrub').max = Math.max(0, frames.length - 1);
+  el('scrub').value = 0;
+  el('status').textContent = data.reply;
+  if (frames.length) updateFromFrame();
+}
+
+function frameAt(i) {
+  const index = Math.max(0, Math.min(frames.length - 1, Math.floor(i)));
+  return frames[index];
+}
+
+function updateFromFrame() {
+  if (!frames.length) return;
+  const f = frameAt(cursor);
+  drone.position.copy(toScene(f.p));
+  // Measured attitude from the simulator, mapped into the scene basis.
+  const R = f.R;
+  const m = new THREE.Matrix4().set(
+    R[1][1], R[1][2], R[1][0], 0,
+    R[2][1], R[2][2], R[2][0], 0,
+    R[0][1], R[0][2], R[0][0], 0,
+    0, 0, 0, 1
+  );
+  drone.quaternion.setFromRotationMatrix(m);
+
+  const speed = Math.hypot(f.v[0], f.v[1], f.v[2]);
+  el('m-clock').textContent = `${f.t.toFixed(1)}s`;
+  el('clock').textContent = `${f.t.toFixed(1)}s`;
+  el('m-speed').textContent = `${speed.toFixed(2)} m/s`;
+  const tilt = Math.acos(Math.max(-1, Math.min(1, R[2][2]))) * 180 / Math.PI;
+  el('m-tilt').textContent = `${tilt.toFixed(1)}\u00b0`;
+
+  const radial = Math.hypot(f.p[1], f.p[2]);
+  const axial = Math.min(Math.max(f.p[0], 0), NACELLE_LENGTH);
+  const clearance = Math.hypot(radial, f.p[0] - axial) - KEEP_OUT_RADIUS;
+  el('m-clearance').textContent = `${clearance.toFixed(2)} m`;
+  el('m-clearance').style.color = clearance < 0.35 ? 'var(--bad)' : 'var(--ink)';
+
+  const wind = f.wind || [0, 0, 0];
+  const windMagnitude = Math.hypot(...wind);
+  el('s-wind').textContent = `${windMagnitude.toFixed(1)} m/s²`;
+  el('s-wind-note').textContent = windMagnitude >= 3 ? 'Strong gust affecting the flight' : 'Seeded and repeatable disturbance';
+  const windScene = toScene(wind);
+  if (windMagnitude > 0.02) {
+    windArrow.visible = true;
+    windArrow.setDirection(windScene.normalize());
+    windArrow.setLength(Math.max(0.8, Math.min(4.5, windMagnitude)), 0.35, 0.18);
+  } else windArrow.visible = false;
+
+  const sensors = f.sensors || {};
+  const detections = sensors.visual_detections || [];
+  if (detections.length) {
+    const detected = detections[0];
+    el('s-vision').textContent = `${detected.label} ${(detected.confidence * 100).toFixed(0)}%`;
+    el('s-vision').style.color = 'var(--warn)';
+    el('s-vision-note').textContent = `${detected.distance_m.toFixed(1)} m away · synthetic detection`;
+    obstacle.visible = true;
+    obstacle.position.copy(toScene(detected.position_m));
+    obstacleWing.rotation.x = Math.sin(f.t * 8) * 0.55;
+  } else {
+    el('s-vision').textContent = 'clear';
+    el('s-vision').style.color = 'var(--good)';
+    el('s-vision-note').textContent = 'No synthetic object in sensor range';
+    obstacle.visible = false;
+  }
+  const audio = sensors.audio || {level_db: 0, anomaly: false};
+  el('s-audio').textContent = `${audio.level_db.toFixed(0)} dB${audio.anomaly ? ' anomaly' : ''}`;
+  el('s-audio').style.color = audio.anomaly ? 'var(--warn)' : 'var(--good)';
+  el('s-audio-note').textContent = `${audio.label || 'normal'} · synthetic signal`;
+  const groundClearance = sensors.ground_clearance_m;
+  el('s-ground').textContent = groundClearance === undefined ? '-' : `${groundClearance.toFixed(2)} m`;
+  el('s-ground').style.color = groundClearance !== undefined && groundClearance < 0.25 ? 'var(--bad)' : 'var(--ink)';
+
+  markers.forEach((marker) => {
+    const at = inspectedAt.get(marker.userData.index);
+    const done = at !== undefined && f.t >= at;
+    const activeStep = mission.artifact.steps.find((step) => step.outcome && f.t >= (step._start || 0) && f.t <= (step._end || -1));
+    const isTarget = activeStep && activeStep.action && activeStep.action.waypoint_indexes.includes(marker.userData.index);
+    marker.material.color.setHex(done ? 0x19a667 : (isTarget ? 0x285ed1 : (marker.material.opacity < 1 ? 0x9aa8b6 : 0x708197)));
+    marker.material.emissive.setHex(done ? 0x123d26 : 0x000000);
+    marker.scale.setScalar(done ? 1.25 : 1);
+  });
+
+  const points = frames.slice(Math.max(0, cursor - 260), cursor + 1).map((fr) => toScene(fr.p));
+  if (points.length > 1) trailGeom.setFromPoints(points);
+
+  if (follow) {
+    const framing = missionFraming();
+    orbit.target.lerp(framing.centre, 0.08);
+    camera.position.lerp(framing.position, 0.035);
+  }
+  el('scrub').value = cursor;
+
+  // Highlight whichever decision is currently being flown.
+  let clock = 0, activeIndex = -1;
+  mission.artifact.steps.forEach((step, i) => {
+    if (!step.outcome) return;
+    const start = clock;
+    clock += step.outcome.duration_s;
+    step._start = start;
+    step._end = clock;
+    if (f.t >= start && f.t <= clock) activeIndex = i;
+  });
+  document.querySelectorAll('.step').forEach((node) => {
+    node.classList.toggle('active', Number(node.dataset.step) === activeIndex);
+  });
+  const actionId = ((f.control || {}).action_id || '');
+  viewMarkers.forEach((group) => {
+    const active = group.userData.actionId === actionId;
+    group.traverse((child) => {
+      if (child.material) child.material.opacity = active ? 1.0 : 0.28;
+    });
+  });
+}
+
+async function runMission() {
+  const button = el('run');
+  const planner = el('planner').value;
+  const text = el('order').value.trim();
+  if (!text) {
+    el('status').textContent = 'Choose a mission preset or type an inspection request first.';
+    return;
+  }
+  if (button.disabled) return;
+  if (planner === 'devin' && devinRequiresAccessCode && !devinAccessToken) {
+    const entered = window.prompt('Enter the temporary judge access code for a live Devin mission:');
+    if (!entered) {
+      el('status').textContent = 'Live Devin mission cancelled. No access code was sent.';
+      return;
+    }
+    devinAccessToken = entered.trim();
+  }
+  button.disabled = true;
+  setMissionMenuOpen(false);
+  resetMissionForStart(planner, text);
+  el('status').textContent = 'Submitting the mission to the backend…';
+  notifyDashboard('starting', {
+    message: `Submitting “${text}” to the AeroLoop backend.`,
+    stage: 'submitting',
+    planner,
+  });
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (planner === 'devin' && devinAccessToken) {
+      headers.Authorization = `Bearer ${devinAccessToken}`;
+    }
+    const response = await fetch('/api/mission/start', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ text, planner }),
+    });
+    const started = await response.json();
+    if (!response.ok || !started.ok) {
+      if (response.status === 401) devinAccessToken = '';
+      throw new Error(started.reply || 'The backend refused the mission.');
+    }
+    el('status').textContent = started.reply;
+    notifyDashboard('accepted', {
+      message: started.reply,
+      stage: 'accepted',
+      planner,
+    });
+    const data = await waitForMission(started.job_id);
+    follow = true;
+    el('cam').classList.add('on');
+    el('cam').textContent = 'Follow';
+    applyMission(data, { autoplay: true });
+    const verification = data.artifact.verification;
+    notifyDashboard('complete', {
+      message: data.reply,
+      disposition: data.artifact.final_disposition,
+      inspectedCount: verification.inspected_count,
+      waypointCount: verification.waypoint_count,
+      planner: data.artifact.planner,
+    });
+  } catch (error) {
+    const message = `Mission request failed: ${error.message || error}`;
+    el('status').textContent = message;
+    el('m-verdict').innerHTML = '<span class="aborted">FAILED</span>';
+    notifyDashboard('failed', { message, stage: 'failed', planner });
+  } finally {
+    button.disabled = false;
+  }
+}
+
+el('run').onclick = runMission;
+el('order').addEventListener('keydown', (event) => { if (event.key === 'Enter') runMission(); });
+function syncMissionReady() {
+  el('run').disabled = !el('order').value.trim();
+}
+el('order').addEventListener('input', syncMissionReady);
+
+// The dashboard command drawer hands the operator's words over in the URL, so the
+// request a judge typed on the front page is the request that gets flown here.
+const incomingOrder = new URLSearchParams(location.search);
+let autostartPending = incomingOrder.get('autostart') === '1';
+if (incomingOrder.get('order')) {
+  el('order').value = incomingOrder.get('order');
+  syncMissionReady();
+}
+addEventListener('message', (event) => {
+  if (
+    event.origin !== window.location.origin
+    || event.source !== window.parent
+    || event.data?.source !== 'aeroloop-dashboard'
+    || event.data?.type !== 'run-mission'
+  ) return;
+  const command = String(event.data.command || '').trim();
+  if (!command) return;
+  el('order').value = command;
+  el('planner').value = event.data.planner === 'baseline' ? 'baseline' : 'devin';
+  syncMissionReady();
+  runMission();
+});
+document.querySelectorAll('.ex').forEach((chip) => {
+  chip.onclick = () => {
+    el('order').value = chip.textContent;
+    syncMissionReady();
+    el('order').focus();
+  };
+});
+
+function setMissionMenuOpen(open) {
+  el('sidebar').classList.toggle('open', open);
+  document.body.classList.toggle('menu-open', open);
+  el('menu-toggle').setAttribute('aria-expanded', String(open));
+}
+el('menu-toggle').onclick = () => setMissionMenuOpen(!el('sidebar').classList.contains('open'));
+el('menu-close').onclick = () => setMissionMenuOpen(false);
+if (matchMedia('(max-width: 1120px)').matches) setMissionMenuOpen(true);
+
+// Speech is a convenience only. Everything it can do, the text box can do.
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!Recognition) {
+  el('mic').disabled = true;
+  el('mic').title = 'this browser has no speech recognition';
+} else {
+  const recogniser = new Recognition();
+  recogniser.lang = 'en-US';
+  recogniser.interimResults = false;
+  el('mic').onclick = () => { el('mic').classList.add('on'); recogniser.start(); };
+  recogniser.onresult = (event) => {
+    el('order').value = event.results[0][0].transcript;
+    syncMissionReady();
+    el('mic').classList.remove('on');
+    runMission();
+  };
+  recogniser.onerror = () => {
+    el('mic').classList.remove('on');
+    el('status').textContent = 'Speech failed, which usually means the page is not a secure context. Type the order instead.';
+  };
+  recogniser.onend = () => el('mic').classList.remove('on');
+}
+el('play').onclick = () => { playing = !playing; el('play').textContent = playing ? 'Pause' : 'Play'; };
+el('rate').onchange = () => { rate = Number(el('rate').value); };
+el('cam').onclick = () => {
+  follow = !follow;
+  el('cam').classList.toggle('on', follow);
+  el('cam').textContent = follow ? 'Follow' : 'Orbit';
+};
+el('cam').classList.add('on');
+function leaveFollowMode() {
+  if (!follow) return;
+  follow = false;
+  el('cam').classList.remove('on');
+  el('cam').textContent = 'Orbit';
+}
+function zoomCamera(factor) {
+  leaveFollowMode();
+  const offset = camera.position.clone().sub(orbit.target);
+  const distance = Math.max(orbit.minDistance, Math.min(orbit.maxDistance, offset.length() * factor));
+  if (offset.lengthSq() < 1e-8) offset.set(1, 0.6, 1);
+  camera.position.copy(orbit.target).add(offset.setLength(distance));
+  orbit.update();
+}
+orbit.addEventListener('start', leaveFollowMode);
+el('zoom-in').onclick = () => zoomCamera(0.78);
+el('zoom-out').onclick = () => zoomCamera(1.28);
+el('zoom-reset').onclick = () => {
+  follow = false;
+  el('cam').classList.remove('on');
+  el('cam').textContent = 'Orbit';
+  const framing = missionFraming();
+  camera.position.copy(framing.position);
+  orbit.target.copy(framing.centre);
+  orbit.update();
+};
+el('scrub').oninput = (event) => { cursor = Number(event.target.value); updateFromFrame(); };
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = (now - last) / 1000;
+  last = now;
+  if (playing && frames.length) {
+    // Frames are recorded every other 50 Hz tick, so 25 frames is one second of flight.
+    cursor += dt * 25 * rate;
+    if (cursor >= frames.length - 1) { cursor = frames.length - 1; playing = false; el('play').textContent = 'Play'; }
+    updateFromFrame();
+  }
+  orbit.update();
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(animate);
+
+// Autostart waits for the capability check, so a handed-over mission never fires at a
+// planner this server cannot actually reach.
+function maybeAutostart() {
+  if (!autostartPending) return;
+  autostartPending = false;
+  if (!el('order').value.trim()) return;
+  runMission();
+}
+
+// Ask the server whether it can fly a live mission at all, so the Devin option is
+// never offered by a server that was started without credentials.
+fetch('/api/capabilities').then((r) => r.json()).then((caps) => {
+  if (caps.devin_available) {
+    const option = el('planner').querySelector('option[value="devin"]');
+    devinRequiresAccessCode = Boolean(caps.devin_requires_access_code);
+    option.textContent = devinRequiresAccessCode
+      ? 'Devin (live API, access code required)'
+      : 'Devin (live public demo)';
+    notifyDashboard('ready', {
+      message: 'Simulator connected. Choose Devin or the local test pilot, then send a mission.',
+      devinAvailable: true,
+    });
+    maybeAutostart();
+    return;
+  }
+  const option = el('planner').querySelector('option[value="devin"]');
+  option.textContent = 'Devin (no credentials on this server)';
+  option.disabled = true;
+  el('planner').value = 'baseline';
+  el('status').textContent = caps.reason;
+  notifyDashboard('ready', {
+    message: 'Simulator connected. Local test pilot available; live Devin is disabled here.',
+    devinAvailable: false,
+  });
+  maybeAutostart();
+}).catch(() => {
+  notifyDashboard('failed', { message: 'The simulator capability check failed.' });
+});
+
+// Load the last recorded mission if one is on disk, so the view is never empty.
+fetch('/data3/mission_trace.json').then((r) => r.ok ? r.json() : null).then((trace) => {
+  if (!trace || mission) return;
+  fetch('/data3/mission_artifact.json').then((r) => r.ok ? r.json() : null).then((artifact) => {
+    if (!artifact || mission) return;
+    applyMission({
+      seed: trace.seed,
+      waypoints: trace.waypoints,
+      authorised_indexes: trace.authorised_indexes,
+      frames: trace.frames,
+      artifact,
+      reply: 'Recorded mission ready at 0.0s. Choose a new mission or press Play to watch this one.',
+    }, { autoplay: false });
+  });
+}).catch(() => {});
+</script>
+</body>
+</html>

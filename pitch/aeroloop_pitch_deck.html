@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AeroLoop, pitch deck</title>
+<style>
+  /* Swiss style. Helvetica, flat colors, blueprint line art. No gradients. */
+  :root {
+    --black: #0B0C0E;
+    --paper: #F2EFE9;
+    --navy: #00508F;
+    --ink: #14293A;
+    --amber: #FFB347;
+    --sand: #FFCD82;
+    --sky: #ADDBFF;
+    --line: #3A3D42;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #222; }
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    position: relative;
+    width: 1280px; height: 720px;
+    margin: 24px auto;
+    overflow: hidden;
+    background: var(--black);
+    color: var(--paper);
+    page-break-after: always;
+  }
+  .page.light { background: var(--paper); color: var(--black); }
+  @media print { html, body { background: none; } .page { margin: 0; } }
+  @page { size: 1280px 720px; margin: 0; }
+
+  .pad { position: absolute; inset: 0; padding: 64px 72px; }
+
+  .idx {
+    position: absolute; top: 52px; right: 72px;
+    font-size: 15px; font-weight: 700; letter-spacing: .12em;
+  }
+  .idx b { color: var(--amber); }
+  .page.light .idx b { color: var(--navy); }
+
+  .kicker {
+    display: inline-block;
+    font-size: 13px; font-weight: 700; letter-spacing: .38em; text-transform: uppercase;
+    padding: 6px 12px; background: var(--amber); color: var(--black);
+  }
+  .page.light .kicker { background: var(--navy); color: var(--paper); }
+
+  h2 {
+    margin-top: 26px;
+    font-size: 62px; font-weight: 800; line-height: .98;
+    letter-spacing: -.025em; text-transform: uppercase;
+  }
+  h2 .o { color: var(--amber); }
+  .page.light h2 .o { color: var(--navy); }
+
+  p.lead { font-size: 20px; line-height: 1.55; font-weight: 400; }
+
+  .baseline {
+    position: absolute; bottom: 0; left: 72px; right: 72px;
+    border-top: 1px solid var(--line);
+    height: 48px; display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; font-weight: 700; letter-spacing: .3em; text-transform: uppercase;
+    color: #8B9098;
+  }
+  .page.light .baseline { border-top-color: #C9C2B4; color: #6E6A5F; }
+
+  ul.bullets { list-style: none; }
+  ul.bullets li {
+    position: relative; padding-left: 30px; margin-bottom: 18px;
+    font-size: 18px; line-height: 1.5;
+  }
+  ul.bullets li::before {
+    content: ""; position: absolute; left: 0; top: .52em;
+    width: 14px; height: 14px; background: var(--amber);
+  }
+  .page.light ul.bullets li::before { background: var(--navy); }
+
+  .lbl { font-size: 11px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; }
+  svg text { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+</style>
+</head>
+<body>
+
+<!-- ============ SVG DEFS: reusable blueprint objects ============ -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <!-- Turbofan front view, blueprint line art -->
+    <g id="turbofan" fill="none" stroke="#F2EFE9" stroke-width="1.6">
+      <circle cx="200" cy="200" r="196" stroke-width="3"/>
+      <circle cx="200" cy="200" r="178"/>
+      <circle cx="200" cy="200" r="150" stroke-dasharray="4 6" stroke-width="1"/>
+      <circle cx="200" cy="200" r="46"/>
+      <circle cx="200" cy="200" r="30" stroke-width="2.4"/>
+      <circle cx="200" cy="200" r="8" fill="#F2EFE9"/>
+      <g id="fanblades">
+        <path d="M200 200 L214 62 Q200 54 186 62 Z" stroke-width="1.2"/>
+      </g>
+      <use href="#fanblades" transform="rotate(20 200 200)"/>
+      <use href="#fanblades" transform="rotate(40 200 200)"/>
+      <use href="#fanblades" transform="rotate(60 200 200)"/>
+      <use href="#fanblades" transform="rotate(80 200 200)"/>
+      <use href="#fanblades" transform="rotate(100 200 200)"/>
+      <use href="#fanblades" transform="rotate(120 200 200)"/>
+      <use href="#fanblades" transform="rotate(140 200 200)"/>
+      <use href="#fanblades" transform="rotate(160 200 200)"/>
+      <use href="#fanblades" transform="rotate(180 200 200)"/>
+      <use href="#fanblades" transform="rotate(200 200 200)"/>
+      <use href="#fanblades" transform="rotate(220 200 200)"/>
+      <use href="#fanblades" transform="rotate(240 200 200)"/>
+      <use href="#fanblades" transform="rotate(260 200 200)"/>
+      <use href="#fanblades" transform="rotate(280 200 200)"/>
+      <use href="#fanblades" transform="rotate(300 200 200)"/>
+      <use href="#fanblades" transform="rotate(320 200 200)"/>
+      <use href="#fanblades" transform="rotate(340 200 200)"/>
+    </g>
+
+    <!-- Quadrotor drone, top view, blueprint line art -->
+    <g id="quadrotor" fill="none" stroke="#F2EFE9" stroke-width="1.6">
+      <line x1="60" y1="60" x2="240" y2="240"/>
+      <line x1="240" y1="60" x2="60" y2="240"/>
+      <circle cx="60" cy="60" r="44"/>
+      <circle cx="240" cy="60" r="44"/>
+      <circle cx="60" cy="240" r="44"/>
+      <circle cx="240" cy="240" r="44"/>
+      <circle cx="60" cy="60" r="5" fill="#F2EFE9"/>
+      <circle cx="240" cy="60" r="5" fill="#F2EFE9"/>
+      <circle cx="60" cy="240" r="5" fill="#F2EFE9"/>
+      <circle cx="240" cy="240" r="5" fill="#F2EFE9"/>
+      <line x1="26" y1="60" x2="94" y2="60"/><line x1="206" y1="60" x2="274" y2="60"/>
+      <line x1="26" y1="240" x2="94" y2="240"/><line x1="206" y1="240" x2="274" y2="240"/>
+      <rect x="122" y="122" width="56" height="56" stroke-width="2.4"/>
+      <rect x="136" y="178" width="28" height="16"/>
+      <circle cx="150" cy="186" r="5"/>
+      <path d="M138 202 L150 226 L162 202" stroke-dasharray="3 4" stroke-width="1"/>
+    </g>
+
+    <!-- Nacelle side profile with inspection path -->
+    <g id="nacellepath" fill="none" stroke="#F2EFE9" stroke-width="1.8">
+      <path d="M60 130 Q40 170 60 210 L300 224 Q330 170 300 116 Z"/>
+      <ellipse cx="62" cy="170" rx="14" ry="42"/>
+      <path d="M300 116 L340 128 M300 224 L340 212" stroke-width="1.2"/>
+      <path d="M40 96 Q180 30 330 84" stroke-dasharray="6 6" stroke="#FFB347"/>
+      <path d="M330 258 Q180 310 44 244" stroke-dasharray="6 6" stroke="#FFB347"/>
+      <circle cx="180" cy="55" r="7" fill="#FFB347" stroke="none"/>
+      <line x1="171" y1="46" x2="189" y2="64" stroke="#0B0C0E" stroke-width="1.4"/>
+      <line x1="189" y1="46" x2="171" y2="64" stroke="#0B0C0E" stroke-width="1.4"/>
+    </g>
+  </defs>
+</svg>
+
+<!-- PAGE 0 : title -->
+<section class="page">
+  <div style="position:absolute;left:72px;right:72px;top:52px;display:flex;justify-content:space-between;font-size:15px;font-weight:700;letter-spacing:.12em;">
+    <span>LEAGUE_HACKERS</span><span>COGNITION TRACK &middot; EHL MUNICH</span>
+  </div>
+  <img src="assets/hero_drone.png" alt="" style="position:absolute;right:0;top:0;width:430px;height:720px;object-fit:cover;">
+  <div style="position:absolute;right:430px;top:0;width:18px;height:720px;background:var(--amber);"></div>
+  <div style="position:absolute;left:72px;top:128px;font-weight:900;font-size:220px;letter-spacing:-.045em;line-height:.85;color:var(--paper);">
+    AERO<br><span style="color:var(--amber);">LOOP</span>
+  </div>
+  <div style="position:absolute;left:76px;top:540px;width:150px;height:14px;background:var(--amber);"></div>
+  <div style="position:absolute;left:76px;top:576px;width:480px;font-size:21px;line-height:1.5;color:var(--paper);">
+    Autonomous engine inspection, written, flown and proven by an AI engineer.
+  </div>
+  <div class="baseline"><span>AEROLOOP</span><span>PITCH DECK &middot; 2026</span></div>
+</section>
+
+<!-- PAGE 1 : one-liner -->
+<section class="page light">
+  <div class="idx"><b>01</b> / 12</div>
+  <div class="pad" style="display:flex;flex-direction:column;justify-content:center;">
+    <span class="kicker">The claim</span>
+    <div style="margin-top:34px;font-size:52px;font-weight:800;line-height:1.12;letter-spacing:-.02em;max-width:1100px;">
+      Good old autonomous flight engineering software for drone-based engine inspection is now
+      written, verified and flown by an
+      <span style="background:var(--navy);color:var(--sand);padding:0 18px;">AI</span> engineer.
+    </div>
+    <p class="lead" style="margin-top:36px;max-width:760px;color:#4A463C;">
+      A human is only involved in the physical safety sign-off at the end.
+    </p>
+  </div>
+  <div class="baseline"><span>AEROLOOP</span><span>League_Hackers</span></div>
+</section>
+
+<!-- PAGE 2 : pipeline -->
+<section class="page">
+  <div class="idx"><b>02</b> / 12</div>
+  <div class="pad">
+    <span class="kicker">The loop</span>
+    <h2>One loop,<br><span class="o">no hand on the stick</span></h2>
+    <div style="margin-top:48px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:20px;">
+      <div style="border-top:6px solid var(--amber);padding-top:20px;">
+        <div style="font-size:60px;font-weight:900;color:var(--amber);">1</div>
+        <div style="margin-top:12px;font-size:19px;line-height:1.4;font-weight:600;">Devin writes the drone flight controller code</div>
+      </div>
+      <div style="border-top:6px solid var(--amber);padding-top:20px;">
+        <div style="font-size:60px;font-weight:900;color:var(--amber);">2</div>
+        <div style="margin-top:12px;font-size:19px;line-height:1.4;font-weight:600;">Devin steers and flies the drone</div>
+      </div>
+      <div style="border-top:6px solid var(--amber);padding-top:20px;">
+        <div style="font-size:60px;font-weight:900;color:var(--amber);">3</div>
+        <div style="margin-top:12px;font-size:19px;line-height:1.4;font-weight:600;">An independent verifier then judges it</div>
+      </div>
+      <div style="background:var(--amber);color:var(--black);padding:20px 18px 18px;">
+        <div style="font-size:60px;font-weight:900;">4</div>
+        <div style="margin-top:12px;font-size:19px;line-height:1.4;font-weight:800;">A human signs off</div>
+      </div>
+    </div>
+    <svg viewBox="0 0 300 300" style="position:absolute;right:88px;top:44px;width:130px;height:130px;opacity:.9;"><use href="#quadrotor"/></svg>
+  </div>
+  <div class="baseline"><span>AEROLOOP</span><span>WRITE &rarr; FLY &rarr; VERIFY &rarr; SIGN OFF</span></div>
+</section>
+
+<!-- PAGE 3 : stats -->
+<section class="page light">
+  <div class="idx"><b>03</b> / 12</div>
+  <div class="pad">
+    <span class="kicker">Evidence</span>
+    <h2>The numbers <span class="o">behind the claim</span></h2>
+    <div style="margin-top:52px;display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:2px solid var(--black);">
+      <div style="padding:34px 24px;border-right:2px solid var(--black);">
+        <div style="font-size:88px;font-weight:900;letter-spacing:-.04em;color:var(--navy);">47</div>
+        <div style="margin-top:14px;font-size:15px;line-height:1.45;font-weight:600;">live autonomous missions flown by the harness</div>
+      </div>
+      <div style="padding:34px 24px;border-right:2px solid var(--black);">
+        <div style="font-size:88px;font-weight:900;letter-spacing:-.04em;color:var(--navy);">30<span style="font-size:44px;">/30</span></div>
+        <div style="margin-top:14px;font-size:15px;line-height:1.45;font-weight:600;">hidden scenarios passed by its controller</div>
+      </div>
+      <div style="padding:34px 24px;border-right:2px solid var(--black);">
+        <div style="font-size:88px;font-weight:900;letter-spacing:-.04em;color:var(--navy);">151</div>
+        <div style="margin-top:14px;font-size:15px;line-height:1.45;font-weight:600;">automated tests</div>
+      </div>
+      <div style="padding:34px 24px;background:var(--black);color:var(--paper);">
+        <div style="font-size:88px;font-weight:900;letter-spacing:-.04em;color:var(--amber);">0</div>
+        <div style="margin-top:14px;font-size:15px;line-height:1.45;font-weight:600;">lines of the flight controller <span style="background:var(--amber);color:var(--black);padding:0 5px;font-weight:800;">written by a human</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="baseline"><span>AEROLOOP</span><span>ALL FIGURES REPRODUCIBLE FROM THE REPO</span></div>
+</section>
+
+<!-- PAGE 4 : problem -->
+<section class="page">
+  <div class="idx"><b>04</b> / 12</div>
+  <div class="pad" style="padding-top:52px;">
+    <span class="kicker">The problem</span>
+    <h2 style="font-size:46px;">No proof the engine <span class="o">was ever fully seen</span></h2>
+    <p class="lead" style="margin-top:22px;font-size:18px;max-width:1120px;">
+      A grounded aircraft costs <b style="color:var(--amber);">thousands an hour</b>, and the sanity inspection of its jet
+      engine parts is done by eye: a technician walking a surface with a torch, or flying a drone manually.
+      Coverage is only as good as whatever the operator managed that day.
+    </p>
+    <ul class="bullets" style="margin-top:18px;">
+      <li style="font-size:17px;margin-bottom:8px;">The defects that matter most need <b>complete, consistent coverage</b> to catch.</li>
+      <li style="font-size:17px;margin-bottom:8px;"><b>Southwest 1380</b> began as a fan blade fatigue crack that surface inspection could not see.</li>
+    </ul>
+    <div style="margin-top:22px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
+      <div style="border:1px solid var(--line);">
+        <img src="assets/incident_fanblade.png" alt="" style="width:100%;height:148px;object-fit:cover;display:block;">
+        <div style="padding:12px 14px;"><div class="lbl" style="color:var(--amber);">Fan blade root crack</div><div style="margin-top:6px;font-size:13px;line-height:1.4;color:#B8BCC2;">Southwest 1380, 2018. NTSB AAR-19/03.</div></div>
+      </div>
+      <div style="border:1px solid var(--line);">
+        <img src="assets/incident_cowl.png" alt="" style="width:100%;height:148px;object-fit:cover;display:block;">
+        <div style="padding:12px 14px;"><div class="lbl" style="color:var(--amber);">Fan cowl door loss</div><div style="margin-top:6px;font-size:13px;line-height:1.4;color:#B8BCC2;">45+ documented A320-family losses; latches sit low on the underside.</div></div>
+      </div>
+      <div style="border:1px solid var(--line);">
+        <img src="assets/incident_torch.png" alt="" style="width:100%;height:148px;object-fit:cover;display:block;">
+        <div style="padding:12px 14px;"><div class="lbl" style="color:var(--amber);">Unseen is not clean</div><div style="margin-top:6px;font-size:13px;line-height:1.4;color:#B8BCC2;">A panel never covered at the right distance and angle was never inspected.</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="baseline"><span>AEROLOOP</span><span>COVERAGE, NOT LUCK</span></div>
+</section>
+
+<!-- PAGE 5 : software is the hard part -->
+<section class="page light">
+  <div class="idx"><b>05</b> / 12</div>
+  <div class="pad" style="display:flex;align-items:center;gap:60px;">
+    <div style="flex:1.25;">
+      <span class="kicker">The bottleneck</span>
+      <h2>Why the <span class="o">software</span> is the hard part</h2>
+      <p class="lead" style="margin-top:26px;">
+        Flying a drone half a metre from a jet engine, in wind, holding a camera steady enough for
+        usable evidence, is a control problem. Every operator, aircraft type and hangar needs
+        different software, and all of it is
+        <span style="background:var(--black);color:var(--sand);padding:0 10px;font-weight:700;">safety critical</span>.
+      </p>
+      <div style="margin-top:34px;border-left:8px solid var(--navy);padding-left:26px;">
+        <p style="font-size:26px;line-height:1.4;font-weight:700;">
+          The bottleneck is not the airframe. It is writing and certifying the software,
+          <span style="color:var(--navy);">over and over</span>.
+        </p>
+      </div>
+    </div>
+    <div style="flex:.75;position:relative;">
+      <svg viewBox="0 0 400 340" style="width:100%;" fill="none" stroke="#14293A" stroke-width="1.8">
+        <path d="M60 130 Q40 170 60 210 L300 224 Q330 170 300 116 Z"/>
+        <ellipse cx="62" cy="170" rx="14" ry="42"/>
+        <path d="M300 116 L340 128 M300 224 L340 212" stroke-width="1.2"/>
+        <path d="M40 96 Q180 30 330 84" stroke-dasharray="6 6" stroke="#00508F" stroke-width="2.2"/>
+        <path d="M330 258 Q180 310 44 244" stroke-dasharray="6 6" stroke="#00508F" stroke-width="2.2"/>
+        <circle cx="180" cy="55" r="8" fill="#00508F" stroke="none"/>
+        <text x="40" y="316" fill="#14293A" font-size="12" letter-spacing="2" font-weight="700" stroke="none">FIG. 01 / INSPECTION ORBIT, 0.5 M STANDOFF</text>
+      </svg>
+    </div>
+  </div>
+  <div class="baseline"><span>AEROLOOP</span><span>SAFETY CRITICAL &middot; EVERY TIME</span></div>
+</section>
+
+<!-- PAGE 6 : market + why unsolved -->
+<section class="page">
+  <div class="idx" style="color:var(--paper);"><b>06</b> / 12</div>
+  <div style="position:absolute;left:0;top:0;width:450px;height:720px;background:var(--navy);padding:64px 52px;display:flex;flex-direction:column;justify-content:center;">
+    <div class="lbl" style="color:var(--sand);">The market</div>
+    <div style="margin-top:22px;font-size:120px;font-weight:900;letter-spacing:-.05em;line-height:.9;color:var(--paper);">$136<span style="font-size:70px;">B</span></div>
+    <p style="margin-top:22px;font-size:21px;line-height:1.45;color:var(--sky);">MRO demand in 2025, approaching <b style="color:var(--paper);">$193B by 2030</b></p>
+    <div class="lbl" style="margin-top:22px;color:var(--sky);opacity:.8;">Oliver Wyman, Global Fleet and MRO Market Forecast</div>
+  </div>
+  <div style="position:absolute;left:450px;right:0;top:0;height:720px;padding:64px 72px 64px 56px;display:flex;flex-direction:column;justify-content:center;">
+    <span class="kicker">The blocker</span>
+    <h2 style="font-size:44px;">Not intelligence.<br><span class="o">Trust.</span></h2>
+    <ul class="bullets" style="margin-top:28px;">
+      <li>You cannot put an agent near a $12M engine if it decides its own success criteria.</li>
+      <li>A model that says "inspection complete" is worth nothing without something independent that can say no.</li>
+      <li>Nobody wants an autonomy layer that keeps flying when it loses contact.</li>
+    </ul>
+  </div>
+  <div class="baseline" style="left:522px;"><span>AEROLOOP</span><span>WHY IT WAS NOT SOLVED</span></div>
+</section>
+
+<!-- PAGE 7 : what we built -->
+<section class="page light">
+  <div class="idx"><b>07</b> / 12</div>
+  <div class="pad" style="padding-top:52px;">
+    <span class="kicker">Our answer</span>
+    <h2 style="font-size:50px;">What we built <span class="o">to solve it</span></h2>
+    <div style="margin-top:30px;display:flex;gap:52px;">
+      <ul class="bullets" style="flex:1.3;">
+        <li>An <b>adversarial verifier</b> that existed before the agent wrote a line, and grades every mission whatever the agent claims.</li>
+        <li>A <b>safety envelope</b> that bounds every action and hands rejections back to the agent instead of quietly fixing them.</li>
+        <li><b>Fail closed by default.</b> Lose the agent and the drone returns home. The mission can never report PASS.</li>
+        <li>Humans keep four authorities: <b>authorise, confirm identity, intervene, sign off</b>.</li>
+      </ul>
+      <div style="flex:.85;background:var(--black);color:var(--paper);padding:30px 32px;align-self:flex-start;">
+        <div class="lbl" style="color:var(--amber);">Caught in the act</div>
+        <p style="margin-top:16px;font-size:17px;line-height:1.55;">
+          It has caught the agent twice. Devin claimed a mission complete with 3 of 9 views captured;
+          the verifier returned <b style="color:var(--amber);">33% against a 95% bar</b> and refused it.
+        </p>
+        <p style="margin-top:16px;font-size:19px;font-weight:800;color:var(--amber);">That refusal is our product. Not the flying.</p>
+      </div>
+    </div>
+  </div>
+  <div class="baseline"><span>AEROLOOP</span><span>VERIFIER &middot; ENVELOPE &middot; FAIL CLOSED &middot; HUMAN AUTHORITY</span></div>
+</section>
+
+<!-- PAGE 8 : how, with Devin -->
+<section class="page">
+  <div class="idx"><b>08</b> / 12</div>
+  <div class="pad" style="padding-top:52px;">
+    <span class="kicker">The autonomy layer</span>
+    <h2 style="font-size:50px;">How we solved it <span class="o">with Devin</span></h2>
+    <p class="lead" style="margin-top:24px;font-size:19px;max-width:1100px;">
+      We did not train a model. We used an <b style="color:var(--amber);">agent harness</b> as the autonomy
+      layer. A model endpoint returns text. A harness comes with persistent sessions, its own shell,
+      editor, tests and version control, and the judgement to use them.
+    </p>
+    <div style="margin-top:30px;border:2px solid var(--amber);padding:26px 32px;max-width:1100px;">
+      <div class="lbl" style="color:var(--amber);">An API alone cannot do this</div>
+      <p style="margin-top:14px;font-size:18px;line-height:1.55;">
+        Devin found a ZeroDivisionError in the flight controller it had written, reproduced it, derived a fix,
+        proved the routing was unchanged over 2000 random cases, added a regression test and opened a
+        pull request. Thirteen of its PRs are merged.
+        <b style="color:var(--amber);">No text completion does that.</b>
+      </p>
+    </div>
+  </div>
+  <div class="baseline"><span>AEROLOOP</span><span>HARNESS, NOT ENDPOINT</span></div>
+</section>
+
+<!-- PAGE 9 : one harness both jobs -->
+<section class="page light">
+  <div class="idx"><b>09</b> / 12</div>
+  <div class="pad" style="padding-top:48px;">
+    <span class="kicker">Architecture</span>
+    <h2 style="font-size:46px;">One harness, <span class="o">both jobs</span></h2>
+    <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+      <div style="border:2px solid var(--black);padding:22px 26px;">
+        <div class="lbl" style="color:var(--navy);">Engineer and mission agent in one</div>
+        <ul class="bullets" style="margin-top:16px;">
+          <li style="font-size:15px;margin-bottom:12px;">The same harness writes and repairs controller2.py, and chooses every inspection action in flight. One resumable session per mission, so later decisions reflect what earlier ones revealed.</li>
+          <li style="font-size:15px;margin-bottom:0;">The boundary is a typed action contract, not a prompt. Devin v3 sits behind it today; a stronger version drops in without touching the simulator, envelope or verifier. Swap our controller for a certified autopilot and the autonomy layer is unchanged.</li>
+        </ul>
+      </div>
+      <div style="background:var(--black);color:var(--paper);padding:22px 26px;">
+        <div class="lbl" style="color:var(--amber);">Why a harness is the right bet</div>
+        <ul class="bullets" style="margin-top:16px;">
+          <li style="font-size:15px;margin-bottom:12px;">No training data, no eval framework, no agent scaffolding to maintain.</li>
+          <li style="font-size:15px;margin-bottom:12px;">Our engineering goes into the verifier and the safety envelope, which is where aviation rigour belongs.</li>
+          <li style="font-size:15px;margin-bottom:0;">The harness is the part we should not be building ourselves.</li>
+        </ul>
+      </div>
+    </div>
+    <div style="margin-top:20px;background:var(--navy);color:var(--paper);padding:14px 26px;display:flex;gap:18px;align-items:center;">
+      <span class="lbl" style="color:var(--sand);white-space:nowrap;">Cost of the honesty</span>
+      <span style="font-size:16px;font-weight:600;">20 to 30 seconds per decision, metered spend, non-deterministic. All bounded.</span>
+    </div>
+  </div>
+  <div class="baseline"><span>AEROLOOP</span><span>TYPED ACTION CONTRACT</span></div>
+</section>
+
+<!-- PAGE 10 : working today -->
+<section class="page">
+  <div class="idx"><b>10</b> / 12</div>
+  <div class="pad" style="padding-top:52px;display:flex;gap:56px;">
+    <div style="flex:1.35;">
+      <span class="kicker">Working today</span>
+      <h2 style="font-size:44px;">A judge types a sentence.<br>The drone flies.<br><span class="o">Something independent grades it.</span></h2>
+      <ul class="bullets" style="margin-top:28px;">
+        <li>Plain English in: <i>"inspect the underside on a random scene."</i> The area is authorised locally, then Devin chooses every action.</li>
+        <li>A rate-controlled quadrotor simulator where a view only counts within 0.5 m, aimed within 60&deg;, and steady.</li>
+        <li>Seeded wind and gusts the agent is never shown, only sensed.</li>
+        <li>Every observation and decision hashed into a signed, replayable artifact.</li>
+      </ul>
+    </div>
+    <div style="flex:.65;display:flex;flex-direction:column;justify-content:center;">
+      <svg viewBox="0 0 300 300" style="width:100%;"><use href="#quadrotor"/></svg>
+      <div class="lbl" style="margin-top:14px;text-align:center;color:#8B9098;">FIG. 02 / QUADROTOR, CAMERA GATE 0.5 M &middot; 60&deg;</div>
+    </div>
+  </div>
+  <div class="baseline"><span>AEROLOOP</span><span>LIVE IN THE SIMULATOR</span></div>
+</section>
+
+<!-- PAGE 11 : what is next -->
+<section class="page light">
+  <div class="idx"><b>11</b> / 12</div>
+  <div class="pad" style="padding-top:52px;">
+    <span class="kicker">Roadmap</span>
+    <h2>What is <span class="o">next</span></h2>
+    <ul class="bullets" style="margin-top:30px;max-width:1000px;">
+      <li>Real perception: camera, audio and thermal into the same observation contract.</li>
+      <li>Swap our controller for a certified autopilot over MAVLink. The mission layer does not change.</li>
+      <li>Independent hardware emergency stop, outside every software authority.</li>
+      <li>Cage trial on a real component, then inspector-led validation with a regulator in the room.</li>
+    </ul>
+    <div style="margin-top:26px;background:var(--black);color:var(--paper);padding:22px 32px;max-width:1000px;">
+      <p style="font-size:18px;line-height:1.55;">
+        Everything here is simulated, and it verifies inspection coverage rather than detecting defects.<br>
+        <b style="color:var(--amber);">We would rather tell you that than have you find it in the demo.</b>
+      </p>
+    </div>
+  </div>
+  <div class="baseline"><span>AEROLOOP</span><span>SIMULATION TODAY &middot; HANGAR NEXT</span></div>
+</section>
+
+<!-- PAGE 12 : team -->
+<section class="page">
+  <div class="idx"><b>12</b> / 12</div>
+  <svg viewBox="0 0 400 400" style="position:absolute;left:-110px;bottom:-110px;width:420px;height:420px;opacity:.35;"><use href="#turbofan"/></svg>
+  <div class="pad" style="display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;">
+    <span class="kicker">League_Hackers</span>
+    <h2 style="margin-top:30px;">Meet the <span class="o">team</span></h2>
+    <div style="margin-top:56px;display:flex;gap:120px;">
+      <div>
+        <div style="width:130px;height:130px;border:3px solid var(--paper);display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 64 64" fill="none" stroke="#F2EFE9" stroke-width="3" style="width:60px;height:60px;">
+            <circle cx="32" cy="22" r="11"/><path d="M12 54 q20 -18 40 0"/>
+          </svg>
+        </div>
+        <div style="margin-top:20px;font-size:24px;font-weight:800;letter-spacing:.02em;">ESHAAN</div>
+      </div>
+      <div>
+        <div style="width:130px;height:130px;border:3px solid var(--amber);display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 64 64" fill="none" stroke="#FFB347" stroke-width="3" style="width:60px;height:60px;">
+            <circle cx="32" cy="22" r="11"/><path d="M12 54 q20 -18 40 0"/>
+          </svg>
+        </div>
+        <div style="margin-top:20px;font-size:24px;font-weight:800;letter-spacing:.02em;color:var(--amber);">DOUAA</div>
+      </div>
+      <div>
+        <div style="width:130px;height:130px;border:3px solid var(--paper);display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 64 64" fill="none" stroke="#F2EFE9" stroke-width="3" style="width:60px;height:60px;">
+            <circle cx="32" cy="22" r="11"/><path d="M12 54 q20 -18 40 0"/>
+          </svg>
+        </div>
+        <div style="margin-top:20px;font-size:24px;font-weight:800;letter-spacing:.02em;">HARISMITHA</div>
+      </div>
+    </div>
+    <div style="margin-top:64px;font-size:40px;font-weight:900;letter-spacing:-.02em;">THANK <span style="color:var(--amber);">YOU.</span></div>
+  </div>
+  <div class="baseline"><span>AEROLOOP</span><span>LEAGUE_HACKERS &middot; 2026</span></div>
+</section>
+
+</body>
+</html>

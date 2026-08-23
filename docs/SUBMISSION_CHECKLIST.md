@@ -32,6 +32,7 @@ replace the run artifact or the Devin session URL produced by AeroLoop.
 
 ## Product proof
 
+- [ ] The GitHub Actions `Python tests` check passes on the submitted commit.
 - [ ] `python -m pytest -q` passes.
 - [ ] `python -m sim.run_verifier --scenarios 30 --seed 1000` passes.
 - [ ] `python -m sim2.run_verifier --scenarios 30 --seed 1000` produces the recorded

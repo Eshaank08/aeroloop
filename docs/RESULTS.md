@@ -16,7 +16,7 @@ Scope, stated once so nothing here is over read:
 
 | Metric | Result |
 | ------ | ------ |
-| Tests | 133 passed |
+| Tests | 142 passed |
 
 ```bash
 python -m pytest -q

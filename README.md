@@ -63,7 +63,7 @@ Full narrative and numbers in [docs/RESULTS.md](docs/RESULTS.md).
 
 ```bash
 python -m pip install -r requirements.txt
-python -m pytest -q                                   # 133 passed
+python -m pytest -q                                   # 142 passed
 ```
 
 Verifier for simulator v1, the point mass sweep:
@@ -136,7 +136,7 @@ handful of live runs, not a soak test. Treat it as demonstrated, not battle test
 
 | What | Result | Command |
 | ---- | ------ | ------- |
-| Test suite | 133 passed | `python -m pytest -q` |
+| Test suite | 142 passed | `python -m pytest -q` |
 | Sim v1 batch | 30/30 PASS, 100.0% mean coverage, 0 collisions | `python -m sim.run_verifier --scenarios 30 --seed 1000` |
 | Sim v2 batch | 30/30 PASS, 99.9% mean coverage, 719/720 waypoints | `python -m sim2.run_verifier --scenarios 30 --seed 1000` |
 | Mission loop, baseline agent, seeds 1000 to 1029 | 29/30 PASS, 98.6% mean coverage | `python scripts/run_autonomous_mission.py --seed <n> --planner baseline` |

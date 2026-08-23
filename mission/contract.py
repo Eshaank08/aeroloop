@@ -2,7 +2,8 @@
 
 Two rules govern this file. The observation packet carries only what a drone could
 sense right now, never the seeded scenario, the future gust or the verifier answer.
-The action packet carries only bounded mission primitives, never motor commands.
+The action packet carries bounded motion goals that the real-time controller turns
+into motor commands. The agent never emits raw PWM or body-rate ticks.
 """
 
 from __future__ import annotations
@@ -13,6 +14,9 @@ import json
 from typing import Any
 
 SCHEMA_VERSION = 1
+
+DEFAULT_VIEW_DISTANCE_M = 1.4
+DEFAULT_ACTION_SPEED_MPS = 1.2
 
 PRIMITIVE_INSPECT = "inspect_waypoints"
 PRIMITIVE_HOVER = "quiet_hover"
@@ -54,6 +58,7 @@ ACTION_SCHEMA = {
             "properties": {
                 "duration_s": {"type": "number", "exclusiveMinimum": 0},
                 "max_speed_mps": {"type": "number", "exclusiveMinimum": 0},
+                "view_distance_m": {"type": "number", "exclusiveMinimum": 0},
             },
         },
         "reason": {"type": "string", "minLength": 1},
@@ -248,7 +253,7 @@ def parse_action(payload: dict, *, chosen_by: str = "devin") -> Action:
     if not isinstance(constraints, dict):
         raise ContractError("constraints must be an object")
     for key, value in constraints.items():
-        if key not in ("duration_s", "max_speed_mps"):
+        if key not in ("duration_s", "max_speed_mps", "view_distance_m"):
             raise ContractError(f"unknown constraint {key!r}")
         if not isinstance(value, (int, float)) or isinstance(value, bool) or value <= 0:
             raise ContractError(f"constraint {key} must be a positive number")

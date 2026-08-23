@@ -34,11 +34,23 @@ from the vehicle's own motion, clearly labelled synthetic object/acoustic events
 waypoint evidence gaps, remaining action and time budget, and the hard limits it must
 respect. It returns exactly one bounded action at a time
 as structured output. `mission/safety.py` rejects stale observation ids, replayed
-action ids, waypoints outside the authorised sector, over long actions, excess speed
-and exhausted per waypoint attempts, and reports the rejection back to Devin rather
+action ids, waypoints outside the authorised sector, over-long actions, speed or
+camera-standoff violations and exhausted per-waypoint attempts, and reports the rejection back to Devin rather
 than substituting a choice of its own. Devin's claim of completion never overrides
 the verifier. If Devin becomes unreachable, the mission performs a bounded return
 toward home and can never report PASS.
+
+Surface evidence targets and flight positions are deliberately separate. A target says
+which part of the asset needs evidence; for each accepted action Devin chooses a bounded
+camera distance and speed. `mission/episode.py` projects that target into a camera pose,
+then `controller2.py` turns the accepted pose and speed into thrust and body-rate commands
+at 50 Hz. The artifact records both the agent request and the applied flight plan, so the
+browser is a replay rather than the source of the route.
+
+The mission contract is provider-independent. Devin is the runtime planner in this build
+because the challenge is specifically to place Devin inside an industry feedback loop. An
+onboard Raspberry Pi model could implement the same `decide(observation) -> action`
+contract later without replacing the safety envelope, controller, verifier or artifact.
 
 The strongest evidence for the challenge is in the second loop: during this build
 `controller2.py` crashed with `ZeroDivisionError` whenever the mission agent handed

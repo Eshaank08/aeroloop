@@ -160,12 +160,14 @@ seeded hidden scenario (wind, gusts)
  human final approval
 ```
 
-**Mission rate.** Devin chooses which waypoints to approach, whether to hover and settle,
-whether to retry, and when to stop. Seconds per decision.
+**Mission rate.** Devin chooses which surface targets to inspect, the camera standoff and
+speed for the resulting view, whether to hover and settle, whether to retry, and when to
+stop. Seconds per decision.
 
-**Flight rate.** `controller2.py` runs at 50 Hz to stabilise the vehicle and execute the
-latest accepted action inside speed, clearance and geofence limits. It is an actuator, not
-a planner. In Devin controlled mode local code never picks the next inspection target.
+**Flight rate.** `controller2.py` runs at 50 Hz to translate the accepted camera pose and
+speed into thrust and body-rate commands while stabilising the vehicle inside clearance
+and geofence limits. It is an actuator, not a planner. In Devin controlled mode local code
+never picks the next inspection target.
 
 > One sentence to land: the fast loop keeps the aircraft safe, the slow loop decides what
 > the mission does, and only the slow loop is intelligent. That separation is also why

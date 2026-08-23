@@ -15,7 +15,7 @@ import math
 
 from sim.aircraft_geometry import DEFAULT_NACELLE
 from sim.scenarios import make_scenario
-from sim2.camera import camera_gate
+from sim2.camera import camera_gate, closest_point_on_surface
 from sim2.params import DEFAULT_QUAD
 from sim2.quad_dynamics import QuadDrone, command_is_finite
 from sim2.run_verifier import COVERAGE_THRESHOLD
@@ -31,6 +31,8 @@ from mission.contract import (
     PRIMITIVE_RETURN_HOME,
     Action,
     ActionOutcome,
+    DEFAULT_ACTION_SPEED_MPS,
+    DEFAULT_VIEW_DISTANCE_M,
     Observation,
     WaypointEvidence,
 )
@@ -76,6 +78,12 @@ class MissionEpisode:
         self.mission_id = mission_id or f"mission-{seed}"
 
         self.waypoints = list(nacelle.waypoints())
+        # Stable evidence IDs live on the asset surface. Flight viewpoints are
+        # generated per action from these targets and the agent's chosen standoff.
+        self.evidence_targets = [
+            closest_point_on_surface(nacelle, waypoint) for waypoint in self.waypoints
+        ]
+        self.active_viewpoints = list(self.waypoints)
         every_index = list(range(len(self.waypoints)))
         self.authorised_indexes = sorted(
             set(authorised_indexes) if authorised_indexes is not None else every_index
@@ -102,6 +110,9 @@ class MissionEpisode:
         self._audio_reported = False
         self._minimum_ground_clearance = float("inf")
         self._obstacle_alerts = 0
+        self.current_action_id = ""
+        self.current_applied_constraints: dict = {}
+        self.last_execution: dict = {}
         self._record_frame()
 
     # ---- sensing -------------------------------------------------------
@@ -152,6 +163,10 @@ class MissionEpisode:
             "thrust": round(state.thrust, 4),
             "wind": [round(v, 4) for v in wind],
             "sensors": sensors,
+            "control": {
+                "action_id": self.current_action_id,
+                **self.current_applied_constraints,
+            },
         })
 
     def _sense_environment(self) -> str | None:
@@ -263,7 +278,7 @@ class MissionEpisode:
         """Update evidence bookkeeping for one waypoint at the current tick."""
         if self.inspected[index]:
             return
-        gate = camera_gate(self.waypoints[index], self.drone.state, self.nacelle)
+        gate = camera_gate(self.active_viewpoints[index], self.drone.state, self.nacelle)
         if gate.inspected:
             self.inspected[index] = True
             self.gap_reasons[index] = []
@@ -279,15 +294,47 @@ class MissionEpisode:
         elif not self.approached[index]:
             self.gap_reasons[index] = [GAP_TOO_FAR]
 
-    def _fly(self, targets: list[int], duration_s: float, stop_when_inspected: bool) -> str | None:
+    def _viewpoint(self, index: int, view_distance_m: float) -> tuple:
+        """Project one stable surface target outward to an agent-selected camera pose."""
+        surface = self.evidence_targets[index]
+        reference = self.waypoints[index]
+        outward = tuple(reference[i] - surface[i] for i in range(3))
+        length = _norm(outward)
+        direction = tuple(value / length for value in outward)
+        return tuple(surface[i] + direction[i] * view_distance_m for i in range(3))
+
+    def _fly(
+        self,
+        targets: list[int],
+        duration_s: float,
+        stop_when_inspected: bool,
+        flight_waypoints: list[tuple],
+        max_speed_mps: float,
+        view_distance_m: float,
+    ) -> str | None:
         """Advance physics under Devin's controller for one bounded action."""
         try:
             controller = self.controller_cls(
-                [self.waypoints[index] for index in targets],
+                flight_waypoints,
                 self.nacelle,
                 self.params,
             )
         except Exception as exc:  # the controller is under test, not trusted
+            return f"controller_exception: {type(exc).__name__}: {exc}"
+        try:
+            # The controller remains the fast safety-critical loop, but these
+            # accepted agent limits now materially shape its motor commands.
+            controller.transit_speed = min(controller.transit_speed, max_speed_mps)
+            controller.approach_speed = min(controller.approach_speed, max_speed_mps)
+            controller.arrive_speed = min(controller.arrive_speed, max_speed_mps)
+            controller.brake_speed = min(
+                controller.brake_speed, max(0.35, max_speed_mps * 1.05)
+            )
+            target_radius = self.nacelle.radius + view_distance_m
+            barrier = max(self.nacelle.keep_out_radius + 0.1, target_radius - 0.15)
+            controller.standoff_radius = barrier
+            controller.retry_standoff_radius = barrier
+        except Exception as exc:  # the controller configuration is also untrusted
             return f"controller_exception: {type(exc).__name__}: {exc}"
         # Tick counting rather than float comparison, so an action can never
         # accumulate its way past the graded time budget.
@@ -366,10 +413,40 @@ class MissionEpisode:
         else:
             raise EpisodeClosed(f"{action.primitive} is not an executable flight primitive")
 
+        max_speed_mps = float(
+            action.constraints.get("max_speed_mps", DEFAULT_ACTION_SPEED_MPS)
+        )
+        view_distance_m = float(
+            action.constraints.get("view_distance_m", DEFAULT_VIEW_DISTANCE_M)
+        )
+        flight_waypoints = [
+            self._viewpoint(index, view_distance_m) for index in targets
+        ]
+        for index, viewpoint in zip(targets, flight_waypoints):
+            self.active_viewpoints[index] = viewpoint
+        self.current_action_id = action.action_id
+        self.current_applied_constraints = {
+            "max_speed_mps": max_speed_mps,
+            "view_distance_m": view_distance_m,
+        }
+        self.last_execution = {
+            "action_id": action.action_id,
+            "target_indexes": list(targets),
+            "flight_waypoints": [list(point) for point in flight_waypoints],
+            **self.current_applied_constraints,
+        }
+
         for index in targets:
             self.attempts[index] = self.attempts.get(index, 0) + 1
 
-        failure = self._fly(targets, duration_s, stop_when_inspected)
+        failure = self._fly(
+            targets,
+            duration_s,
+            stop_when_inspected,
+            flight_waypoints,
+            max_speed_mps,
+            view_distance_m,
+        )
         self.actions_executed += 1
         if failure:
             self.failure = failure

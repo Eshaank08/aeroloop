@@ -335,6 +335,7 @@ class CommandHandler(SimpleHTTPRequestHandler):
                 "api_calls": api_calls,
                 "sector": intent.region,
                 "waypoints": [list(point) for point in episode.waypoints],
+                "evidence_targets": [list(point) for point in episode.evidence_targets],
                 "authorised_indexes": episode.authorised_indexes,
                 "frames": episode.frames,
                 "artifact": run.to_dict(),

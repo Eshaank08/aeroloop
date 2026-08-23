@@ -62,6 +62,9 @@ Rules:
 - Every action_id must be unique within the mission.
 - Choose inspect_waypoints for evidence, quiet_hover to settle before a difficult
   shot, return_home to stop safely, complete or abort to end the mission.
+- For every inspect_waypoints or quiet_hover action, choose max_speed_mps and
+  view_distance_m inside the published limits. Use a slower, closer view for fine
+  evidence and a wider, faster view for coverage when conditions allow.
 - An action may be rejected by the safety envelope. You will be told why. Choose a
   different action; the system will not choose one for you.
 - Prefer few, well chosen actions. Time and attempts per waypoint are limited.
@@ -161,13 +164,21 @@ class ScriptedPilot:
                 "claim": CLAIM_COMPLETE,
                 "confidence": 1.0,
             }
+        # The comparison pilot deliberately exercises the same bounded control
+        # surface as Devin so the UI can be tested without API credits.
+        profiles = ((0.8, 1.0), (1.4, 1.6), (1.1, 1.3))
+        speed, view_distance = profiles[(self.counter - 1) % len(profiles)]
         return {
             "schema_version": SCHEMA_VERSION,
             "observation_id": observation.observation_id,
             "action_id": f"baseline-{self.counter}",
             "primitive": "inspect_waypoints",
             "waypoint_indexes": remaining[: self.batch_size],
-            "constraints": {"duration_s": 30.0},
+            "constraints": {
+                "duration_s": 30.0,
+                "max_speed_mps": speed,
+                "view_distance_m": view_distance,
+            },
             "reason": "collect evidence for the next batch of missing waypoints",
             "confidence": 0.5,
         }
@@ -325,6 +336,7 @@ def run_mission(
 
         outcome = episode.act(action, decision.duration_s)
         step["outcome"] = outcome_to_dict(outcome)
+        step["execution"] = dict(episode.last_execution)
         run.steps.append(step)
         previous_action_id = action.action_id
         last_outcome = step["outcome"]

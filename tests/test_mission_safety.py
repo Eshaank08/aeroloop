@@ -88,6 +88,34 @@ def test_rejects_a_speed_above_the_vehicle_limit(setup):
         )
 
 
+def test_rejects_an_unsafe_camera_standoff(setup):
+    episode, observation, envelope = setup
+    with pytest.raises(MissionPolicyViolation, match="outside the safe"):
+        envelope.validate(
+            _action(constraints={"view_distance_m": 0.2}),
+            observation,
+            episode.time_remaining_s,
+        )
+
+
+def test_records_the_constraints_that_reach_the_controller(setup):
+    episode, observation, envelope = setup
+    decision = envelope.validate(
+        _action(constraints={
+            "duration_s": 8.0,
+            "max_speed_mps": 0.7,
+            "view_distance_m": 1.1,
+        }),
+        observation,
+        episode.time_remaining_s,
+    )
+    assert decision.applied_constraints == {
+        "duration_s": 8.0,
+        "max_speed_mps": 0.7,
+        "view_distance_m": 1.1,
+    }
+
+
 def test_rejects_too_many_targets_in_one_action(setup):
     episode, observation, envelope = setup
     envelope.authorised = set(range(24))

@@ -28,10 +28,15 @@ def _valid(**overrides):
 
 
 def test_parse_action_accepts_a_well_formed_action():
-    action = parse_action(_valid())
+    action = parse_action(_valid(constraints={
+        "duration_s": 12.0,
+        "max_speed_mps": 0.8,
+        "view_distance_m": 1.1,
+    }))
     assert action.primitive == "inspect_waypoints"
     assert action.waypoint_indexes == [1, 2]
     assert action.chosen_by == "devin"
+    assert action.constraints["view_distance_m"] == 1.1
 
 
 @pytest.mark.parametrize("overrides,message", [
@@ -43,6 +48,7 @@ def test_parse_action_accepts_a_well_formed_action():
     ({"waypoint_indexes": [1, "2"]}, "waypoint_indexes"),
     ({"constraints": {"duration_s": -1}}, "duration_s"),
     ({"constraints": {"motor_pwm": 1200}}, "unknown constraint"),
+    ({"constraints": {"view_distance_m": -1}}, "view_distance_m"),
     ({"reason": ""}, "reason"),
     ({"confidence": 3}, "between 0 and 1"),
     ({"claim": "definitely_fine"}, "unknown claim"),

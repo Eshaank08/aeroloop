@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from mission.contract import (
+    DEFAULT_ACTION_SPEED_MPS,
+    DEFAULT_VIEW_DISTANCE_M,
     FLIGHT_PRIMITIVES,
     PRIMITIVE_HOVER,
     PRIMITIVE_INSPECT,
@@ -24,6 +26,10 @@ DEFAULT_DURATION_S = 20.0
 MAX_DURATION_S = 40.0
 MAX_TARGETS_PER_ACTION = 8
 MAX_ATTEMPTS_PER_WAYPOINT = 3
+MIN_COMMAND_SPEED_MPS = 0.4
+MAX_COMMAND_SPEED_MPS = 2.0
+MIN_VIEW_DISTANCE_M = 0.8
+MAX_VIEW_DISTANCE_M = 2.4
 
 
 class MissionPolicyViolation(Exception):
@@ -38,6 +44,7 @@ class Decision:
     action_id: str = ""
     primitive: str = ""
     waypoint_indexes: list[int] = field(default_factory=list)
+    applied_constraints: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
@@ -48,6 +55,7 @@ class Decision:
             "duration_s": round(self.duration_s, 3),
             "reason": self.reason,
             "policy_version": POLICY_VERSION,
+            "applied_constraints": dict(self.applied_constraints),
         }
 
 
@@ -63,7 +71,7 @@ class MissionSafetyEnvelope:
         max_duration_s: float = MAX_DURATION_S,
     ):
         self.authorised = set(authorised_indexes)
-        self.max_speed_mps = max_speed_mps
+        self.max_speed_mps = min(max_speed_mps, MAX_COMMAND_SPEED_MPS)
         self.max_attempts_per_waypoint = max_attempts_per_waypoint
         self.max_targets_per_action = max_targets_per_action
         self.max_duration_s = max_duration_s
@@ -79,6 +87,11 @@ class MissionSafetyEnvelope:
             "max_targets_per_action": self.max_targets_per_action,
             "max_attempts_per_waypoint": self.max_attempts_per_waypoint,
             "max_speed_mps": self.max_speed_mps,
+            "min_speed_mps": MIN_COMMAND_SPEED_MPS,
+            "min_view_distance_m": MIN_VIEW_DISTANCE_M,
+            "max_view_distance_m": MAX_VIEW_DISTANCE_M,
+            "default_speed_mps": DEFAULT_ACTION_SPEED_MPS,
+            "default_view_distance_m": DEFAULT_VIEW_DISTANCE_M,
             "mission_time_remaining_s": round(time_remaining_s, 3),
             "attempts_used": dict(sorted(self.attempts.items())),
         }
@@ -137,9 +150,23 @@ class MissionSafetyEnvelope:
             raise MissionPolicyViolation("return_home does not take waypoint indexes")
 
         speed = action.constraints.get("max_speed_mps")
+        if speed is not None and speed < MIN_COMMAND_SPEED_MPS:
+            raise MissionPolicyViolation(
+                f"max_speed_mps {speed} is below the controllable minimum "
+                f"{MIN_COMMAND_SPEED_MPS}"
+            )
         if speed is not None and speed > self.max_speed_mps:
             raise MissionPolicyViolation(
                 f"max_speed_mps {speed} exceeds the vehicle limit {self.max_speed_mps}"
+            )
+
+        view_distance = action.constraints.get("view_distance_m")
+        if view_distance is not None and not (
+            MIN_VIEW_DISTANCE_M <= view_distance <= MAX_VIEW_DISTANCE_M
+        ):
+            raise MissionPolicyViolation(
+                f"view_distance_m {view_distance} is outside the safe "
+                f"{MIN_VIEW_DISTANCE_M}-{MAX_VIEW_DISTANCE_M} m range"
             )
 
         duration = float(action.constraints.get("duration_s", DEFAULT_DURATION_S))
@@ -159,4 +186,13 @@ class MissionSafetyEnvelope:
         decision.accepted = True
         decision.duration_s = duration
         decision.reason = "within envelope"
+        decision.applied_constraints = {
+            "duration_s": round(duration, 3),
+            "max_speed_mps": float(
+                action.constraints.get("max_speed_mps", DEFAULT_ACTION_SPEED_MPS)
+            ),
+            "view_distance_m": float(
+                action.constraints.get("view_distance_m", DEFAULT_VIEW_DISTANCE_M)
+            ),
+        }
         return decision

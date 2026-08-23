@@ -142,10 +142,11 @@
 
 <div id="legend" class="panel">
   <h2>What the dots mean</h2>
-  <div class="legend-row"><span class="dot" style="background:#708197"></span>Required camera view</div>
-  <div class="legend-row"><span class="dot" style="background:#285ed1"></span>View being attempted now</div>
+  <div class="legend-row"><span class="dot" style="background:#708197"></span>Required surface evidence</div>
+  <div class="legend-row"><span class="dot" style="background:#54d8ff"></span>Agent-chosen camera position</div>
+  <div class="legend-row"><span class="dot" style="background:#285ed1"></span>Target being attempted now</div>
   <div class="legend-row"><span class="dot" style="background:#19a667"></span>Usable simulated evidence captured</div>
-  <div class="plain">A green dot is a passed pose, aim and stability check—not a detected defect.</div>
+  <div class="plain">Surface targets stay fixed. Camera positions can move closer or farther for each decision.</div>
 </div>
 
 <div id="mission-setup" class="panel">
@@ -178,7 +179,7 @@
 </aside>
 
 <div id="decisions" class="panel">
-  <h2>What Devin decided</h2>
+  <h2 id="decision-title">Mission decisions</h2>
   <div class="steps" id="steps"><div style="color:var(--dim)">Run a mission to see every observation, decision and safety ruling.</div></div>
 </div>
 
@@ -345,6 +346,7 @@ const trail = new THREE.Line(trailGeom, new THREE.LineBasicMaterial({ color: 0x7
 scene.add(trail);
 
 let markers = [];
+let viewMarkers = [];
 let mission = null;
 let frames = [];
 let cursor = 0;
@@ -389,6 +391,8 @@ function observationSummary(observation) {
 function clearMarkers() {
   markers.forEach((m) => scene.remove(m));
   markers = [];
+  viewMarkers.forEach((m) => scene.remove(m));
+  viewMarkers = [];
 }
 
 function buildMarkers(waypoints, authorised) {
@@ -411,6 +415,34 @@ function buildMarkers(waypoints, authorised) {
   });
 }
 
+function buildViewMarkers(data) {
+  const targets = data.evidence_targets || data.waypoints || [];
+  (data.artifact.steps || []).forEach((step) => {
+    const execution = step.execution;
+    if (!execution || !execution.flight_waypoints) return;
+    execution.flight_waypoints.forEach((point, position) => {
+      const targetIndex = execution.target_indexes[position];
+      const target = targets[targetIndex];
+      if (!target) return;
+      const group = new THREE.Group();
+      group.userData.actionId = execution.action_id;
+      const pose = new THREE.Mesh(
+        new THREE.SphereGeometry(0.105, 12, 12),
+        new THREE.MeshBasicMaterial({ color: 0x54d8ff, wireframe: true, transparent: true, opacity: 0.82 })
+      );
+      pose.position.copy(toScene(point));
+      group.add(pose);
+      const connector = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([toScene(target), toScene(point)]),
+        new THREE.LineBasicMaterial({ color: 0x54d8ff, transparent: true, opacity: 0.28 })
+      );
+      group.add(connector);
+      scene.add(group);
+      viewMarkers.push(group);
+    });
+  });
+}
+
 function stepClass(step) {
   if (step.action && step.action.chosen_by === 'safety_envelope') return 'step safety';
   if (step.decision && step.decision.decision === 'rejected') return 'step rejected';
@@ -429,6 +461,7 @@ function renderDecisions() {
     const a = step.action;
     const d = step.decision || {};
     const o = step.outcome;
+    const execution = step.execution || {};
     const targets = a.waypoint_indexes.length ? a.waypoint_indexes.join(', ') : 'none';
     const accepted = d.decision === 'accepted';
     div.innerHTML =
@@ -439,6 +472,7 @@ function renderDecisions() {
       (d.decision === 'rejected' ? `<div class="miss">Safety blocked this: ${escapeHtml(d.reason)}</div>` : '') +
       (o && o.failure ? `<div class="miss">Mission stopped safely: ${escapeHtml(o.failure.replaceAll('_', ' '))}</div>` : '') +
       `<details><summary>Why and technical details</summary><div class="why">${escapeHtml(a.reason || '')}</div>` +
+      (execution.max_speed_mps ? `<div>flight: ${escapeHtml(execution.max_speed_mps)} m/s · camera ${escapeHtml(execution.view_distance_m)} m from surface</div>` : '') +
       `<div>command: ${escapeHtml(a.primitive)} · view IDs: ${escapeHtml(targets)}</div></details>`;
     host.appendChild(div);
   });
@@ -465,7 +499,8 @@ function applyMission(data, { autoplay = false } = {}) {
     });
   });
 
-  buildMarkers(data.waypoints, data.authorised_indexes);
+  buildMarkers(data.evidence_targets || data.waypoints, data.authorised_indexes);
+  buildViewMarkers(data);
   renderDecisions();
   el('steps').scrollTop = 0;
 
@@ -476,6 +511,9 @@ function applyMission(data, { autoplay = false } = {}) {
     ? `${intent.region}, ${intent.waypoint_count} wp`
     : `${(data.authorised_indexes || []).length} wp`;
   el('m-agent').textContent = data.artifact.planner === 'devin' ? 'Devin API' : 'Local test pilot';
+  el('decision-title').textContent = data.artifact.planner === 'devin'
+    ? 'What Devin commanded'
+    : 'What the local test pilot commanded';
   el('m-inspected').textContent = `${v.inspected_count}/${v.waypoint_count}`;
   el('m-coverage').textContent = `${(v.coverage * 100).toFixed(1)}%`;
   const disposition = data.artifact.final_disposition;
@@ -592,6 +630,13 @@ function updateFromFrame() {
   });
   document.querySelectorAll('.step').forEach((node) => {
     node.classList.toggle('active', Number(node.dataset.step) === activeIndex);
+  });
+  const actionId = ((f.control || {}).action_id || '');
+  viewMarkers.forEach((group) => {
+    const active = group.userData.actionId === actionId;
+    group.traverse((child) => {
+      if (child.material) child.material.opacity = active ? 1.0 : 0.28;
+    });
   });
 }
 

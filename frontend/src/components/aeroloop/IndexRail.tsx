@@ -11,7 +11,7 @@ interface IndexRailProps {
 
 const navigation = [
   { id: "active-run" as const, index: "01", label: "Run" },
-  { id: "live-simulator" as const, index: "02", label: "Live" },
+  { id: "live-simulator" as const, index: "02", label: "Sim" },
   { id: "engine" as const, index: "03", label: "Engine" },
   { id: "telemetry" as const, index: "04", label: "Data" },
   { id: "findings" as const, index: "05", label: "Findings" },

@@ -116,12 +116,12 @@ export function AeroLoopShell({ data }: AeroLoopShellProps) {
         isMotionPaused={isMotionPaused}
         isRunning={command.isRunning}
         planner={command.planner}
+        simulatorMessage={command.simulatorMessage}
+        simulatorState={command.simulatorState}
         onAttachContext={command.attachContext}
         onCommandChange={command.setCommandText}
         onPlannerChange={command.setPlanner}
-        onSelectRun={(runId) => command.attachContext(`${runId} selected`)}
         onSubmit={command.submit}
-        previousRuns={data.previousRuns}
       />
     </div>
   )

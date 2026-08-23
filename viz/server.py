@@ -1,13 +1,17 @@
 """Local HTTP command server for the AeroLoop flight view."""
 
 import argparse
+from copy import deepcopy
 from dataclasses import replace
 from functools import partial
 import json
 import os
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
+from threading import Lock, Thread
+import time
+from urllib.parse import parse_qs, unquote, urlsplit
+from uuid import uuid4
 
 from inspection.adaptive import AdaptiveRunner
 from inspection.artifact import build_artifact
@@ -72,6 +76,176 @@ def _wind_label(scale: float) -> str:
     return f"wind x{scale:g}"
 
 
+MISSION_JOBS: dict[str, dict] = {}
+MISSION_JOBS_LOCK = Lock()
+MAX_MISSION_JOBS = 20
+
+
+def _mission_payload(request: dict, on_progress=None) -> dict:
+    """Run one mission independently of HTTP so sync and async routes stay identical."""
+    planner_name = str(request.get("planner", "baseline")).lower()
+    text = str(request.get("text", "") or "").strip()
+    intent = parse_mission_intent(text or "inspect the whole nacelle")
+    if request.get("seed") is not None:
+        intent = replace(intent, seed=int(request["seed"]), seed_was_random=False)
+    if request.get("sector") in SECTORS and SECTORS[request["sector"]] is not None:
+        intent = replace(intent, authorised_indexes=SECTORS[request["sector"]])
+    if request.get("max_actions") is not None:
+        intent = replace(intent, max_actions=int(request["max_actions"]))
+
+    seed = intent.seed
+    authorised = intent.authorised_indexes
+    api_calls: list = []
+    if planner_name == "devin":
+        client = DevinClient.from_env(
+            poll_interval_s=8.0, timeout_s=420.0, recorder=api_calls,
+        )
+        max_acu_text = os.environ.get("AEROLOOP_DEVIN_MAX_ACU", "").strip()
+        session = DevinMissionSession(
+            client,
+            ACTION_SCHEMA,
+            title=f"AeroLoop autonomous mission seed {seed}",
+            max_acu_limit=int(max_acu_text) if max_acu_text else None,
+        )
+        planner = DevinMissionPlanner(session, work_order=intent.text)
+    elif planner_name == "baseline":
+        planner = ScriptedPilot()
+    else:
+        raise ValueError("planner must be 'devin' or 'baseline'")
+
+    episode = MissionEpisode(seed=seed, authorised_indexes=authorised)
+    run = run_mission(
+        planner,
+        seed=seed,
+        authorised_indexes=authorised,
+        max_actions=intent.max_actions,
+        episode=episode,
+        on_progress=on_progress,
+    )
+    return {
+        "ok": True,
+        "reply": (
+            f"{run.planner_name} inspected {run.verification['inspected_count']}"
+            f"/{run.verification['waypoint_count']} waypoints of {intent.region}"
+            f" on seed {seed}: {run.disposition}"
+        ),
+        "seed": seed,
+        "intent": intent.to_dict(),
+        "api_calls": api_calls,
+        "sector": intent.region,
+        "waypoints": [list(point) for point in episode.waypoints],
+        "evidence_targets": [list(point) for point in episode.evidence_targets],
+        "authorised_indexes": episode.authorised_indexes,
+        "frames": episode.frames,
+        "artifact": run.to_dict(),
+    }
+
+
+def _job_message(stage: str, planner: str, step: dict | None) -> str:
+    observation_id = (step or {}).get("observation_id", "")
+    labels = {
+        "preparing": "Preparing the scenario and authorised evidence targets.",
+        "waiting_for_planner": (
+            f"Observation {observation_id} sent to "
+            f"{'Devin' if planner == 'devin' else 'the local test pilot'}; waiting for a decision."
+        ),
+        "action_accepted": f"Decision {observation_id} passed the safety envelope.",
+        "action_rejected": f"Decision {observation_id} was blocked and returned to the planner.",
+        "action_executed": f"Action {observation_id} completed; evaluating the new evidence.",
+        "terminal_action": "The planner stopped; the independent verifier is checking the mission.",
+        "planner_failed": "The planner became unavailable; executing the bounded safe stop.",
+        "complete": "Mission complete. Loading the verified replay from 0.0 seconds.",
+    }
+    return labels.get(stage, "Mission is running.")
+
+
+def _run_mission_job(job_id: str, request: dict) -> None:
+    planner = str(request.get("planner", "baseline")).lower()
+
+    def progress(stage, run, episode, step):
+        snapshot = {
+            "stage": stage,
+            "message": _job_message(stage, planner, step),
+            "steps": deepcopy(run.steps),
+            "current_step": deepcopy(step),
+            "frame_count": len(episode.frames),
+            "updated_at": time.time(),
+        }
+        with MISSION_JOBS_LOCK:
+            if job_id in MISSION_JOBS:
+                history = MISSION_JOBS[job_id].setdefault("history", [])
+                history.append({"stage": stage, "message": snapshot["message"]})
+                MISSION_JOBS[job_id].update(snapshot)
+
+    try:
+        result = _mission_payload(request, on_progress=progress)
+    except Exception as error:
+        with MISSION_JOBS_LOCK:
+            if job_id in MISSION_JOBS:
+                MISSION_JOBS[job_id].update({
+                    "status": "failed",
+                    "stage": "failed",
+                    "message": f"Mission failed: {error}",
+                    "error": str(error),
+                    "updated_at": time.time(),
+                })
+        return
+
+    with MISSION_JOBS_LOCK:
+        if job_id not in MISSION_JOBS:
+            return
+        MISSION_JOBS[job_id].setdefault("history", []).append({
+            "stage": "complete",
+            "message": _job_message("complete", planner, None),
+        })
+        MISSION_JOBS[job_id].update({
+            "status": "complete",
+            "stage": "complete",
+            "message": _job_message("complete", planner, None),
+            "result": result,
+            "steps": deepcopy(result["artifact"]["steps"]),
+            "frame_count": len(result["frames"]),
+            "updated_at": time.time(),
+        })
+
+
+def start_mission_job(request: dict) -> str:
+    job_id = uuid4().hex
+    now = time.time()
+    job = {
+        "ok": True,
+        "job_id": job_id,
+        "status": "running",
+        "stage": "preparing",
+        "message": _job_message("preparing", str(request.get("planner", "baseline")), None),
+        "steps": [],
+        "current_step": None,
+        "frame_count": 0,
+        "history": [{"stage": "preparing", "message": _job_message("preparing", "", None)}],
+        "created_at": now,
+        "updated_at": now,
+    }
+    with MISSION_JOBS_LOCK:
+        if len(MISSION_JOBS) >= MAX_MISSION_JOBS:
+            finished = [
+                key for key, value in MISSION_JOBS.items()
+                if value["status"] in {"complete", "failed"}
+            ]
+            if not finished:
+                raise RuntimeError("Too many missions are already running")
+            oldest = min(finished, key=lambda key: MISSION_JOBS[key]["created_at"])
+            del MISSION_JOBS[oldest]
+        MISSION_JOBS[job_id] = job
+    Thread(target=_run_mission_job, args=(job_id, dict(request)), daemon=True).start()
+    return job_id
+
+
+def mission_job_snapshot(job_id: str) -> dict | None:
+    with MISSION_JOBS_LOCK:
+        job = MISSION_JOBS.get(job_id)
+        return deepcopy(job) if job is not None else None
+
+
 class CommandHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -133,6 +307,15 @@ class CommandHandler(SimpleHTTPRequestHandler):
                     "Devin. The baseline agent works either way."
                 ),
             })
+            return
+        if path == "/api/mission/status":
+            query = parse_qs(urlsplit(self.path).query)
+            job_id = (query.get("job_id") or [""])[0]
+            job = mission_job_snapshot(job_id)
+            if job is None:
+                self._send_json(404, {"ok": False, "reply": "Unknown mission job."})
+            else:
+                self._send_json(200, job)
             return
         if path == "/api/scene":
             payload = scene()
@@ -276,72 +459,28 @@ class CommandHandler(SimpleHTTPRequestHandler):
         """Run one autonomous simulator v2 mission and return it for replay."""
         try:
             request = self._read_json() or {}
-            planner_name = str(request.get("planner", "baseline")).lower()
-            # A plain sentence is the primary interface. Seed and sector remain
-            # accepted so the CLI and the tests can pin an exact scenario.
-            text = str(request.get("text", "") or "").strip()
-            intent = parse_mission_intent(text or "inspect the whole nacelle")
-            if request.get("seed") is not None:
-                intent = replace(intent, seed=int(request["seed"]), seed_was_random=False)
-            if request.get("sector") in SECTORS and SECTORS[request["sector"]] is not None:
-                intent = replace(intent, authorised_indexes=SECTORS[request["sector"]])
-            if request.get("max_actions") is not None:
-                intent = replace(intent, max_actions=int(request["max_actions"]))
+            if not isinstance(request, dict):
+                raise ValueError("mission request must be a JSON object")
+            payload = _mission_payload(request)
+        except Exception as error:
+            self._send_json(500, {"ok": False, "reply": f"Mission failed: {error}"})
+            return
+        self._send_json(200, payload)
+
+    def _start_mission(self):
+        try:
+            request = self._read_json() or {}
+            if not isinstance(request, dict):
+                raise ValueError("mission request must be a JSON object")
+            job_id = start_mission_job(request)
         except Exception as error:
             self._send_json(400, {"ok": False, "reply": f"Bad mission request: {error}"})
             return
-
-        seed = intent.seed
-        authorised = intent.authorised_indexes
-        max_actions = intent.max_actions
-
-        api_calls: list = []
-        try:
-            if planner_name == "devin":
-                client = DevinClient.from_env(
-                    poll_interval_s=8.0, timeout_s=420.0, recorder=api_calls,
-                )
-                max_acu_text = os.environ.get("AEROLOOP_DEVIN_MAX_ACU", "").strip()
-                session = DevinMissionSession(
-                    client,
-                    ACTION_SCHEMA,
-                    title=f"AeroLoop autonomous mission seed {seed}",
-                    max_acu_limit=int(max_acu_text) if max_acu_text else None,
-                )
-                planner = DevinMissionPlanner(session, work_order=intent.text)
-            elif planner_name == "baseline":
-                planner = ScriptedPilot()
-            else:
-                raise ValueError("planner must be 'devin' or 'baseline'")
-        except Exception as error:
-            self._send_json(400, {"ok": False, "reply": str(error)})
-            return
-
-        try:
-            episode = MissionEpisode(seed=seed, authorised_indexes=authorised)
-            run = run_mission(
-                planner, seed=seed, authorised_indexes=authorised,
-                max_actions=max_actions, episode=episode,
-            )
-            self._send_json(200, {
-                "ok": True,
-                "reply": (
-                    f"{run.planner_name} inspected {run.verification['inspected_count']}"
-                    f"/{run.verification['waypoint_count']} waypoints of {intent.region}"
-                    f" on seed {seed}: {run.disposition}"
-                ),
-                "seed": seed,
-                "intent": intent.to_dict(),
-                "api_calls": api_calls,
-                "sector": intent.region,
-                "waypoints": [list(point) for point in episode.waypoints],
-                "evidence_targets": [list(point) for point in episode.evidence_targets],
-                "authorised_indexes": episode.authorised_indexes,
-                "frames": episode.frames,
-                "artifact": run.to_dict(),
-            })
-        except Exception as error:
-            self._send_json(500, {"ok": False, "reply": f"Mission failed: {error}"})
+        self._send_json(202, {
+            "ok": True,
+            "job_id": job_id,
+            "reply": "Mission accepted. Backend progress is now available.",
+        })
 
     def do_POST(self):
         path = urlsplit(self.path).path
@@ -357,6 +496,8 @@ class CommandHandler(SimpleHTTPRequestHandler):
             self._inspect()
         elif path == "/api/mission":
             self._mission()
+        elif path == "/api/mission/start":
+            self._start_mission()
         else:
             self._send_json(404, {"ok": False, "reply": "Unknown API endpoint."})
 

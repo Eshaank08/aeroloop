@@ -273,6 +273,40 @@ def test_scripted_baseline_completes_the_full_nacelle():
     assert run.planner_name == "scripted_baseline"
 
 
+def test_mission_progress_reports_waiting_actions_and_completion():
+    stages = []
+
+    def record(stage, _run, _episode, step):
+        stages.append((stage, None if step is None else step["observation_id"]))
+
+    run = run_mission(
+        ScriptedPilot(),
+        seed=1000,
+        authorised_indexes=SECTOR,
+        on_progress=record,
+    )
+
+    assert run.disposition == DISPOSITION_PASS
+    assert stages[0] == ("waiting_for_planner", 1)
+    assert ("action_accepted", 1) in stages
+    assert ("action_executed", 1) in stages
+    assert stages[-1] == ("complete", None)
+
+
+def test_broken_progress_sink_cannot_change_the_mission_result():
+    def broken(*_args):
+        raise RuntimeError("browser disconnected")
+
+    run = run_mission(
+        ScriptedPilot(),
+        seed=1000,
+        authorised_indexes=SECTOR,
+        on_progress=broken,
+    )
+
+    assert run.disposition == DISPOSITION_PASS
+
+
 def test_mission_artifact_hashes_every_observation_and_action():
     run = run_mission(ScriptedPilot(), seed=1000, authorised_indexes=SECTOR)
     payload = run.to_dict()

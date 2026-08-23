@@ -260,6 +260,7 @@ def run_mission(
     authorised_indexes: list[int] | None = None,
     max_actions: int = MAX_ACTIONS,
     episode: MissionEpisode | None = None,
+    on_progress=None,
 ) -> MissionRun:
     episode = episode or MissionEpisode(seed=seed, authorised_indexes=authorised_indexes)
     envelope = MissionSafetyEnvelope(
@@ -267,6 +268,17 @@ def run_mission(
         max_speed_mps=episode.params.max_speed,
     )
     run = MissionRun(episode.mission_id, seed, getattr(planner, "name", type(planner).__name__))
+
+    def emit(stage: str, step: dict | None = None) -> None:
+        """Expose read-only progress without making UI delivery part of flight safety."""
+        if on_progress is None:
+            return
+        try:
+            on_progress(stage, run, episode, step)
+        except Exception:
+            # A disconnected browser or broken progress sink must never alter the
+            # autonomous result or stop the vehicle mid-mission.
+            pass
 
     previous_action_id = ""
     last_outcome: dict | None = None
@@ -287,6 +299,7 @@ def run_mission(
             "observation": observation_to_dict(observation),
         }
         step["observation_digest"] = packet_digest(step["observation"])
+        emit("waiting_for_planner", step)
 
         try:
             payload = planner.decide(observation, rejection)
@@ -296,6 +309,7 @@ def run_mission(
             step["planner_error"] = str(exc)
             run.steps.append(step)
             _safe_stop(episode, run, f"agent unreachable: {exc}")
+            emit("planner_failed", step)
             break
 
         rejection = None
@@ -315,6 +329,7 @@ def run_mission(
                 primitive=str(payload.get("primitive", "")) if isinstance(payload, dict) else "",
             ).to_dict()
             run.steps.append(step)
+            emit("action_rejected", step)
             if consecutive_rejections >= MAX_CONSECUTIVE_REJECTIONS:
                 _safe_stop(
                     episode, run,
@@ -325,6 +340,7 @@ def run_mission(
 
         consecutive_rejections = 0
         step["decision"] = decision.to_dict()
+        emit("action_accepted", step)
 
         if action.primitive in TERMINAL_PRIMITIVES:
             run.agent_claim = action.claim
@@ -332,12 +348,14 @@ def run_mission(
             if action.primitive == PRIMITIVE_ABORT:
                 _safe_stop(episode, run, f"agent aborted: {action.reason}")
             episode.close()
+            emit("terminal_action", step)
             break
 
         outcome = episode.act(action, decision.duration_s)
         step["outcome"] = outcome_to_dict(outcome)
         step["execution"] = dict(episode.last_execution)
         run.steps.append(step)
+        emit("action_executed", step)
         previous_action_id = action.action_id
         last_outcome = step["outcome"]
 
@@ -357,5 +375,7 @@ def run_mission(
         run.disposition = DISPOSITION_PASS
     else:
         run.disposition = DISPOSITION_INSUFFICIENT
+
+    emit("complete")
 
     return run

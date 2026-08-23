@@ -2,6 +2,7 @@ import { ArrowUpRight } from "lucide-react"
 import { motion } from "motion/react"
 import { useRef } from "react"
 import { Button } from "@/components/ui/button"
+import heroImage from "@/assets/hero.png"
 import { useFlightMotion } from "@/hooks/useFlightMotion"
 import type { SectionId } from "@/types/aeroloop"
 
@@ -33,7 +34,7 @@ export function HeroFlightRecorder({
         className="hero-image absolute inset-0 h-full w-full object-cover opacity-60"
         decoding="async"
         loading="lazy"
-        src="https://images.unsplash.com/photo-1428908728789-d2de25dbd4e2?auto=format&w=1400&q=80&fit=crop"
+        src={heroImage}
       />
       <div aria-hidden="true" className="hero-wash absolute inset-0" />
       <div className="absolute left-7 right-7 top-6 z-10 flex items-center justify-between border-b border-aero-blue/35 pb-3">
@@ -112,22 +113,22 @@ export function HeroFlightRecorder({
           Decide.
         </h1>
         <p className="mt-4 max-w-[355px] text-[14px] leading-5 text-aero-ink/75">
-          AeroLoop directs Devin through engine checks and keeps every finding tied to the run.
+            AeroLoop puts Devin inside a measurable flight loop: observe, command, execute, verify, and try again.
         </p>
         <div className="mt-5 flex items-center">
           <Button
             className="h-auto rounded-none border-0 border-l-4 border-aero-blue bg-aero-sun px-4 py-3 text-[13px] font-bold text-aero-navy hover:bg-aero-sun/85"
-            onClick={() => onNavigate("engine")}
+            onClick={() => onNavigate("live-simulator")}
             type="button"
           >
-            Review active run
+            Open live simulator
             <ArrowUpRight aria-hidden="true" className="ml-2 h-4 w-4" />
           </Button>
         </div>
       </div>
       <div className="hero-plate chamfer absolute bottom-[78px] right-6 z-10 w-[210px] border border-aero-blue bg-aero-paper p-4 text-aero-navy">
         <div className="flex items-center justify-between">
-          <p className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-blue">Active run / sample</p>
+          <p className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-blue">Recorded proof / sample</p>
           <span aria-hidden="true" className="h-2 w-2 bg-aero-amber" />
         </div>
         <p className="aero-display mt-3 text-[34px] font-semibold leading-none">AL-208</p>

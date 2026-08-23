@@ -51,9 +51,9 @@ export const previousRuns: PreviousRun[] = [
 ]
 
 export const initialEntries: CommandEntry[] = [
-  { id: "entry-1", author: "OPERATOR", timestamp: "14:31:42", message: "Run compressor stage 3.", status: "STAGE 03 · ACCEPTED" },
-  { id: "entry-2", author: "DEVIN", timestamp: "14:32:08", message: "Vibration crossed threshold. Holding run.", status: "EVIDENCE 14:32:08 · HOLD", alert: true },
-  { id: "entry-3", author: "SYSTEM", timestamp: "14:32:16", message: "Trace window attached.", status: "CONTEXT · SAVED" },
+  { id: "entry-1", author: "OPERATOR", timestamp: "14:31:42", message: "Run compressor stage 3.", status: "RECORDED · STAGE 03 ACCEPTED" },
+  { id: "entry-2", author: "DEVIN", timestamp: "14:32:08", message: "Vibration crossed threshold. Holding run.", status: "RECORDED · EVIDENCE HOLD", alert: true },
+  { id: "entry-3", author: "SYSTEM", timestamp: "14:32:16", message: "Trace window attached.", status: "RECORDED · CONTEXT SAVED" },
 ]
 
 export const aeroLoopData: AeroLoopData = {

@@ -2,8 +2,11 @@ export type RunStatus = "PASS" | "HOLD" | "QUEUED" | "READY"
 export type StageStatus = "complete" | "current" | "queued"
 export type CommandEntryAuthor = "OPERATOR" | "DEVIN" | "SYSTEM"
 export type FindingKind = "vibration" | "temperature"
+export type SimulatorPlanner = "devin" | "baseline"
+export type SimulatorState = "idle" | "ready" | "starting" | "running" | "complete" | "failed"
 export type SectionId =
   | "active-run"
+  | "live-simulator"
   | "inspection-record"
   | "engine"
   | "telemetry"
@@ -74,6 +77,18 @@ export interface CommandEntry {
   message: string
   status: string
   alert?: boolean
+}
+
+export interface SimulatorMessage {
+  source: "aeroloop-simulator"
+  type: "ready" | "starting" | "accepted" | "progress" | "complete" | "failed"
+  message?: string
+  stage?: string
+  disposition?: string
+  inspectedCount?: number
+  waypointCount?: number
+  planner?: string
+  devinAvailable?: boolean
 }
 
 export interface AeroLoopData {

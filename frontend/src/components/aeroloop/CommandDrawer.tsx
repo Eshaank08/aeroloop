@@ -1,10 +1,10 @@
-import { ArrowUpRight, Paperclip, Square } from "lucide-react"
+import { ArrowUpRight, Paperclip } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { CommandDrone } from "@/components/aeroloop/CommandDrone"
-import type { CommandEntry, PreviousRun } from "@/types/aeroloop"
+import type { CommandEntry, PreviousRun, SimulatorPlanner } from "@/types/aeroloop"
 
 interface CommandDrawerProps {
   commandText: string
@@ -12,9 +12,11 @@ interface CommandDrawerProps {
   entries: CommandEntry[]
   isMotionPaused: boolean
   isRunning: boolean
+  planner: SimulatorPlanner
   previousRuns: PreviousRun[]
   onAttachContext: (label?: string) => void
   onCommandChange: (value: string) => void
+  onPlannerChange: (planner: SimulatorPlanner) => void
   onSelectRun: (runId: string) => void
   onSubmit: () => void
 }
@@ -25,9 +27,11 @@ export function CommandDrawer({
   entries,
   isMotionPaused,
   isRunning,
+  planner,
   previousRuns,
   onAttachContext,
   onCommandChange,
+  onPlannerChange,
   onSelectRun,
   onSubmit,
 }: CommandDrawerProps) {
@@ -45,20 +49,20 @@ export function CommandDrawer({
           <p className="aero-mono text-[9px] uppercase tracking-[.2em] text-aero-paper/55">Command record</p>
           <span className="flex items-center gap-2 aero-mono text-[9px] uppercase text-aero-sun">
             <i aria-hidden="true" className="h-2 w-2 bg-aero-sun" />
-            Devin {isRunning ? "running" : "ready"}
+            {planner === "devin" ? "Devin" : "Local pilot"} {isRunning ? "running" : "ready"}
           </span>
         </div>
         <div className="mt-4 flex items-end justify-between gap-4">
           <div>
-            <h2 className="aero-display text-[33px] font-semibold leading-none">Mission AL-208</h2>
-            <p className="mt-2 text-[12px] text-aero-paper/60">Sample simulation · A-17</p>
+            <h2 className="aero-display text-[33px] font-semibold leading-none">Live mission</h2>
+            <p className="mt-2 text-[12px] text-aero-paper/60">Working simulator backend</p>
           </div>
-          <span className="aero-mono border border-aero-sun px-2 py-1 text-[9px] uppercase text-aero-sun">HOLD</span>
+          <span className="aero-mono border border-aero-sun px-2 py-1 text-[9px] uppercase text-aero-sun">{isRunning ? "RUNNING" : "READY"}</span>
         </div>
       </header>
       <section className="shrink-0 border-b border-aero-brown px-5 py-4">
         <div className="flex items-center justify-between">
-          <p className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-paper/55">Recent runs</p>
+          <p className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-paper/55">Recorded sample runs</p>
           <span className="aero-mono text-[9px] text-aero-paper/40">INDEXED / 03</span>
         </div>
         <div className="mt-2">
@@ -77,7 +81,7 @@ export function CommandDrawer({
         </div>
       </section>
       <section aria-labelledby="command-log-title" className="command-log min-h-0 flex-1 overflow-y-auto px-5 py-4" ref={logRef}>
-        <p className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-paper/55" id="command-log-title">Chronological entries</p>
+        <p className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-paper/55" id="command-log-title">Recorded + live entries</p>
         <div className="mt-3 space-y-0" id="command-entries">
           {entries.map((entry) => (
             <article className={`command-entry border-b border-aero-paper/15 py-4 pl-3 ${entry.alert ? "command-alert" : ""}`} key={entry.id}>
@@ -93,6 +97,18 @@ export function CommandDrawer({
           <Label className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-paper/75" htmlFor="command-input">Command AeroLoop</Label>
           <span aria-live="polite" className={`aero-mono text-[9px] uppercase ${contextLabel === "No context" ? "text-aero-paper/45" : "text-aero-sun"}`}>{contextLabel}</span>
         </div>
+        <label className="aero-mono mt-3 flex items-center justify-between text-[9px] uppercase tracking-[.12em] text-aero-paper/55">
+          Decision maker
+          <select
+            className="border border-aero-paper/30 bg-aero-navy px-2 py-1 text-aero-paper outline-none focus:border-aero-sun"
+            disabled={isRunning}
+            onChange={(event) => onPlannerChange(event.target.value as SimulatorPlanner)}
+            value={planner}
+          >
+            <option value="devin">Devin live</option>
+            <option value="baseline">Local test pilot</option>
+          </select>
+        </label>
         <div className={`command-flightbox relative mt-3 overflow-hidden border border-aero-paper/30 bg-aero-navy ${isRunning ? "is-rendering" : ""}`} id="command-flightbox">
           <Textarea
             aria-describedby="command-help"
@@ -107,7 +123,7 @@ export function CommandDrawer({
           <CommandDrone isMotionPaused={isMotionPaused} isVisible={!isRunning} />
         </div>
         <div aria-hidden="true" className={`command-progress mt-3 h-[2px] w-0 bg-aero-sun ${isRunning ? "is-running" : ""}`} id="command-progress" />
-        <p className="sr-only" id="command-help">Enter an inspection command, then submit it to start or stop a run.</p>
+        <p className="mt-2 text-[9px] leading-4 text-aero-paper/45" id="command-help">Starts a real backend mission. A running mission completes or safely stops under backend control.</p>
         <div className="mt-3 flex items-center justify-between gap-3">
           <Button
             aria-pressed={contextLabel !== "No context"}
@@ -121,13 +137,13 @@ export function CommandDrawer({
           </Button>
           <Button
             className={`command-submit min-h-[40px] rounded-none border-0 border-l-4 border-aero-blue bg-aero-navy px-4 text-[11px] font-bold text-aero-paper/45 hover:bg-aero-navy ${isReady ? "is-ready" : ""} ${isRunning ? "is-running" : ""}`}
-            disabled={!isReady && !isRunning}
+            disabled={!isReady}
             id="command-submit"
             onClick={onSubmit}
             type="button"
           >
-            {isRunning ? "Stop run" : "Send command"}
-            {isRunning ? <Square aria-hidden="true" className="ml-2 h-3 w-3 fill-current" /> : <ArrowUpRight aria-hidden="true" className="ml-2 h-3.5 w-3.5" />}
+            {isRunning ? "Mission running" : "Send command"}
+            <ArrowUpRight aria-hidden="true" className="ml-2 h-3.5 w-3.5" />
           </Button>
         </div>
       </footer>

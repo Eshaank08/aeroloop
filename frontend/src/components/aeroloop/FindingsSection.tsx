@@ -22,7 +22,7 @@ export function FindingsSection({
     <section className="border-b border-aero-blue/25 bg-aero-paper px-8 py-14" id="findings">
       <div className="mb-8 flex items-end justify-between border-b border-aero-blue/25 pb-4">
         <div>
-          <p className="aero-mono text-[10px] uppercase tracking-[.2em] text-aero-blue">04 / Evidence</p>
+          <p className="aero-mono text-[10px] uppercase tracking-[.2em] text-aero-blue">05 / Recorded evidence</p>
           <h2 className="aero-display mt-2 text-[45px] font-semibold leading-none text-aero-navy">Findings on record</h2>
         </div>
         <span className="aero-mono border border-aero-amber px-3 py-2 text-[9px] uppercase text-aero-amber">SAMPLE DATA · 02 FINDINGS</span>

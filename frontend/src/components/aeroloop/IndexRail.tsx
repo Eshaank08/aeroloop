@@ -11,10 +11,11 @@ interface IndexRailProps {
 
 const navigation = [
   { id: "active-run" as const, index: "01", label: "Run" },
-  { id: "engine" as const, index: "02", label: "Engine" },
-  { id: "telemetry" as const, index: "03", label: "Data" },
-  { id: "findings" as const, index: "04", label: "Findings" },
-  { id: "previous-runs" as const, index: "05", label: "Archive" },
+  { id: "live-simulator" as const, index: "02", label: "Live" },
+  { id: "engine" as const, index: "03", label: "Engine" },
+  { id: "telemetry" as const, index: "04", label: "Data" },
+  { id: "findings" as const, index: "05", label: "Findings" },
+  { id: "previous-runs" as const, index: "06", label: "Archive" },
 ]
 
 export function IndexRail({

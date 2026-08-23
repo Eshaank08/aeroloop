@@ -10,7 +10,7 @@ export function EngineCutaway({ onReviewTelemetry }: EngineCutawayProps) {
     <section className="engine-field relative overflow-clip border-b border-aero-navy px-8 py-12" id="engine">
       <div className="flex items-end justify-between border-b border-aero-paper/25 pb-4">
         <div>
-          <p className="aero-mono text-[10px] uppercase tracking-[.2em] text-aero-sun">02 / Engine plate</p>
+          <p className="aero-mono text-[10px] uppercase tracking-[.2em] text-aero-sun">03 / Recorded engine plate</p>
           <h2 className="aero-display mt-2 text-[44px] font-semibold leading-none">Engine cutaway</h2>
         </div>
         <div className="text-right aero-mono text-[9px] uppercase leading-5 text-aero-paper/65">

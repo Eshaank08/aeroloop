@@ -351,16 +351,16 @@ def mission_job_snapshot(job_id: str) -> dict | None:
 class CommandHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("X-Frame-Options", "SAMEORIGIN")
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Permissions-Policy", "camera=(), geolocation=(), microphone=(self)")
         self.send_header(
             "Content-Security-Policy",
             "default-src 'self'; script-src 'self' 'unsafe-inline'; "
             "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
-            "connect-src 'self' blob:; worker-src 'self' blob:; "
+            "connect-src 'self' blob:; worker-src 'self' blob:; frame-src 'self'; "
             "media-src 'self' blob:; object-src 'none'; "
-            "base-uri 'none'; frame-ancestors 'none'",
+            "base-uri 'none'; frame-ancestors 'self'",
         )
         super().end_headers()
 
@@ -469,7 +469,7 @@ class CommandHandler(SimpleHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == "/":
             self.send_response(302)
-            self.send_header("Location", "/mission_view.html")
+            self.send_header("Location", "/dashboard/")
             self.send_header("Content-Length", "0")
             self.end_headers()
             return

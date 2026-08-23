@@ -19,6 +19,21 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Verify dashboard source and committed build
+        run: |
+          npm ci --prefix frontend
+          npm run typecheck --prefix frontend
+          npm run lint --prefix frontend
+          npm run build --prefix frontend
+          git diff --exit-code -- viz/dashboard
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

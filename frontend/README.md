@@ -1,13 +1,18 @@
 # AeroLoop — Flight Record
 
-AeroLoop is a Vite + React + TypeScript inspection command center for aircraft-engine simulation. The UI is exported from the focused AeroLoop canvas design and includes the responsive flight record, axial engine cutaway, telemetry traces, evidence archive, command drawer, and inspection drone workflow.
+AeroLoop is a Vite + React + TypeScript command center wrapped around the working
+Python/Three.js inspection simulator. The polished flight record, engine cutaway,
+telemetry, and evidence archive are clearly labelled recorded examples. The live
+simulator and command drawer communicate with `viz/mission_view.html` through a
+same-origin message bridge, so backend progress and verifier outcomes remain the
+source of truth.
 
 ## Run locally
 
 Requirements: Node.js 20.19+.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -16,31 +21,22 @@ Open the local URL printed by Vite.
 ## Validate a production build
 
 ```bash
+npm run typecheck
+npm run lint
 npm run build
-npm run preview
 ```
 
-## Push to GitHub
-
-From this `aeroloop` folder:
-
-```bash
-git init
-git add .
-git commit -m "Add AeroLoop inspection command center"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
-git push -u origin main
-```
-
-If your GitHub repository already contains an app, copy the contents of this folder into the repository root instead of creating a nested folder. Keep `package.json`, `src/`, `public/`, `index.html`, `vite.config.ts`, and the TypeScript config files together.
+The production build is written to `../viz/dashboard/` and committed because the
+Railway service runs the Python server without a Node build step. GitHub CI rebuilds
+it and fails if the committed output is stale.
 
 ## Main files
 
 - `src/components/aeroloop/` — reusable AeroLoop sections and command drawer
 - `src/components/ui/` — shadcn Radix primitives used by the UI
-- `src/data/aeroloop.ts` — typed simulation mock data
-- `src/hooks/useCommandRunner.ts` — command start/stop state and log entries
+- `src/data/aeroloop.ts` — typed, explicitly labelled recorded sample data
+- `src/hooks/useCommandRunner.ts` — live simulator command/progress state
+- `src/components/aeroloop/LiveSimulator.tsx` — embedded working 3D simulator
 - `src/hooks/useFlightMotion.ts` — aircraft flight loop and scroll influence
 - `src/index.css` — AeroLoop design tokens, responsive rules, and custom visual utilities
 - `components.json` — shadcn configuration

@@ -32,7 +32,7 @@ export function InspectionRecord({ stages, onOpenPlate }: InspectionRecordProps)
     >
       <div className="mb-8 flex items-end justify-between border-b border-aero-blue/25 pb-4">
         <div>
-          <p className="aero-mono text-[10px] uppercase tracking-[.2em] text-aero-blue">01 / Active run</p>
+          <p className="aero-mono text-[10px] uppercase tracking-[.2em] text-aero-blue">02 / Recorded inspection example</p>
           <h2 className="aero-display mt-2 text-[45px] font-semibold leading-none text-aero-navy" id="record-title">
             Inspection record
           </h2>

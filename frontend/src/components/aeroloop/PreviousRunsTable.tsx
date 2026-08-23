@@ -17,7 +17,7 @@ export function PreviousRunsTable({ previousRuns }: PreviousRunsTableProps) {
     <section className="border-b border-aero-brown bg-aero-brown px-8 py-12 text-aero-paper" id="previous-runs">
       <div className="mb-8 flex items-end justify-between border-b border-aero-paper/25 pb-4">
         <div>
-          <p className="aero-mono text-[10px] uppercase tracking-[.2em] text-aero-sun">05 / Archive</p>
+          <p className="aero-mono text-[10px] uppercase tracking-[.2em] text-aero-sun">06 / Recorded archive</p>
           <h2 className="aero-display mt-2 text-[45px] font-semibold leading-none">Previous runs</h2>
         </div>
         <div className="text-right aero-mono text-[9px] uppercase leading-5 text-aero-paper/60">

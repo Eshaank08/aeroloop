@@ -36,7 +36,7 @@ export function TelemetryPanel({ traceData, traces }: TelemetryPanelProps) {
     <section className="telemetry-surface relative border-b border-aero-brown px-8 py-12" id="telemetry">
       <div className="flex items-end justify-between border-b border-aero-paper/25 pb-4">
         <div>
-          <p className="aero-mono text-[10px] uppercase tracking-[.2em] text-aero-sun">03 / Flight recorder</p>
+          <p className="aero-mono text-[10px] uppercase tracking-[.2em] text-aero-sun">04 / Recorded flight data</p>
           <h2 className="aero-display mt-2 text-[44px] font-semibold leading-none">Telemetry, one time cursor</h2>
         </div>
         <div className="text-right aero-mono text-[9px] uppercase leading-5 text-aero-paper/60">

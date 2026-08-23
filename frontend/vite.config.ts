@@ -7,11 +7,16 @@ import svgr from "vite-plugin-svgr"
 
 const projectRoot = fileURLToPath(new URL(".", import.meta.url))
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  base: command === "build" ? "/dashboard/" : "/",
+  build: {
+    emptyOutDir: true,
+    outDir: path.resolve(projectRoot, "../viz/dashboard"),
+  },
   plugins: [react(), tailwindcss(), svgr()],
   resolve: {
     alias: {
       "@": path.resolve(projectRoot, "./src"),
     },
   },
-})
+}))

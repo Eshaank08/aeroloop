@@ -43,6 +43,17 @@
   .row { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
   .row span:last-child { color: var(--ink); font-weight: 650; text-align: right; }
   .steps { overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+  .waiting-banner { display: flex; gap: 10px; align-items: center; margin: 1px 0 10px;
+    padding: 11px 12px; border: 1px solid rgba(40, 94, 209, .24); border-radius: 9px;
+    background: rgba(40, 94, 209, .09); color: var(--ink); }
+  .waiting-pulse { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%;
+    background: var(--devin); box-shadow: 0 0 0 0 rgba(40, 94, 209, .42);
+    animation: waiting-pulse 1.35s ease-out infinite; }
+  .waiting-banner strong { display: block; font-size: 13px; }
+  .waiting-banner span { display: block; margin-top: 2px; color: var(--dim); font-size: 11.5px; }
+  @keyframes waiting-pulse { 70% { box-shadow: 0 0 0 7px rgba(40, 94, 209, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(40, 94, 209, 0); } }
+  @media (prefers-reduced-motion: reduce) { .waiting-pulse { animation: none; } }
   .step { border-left: 2px solid var(--devin); padding: 7px 0 7px 9px; margin-bottom: 8px; }
   .step.rejected { border-left-color: var(--bad); }
   .step.safety { border-left-color: var(--warn); }
@@ -483,9 +494,22 @@ function renderDecisions() {
   renderDecisionSteps(mission ? mission.artifact.steps : []);
 }
 
+function showWaitingBanner(message) {
+  const banner = document.createElement('div');
+  banner.className = 'waiting-banner';
+  banner.setAttribute('role', 'status');
+  banner.setAttribute('aria-live', 'polite');
+  banner.innerHTML =
+    `<div class="waiting-pulse" aria-hidden="true"></div>` +
+    `<div><strong>Please wait — preparing the drone</strong>` +
+    `<span>${escapeHtml(message || 'Flight will begin when the mission is ready.')}</span></div>`;
+  el('steps').prepend(banner);
+}
+
 function renderJobProgress(job) {
   renderDecisionSteps(job.steps || []);
   const host = el('steps');
+  showWaitingBanner(job.message || 'Checking the mission and planning a safe route.');
   const live = document.createElement('div');
   live.className = 'step active';
   const observation = (job.current_step || {}).observation || {};
@@ -531,10 +555,8 @@ function resetMissionForStart(planner, text) {
     ? 'Live Devin decisions'
     : 'Live local test-pilot decisions';
   el('m-session').innerHTML = '<span class="tag">backend mission running</span>';
-  el('steps').innerHTML =
-    `<div class="step active"><div class="saw">New mission</div>` +
-    `<div class="head"><span class="prim">Starting “${escapeHtml(text)}”</span>` +
-    `<span class="verdict">working</span></div></div>`;
+  el('steps').innerHTML = '';
+  showWaitingBanner(`Starting “${text}”. Flight will begin when planning and safety checks finish.`);
 }
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));

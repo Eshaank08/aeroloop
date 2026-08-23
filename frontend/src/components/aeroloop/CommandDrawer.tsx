@@ -3,14 +3,12 @@ import { useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { CommandDrone } from "@/components/aeroloop/CommandDrone"
 import type { CommandEntry, SimulatorPlanner, SimulatorState } from "@/types/aeroloop"
 
 interface CommandDrawerProps {
   commandText: string
   contextLabel: string
   entries: CommandEntry[]
-  isMotionPaused: boolean
   isRunning: boolean
   planner: SimulatorPlanner
   simulatorMessage: string
@@ -20,6 +18,12 @@ interface CommandDrawerProps {
   onPlannerChange: (planner: SimulatorPlanner) => void
   onSubmit: () => void
 }
+
+const missionOptions = [
+  { label: "Full sweep", command: "full sweep, light wind seed 606061" },
+  { label: "Top side", command: "inspect top side, light wind seed 606076" },
+  { label: "Ring 2", command: "inspect ring 2, calm seed 200" },
+] as const
 
 const stateLabels: Record<SimulatorState, string> = {
   idle: "Connecting",
@@ -34,7 +38,6 @@ export function CommandDrawer({
   commandText,
   contextLabel,
   entries,
-  isMotionPaused,
   isRunning,
   planner,
   simulatorMessage,
@@ -72,12 +75,18 @@ export function CommandDrawer({
       <section className="shrink-0 border-b border-aero-brown px-5 py-4">
         <p className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-paper/55">Current mission</p>
         <p aria-live="polite" className="mt-2 text-[12px] leading-5 text-aero-paper/80">{simulatorMessage}</p>
+        {isRunning ? (
+          <div aria-live="assertive" className="mt-3 border border-aero-sun bg-aero-sun px-3 py-2 text-aero-navy">
+            <p className="aero-mono text-[10px] font-bold uppercase tracking-[.12em]">Please wait — mission in progress</p>
+            <p className="mt-1 text-[10px] leading-4">Mission Decisions and the 3D flight will update automatically.</p>
+          </div>
+        ) : null}
         <div className="aero-mono mt-3 flex items-center justify-between border-t border-aero-paper/15 pt-3 text-[9px] uppercase text-aero-sun">
           <span>Plan</span><span>→</span><span>Fly</span><span>→</span><span>Verify</span>
         </div>
       </section>
       <section aria-labelledby="command-log-title" className="command-log min-h-0 flex-1 overflow-y-auto px-5 py-4" ref={logRef}>
-        <p className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-paper/55" id="command-log-title">Mission timeline</p>
+        <p className="aero-mono text-[9px] uppercase tracking-[.18em] text-aero-paper/55" id="command-log-title">Mission Decisions</p>
         <div className="mt-3 space-y-0" id="command-entries">
           {entries.map((entry) => (
             <article className={`command-entry border-b border-aero-paper/15 py-4 pl-3 ${entry.alert ? "command-alert" : ""}`} key={entry.id}>
@@ -105,6 +114,23 @@ export function CommandDrawer({
             <option value="baseline">Local test pilot</option>
           </select>
         </label>
+        <fieldset className="mt-3" disabled={isRunning}>
+          <legend className="aero-mono text-[9px] uppercase tracking-[.12em] text-aero-paper/55">Choose an inspection</legend>
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            {missionOptions.map((option) => (
+              <Button
+                aria-pressed={commandText === option.command}
+                className={`min-h-[42px] rounded-none border px-2 text-[10px] ${commandText === option.command ? "border-aero-sun bg-aero-sun text-aero-navy hover:bg-aero-sun" : "border-aero-paper/25 bg-aero-navy text-aero-paper/75 hover:border-aero-sun hover:bg-aero-navy hover:text-aero-sun"}`}
+                key={option.label}
+                onClick={() => onCommandChange(option.command)}
+                type="button"
+                variant="outline"
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </fieldset>
         <div className={`command-flightbox relative mt-3 overflow-hidden border border-aero-paper/30 bg-aero-navy ${isRunning ? "is-rendering" : ""}`} id="command-flightbox">
           <Textarea
             aria-describedby="command-help"
@@ -112,11 +138,10 @@ export function CommandDrawer({
             disabled={isRunning}
             id="command-input"
             onChange={(event) => onCommandChange(event.target.value)}
-            placeholder="Ask for a stage or next action."
+            placeholder="Or customize the mission command."
             rows={2}
             value={commandText}
           />
-          <CommandDrone isMotionPaused={isMotionPaused} isVisible={!isRunning} />
         </div>
         <div aria-hidden="true" className={`command-progress mt-3 h-[2px] w-0 bg-aero-sun ${isRunning ? "is-running" : ""}`} id="command-progress" />
         <p className="mt-2 text-[9px] leading-4 text-aero-paper/45" id="command-help">Starts a real backend mission. A running mission completes or safely stops under backend control.</p>

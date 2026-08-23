@@ -348,6 +348,7 @@ scene.add(trail);
 let markers = [];
 let viewMarkers = [];
 let mission = null;
+let devinAccessToken = '';
 let frames = [];
 let cursor = 0;
 let playing = false;
@@ -724,18 +725,29 @@ async function runMission() {
     return;
   }
   if (button.disabled) return;
+  if (planner === 'devin' && !devinAccessToken) {
+    const entered = window.prompt('Enter the temporary judge access code for a live Devin mission:');
+    if (!entered) {
+      el('status').textContent = 'Live Devin mission cancelled. No access code was sent.';
+      return;
+    }
+    devinAccessToken = entered.trim();
+  }
   button.disabled = true;
   setMissionMenuOpen(false);
   resetMissionForStart(planner, text);
   el('status').textContent = 'Submitting the mission to the backend…';
   try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (planner === 'devin') headers.Authorization = `Bearer ${devinAccessToken}`;
     const response = await fetch('/api/mission/start', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ text, planner }),
     });
     const started = await response.json();
     if (!response.ok || !started.ok) {
+      if (response.status === 401) devinAccessToken = '';
       throw new Error(started.reply || 'The backend refused the mission.');
     }
     el('status').textContent = started.reply;
@@ -858,7 +870,11 @@ requestAnimationFrame(animate);
 // Ask the server whether it can fly a live mission at all, so the Devin option is
 // never offered by a server that was started without credentials.
 fetch('/api/capabilities').then((r) => r.json()).then((caps) => {
-  if (caps.devin_available) return;
+  if (caps.devin_available) {
+    const option = el('planner').querySelector('option[value="devin"]');
+    option.textContent = 'Devin (live API, access code required)';
+    return;
+  }
   const option = el('planner').querySelector('option[value="devin"]');
   option.textContent = 'Devin (no credentials on this server)';
   option.disabled = true;

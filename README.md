@@ -63,7 +63,7 @@ Full narrative and numbers in [docs/RESULTS.md](docs/RESULTS.md).
 
 ```bash
 python -m pip install -r requirements.txt
-python -m pytest -q                                   # 142 passed
+python -m pytest -q                                   # 148 passed
 ```
 
 Verifier for simulator v1, the point mass sweep:
@@ -105,6 +105,27 @@ and **Start mission** runs a fresh mission from the plain-English request and ch
 planner. The mission view is the judge-facing explanation; `/backend_view.html` is the
 auditable protocol and API record.
 
+### Deploy on Railway
+
+`railway.json` runs the same frontend and Python mission API as one service. Railway
+supplies `PORT`; the server binds publicly only when that variable is present, exposes
+`/health`, and sends `/` to the judge-facing mission view. Baseline missions and the
+recorded Devin run work without credentials.
+
+Live Devin missions remain disabled until all four server-side variables are set:
+
+```text
+DEVIN_API_KEY
+DEVIN_ORG_ID
+AEROLOOP_DEMO_TOKEN
+AEROLOOP_DEVIN_MAX_ACU     # integer from 1 through 20
+```
+
+The access token is entered by a judge at runtime and kept only in that page's memory.
+It is never embedded in frontend JavaScript. The HTTP boundary also enforces same-origin
+POSTs, bounded bodies and mission inputs, request-rate and concurrent-mission limits,
+security headers, and an independent per-mission Devin spending ceiling.
+
 ### Submission requirement
 
 This challenge requires a recognized Entire checkpoint branch or ref, not only a code
@@ -136,7 +157,7 @@ handful of live runs, not a soak test. Treat it as demonstrated, not battle test
 
 | What | Result | Command |
 | ---- | ------ | ------- |
-| Test suite | 142 passed | `python -m pytest -q` |
+| Test suite | 148 passed | `python -m pytest -q` |
 | Sim v1 batch | 30/30 PASS, 100.0% mean coverage, 0 collisions | `python -m sim.run_verifier --scenarios 30 --seed 1000` |
 | Sim v2 batch | 30/30 PASS, 99.9% mean coverage, 719/720 waypoints | `python -m sim2.run_verifier --scenarios 30 --seed 1000` |
 | Mission loop, baseline agent, seeds 1000 to 1029 | 29/30 PASS, 98.6% mean coverage | `python scripts/run_autonomous_mission.py --seed <n> --planner baseline` |

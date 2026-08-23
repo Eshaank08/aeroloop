@@ -247,9 +247,10 @@ all three of these, on at least 90% of scenarios:
 | Safety   | zero collisions with the nacelle, in every single scenario |
 | Time     | sweep completed within the time budget                     |
 
-The 95% coverage bar mirrors the real industry benchmark for autonomous aircraft
-inspection (99.1% autonomous vs 78% manual walk-around), so it is a credible target,
-not an invented one.
+The 95% coverage bar is our own engineering threshold, set deliberately below the full
+coverage that the inspection-planning literature targets. The verifier is here to grade
+robustness under wind, not geometric completeness, and the five points of slack are
+exactly where the wind is allowed to hurt you. Collisions get no such slack.
 
 ### How to check your own work
 
@@ -258,11 +259,12 @@ pytest -q
 ```
 
 That runs the full verifier. It prints a per-scenario report plus a final PASS/FAIL.
-The default batch uses 30 scenarios and base seed 1000. To verify against a
-judge-supplied seed, override both values with environment variables:
+The default batch uses 30 scenarios and base seed 1000, on the `standard-sweep` job.
+To verify against a different job or a judge-supplied seed, override with environment
+variables:
 
 ```bash
-AEROLOOP_SCENARIOS=5 AEROLOOP_BASE_SEED=4242 pytest -q
+AEROLOOP_JOB=dense-sweep AEROLOOP_SCENARIOS=5 AEROLOOP_BASE_SEED=4242 pytest -q
 ```
 
 You can also run it directly for more detail:
@@ -274,8 +276,21 @@ python -m sim.run_verifier --scenarios 30 --verbose
 The equivalent judge-seed command is:
 
 ```bash
-python -m sim.run_verifier --scenarios 5 --seed 4242 --verbose
+python -m sim.run_verifier --job dense-sweep --scenarios 5 --seed 4242 --verbose
 ```
+
+### Inspection jobs
+
+A job is one inspection request: a nacelle geometry, a viewpoint layout, and a time
+budget. `sim/jobs.py` defines them, and the same `Controller` class must handle
+whichever one it is given. The geometry arrives through `__init__`, so do not hardcode
+anything you can read off `nacelle` and `limits`.
+
+| Job                | Geometry                            | Waypoints | Budget |
+| ------------------ | ----------------------------------- | --------- | ------ |
+| `standard-sweep`   | widebody, 3.2 m diameter, 4.5 m     | 24        | 120 s  |
+| `dense-sweep`      | same airframe, dense viewpoint set  | 60        | 120 s  |
+| `narrowbody-sweep` | A320 class, 2.7 m diameter, 3.0 m   | 24        | 90 s   |
 
 Iterate until `pytest` passes. Collisions are the hardest constraint: a controller that
 covers every waypoint but clips the nacelle once is a FAIL, not a near-miss.

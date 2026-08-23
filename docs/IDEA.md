@@ -11,15 +11,22 @@ approving only the final step before it would ever fly near a real aircraft.
 Autonomous drone-based aircraft inspection is a real, already-approved, currently-scaling
 practice in 2026. This is not a scenario invented for a pitch.
 
-- **FAA Part 145 and EASA Part 145** both approve drone inspection for General and
-  Detailed Visual Inspection.
-- **Airbus** approved it for the A320 family. **Boeing** added it to the 737 maintenance
-  manual.
-- Airlines and MROs already running it: **AAR, Austrian Airlines, KLM, LATAM**, via
-  providers like **Donecle** and **Mainblades**.
-- The real performance bar: **99.1% inspection coverage autonomous vs 78% for a manual
-  walk-around**. A full widebody scan runs under two hours; Donecle does a full fuselage
-  scan in under fifteen minutes.
+- **Airbus** wrote a drone inspection task into the A320-family maintenance manual,
+  valid worldwide. **Boeing** added drone inspection to the 737 maintenance manual. An
+  OEM manual task is the real bar in this industry, and it is a stronger claim than a
+  blanket "the regulator approves drones" line, which is not how airworthiness works.
+- **Airbus's own number:** an inspection that used to take up to a full day now takes
+  about three hours, of which roughly thirty minutes is the drone actually flying.
+- Airlines and MROs already running it: **AAR** with Donecle, **KLM** with Mainblades,
+  **Jet Aviation** for general visual and lightning-strike inspection.
+- **Donecle** covers all upper aircraft surfaces in under forty-five minutes, capturing
+  on the order of a thousand images.
+
+Sources, all primary or trade press, all checkable live during Q&A:
+[Airbus press release](https://www.airbus.com/en/newsroom/press-releases/2018-04-airbus-launches-advanced-indoor-inspection-drone-to-reduce-aircraft),
+[Donecle](https://www.donecle.com/portfolio/advanced-drone-inspection/),
+[AAR](https://www.aarcorp.com/en/newsroom/press-releases/2019/aar-launches-donecle-drone-technology-integration-for-mro-aircraft-inspections/),
+[Aviation Week](https://aviationweek.com/mro/emerging-technologies/aircraft-inspections-drones-accelerate-toward-next-evolution).
 
 So the question "should drones inspect aircraft" is already settled by the industry. Our
 question is sharper and harder to argue with:
@@ -137,6 +144,17 @@ Track this honestly as it happens. Current record:
    A regression test in `tests/test_sim2_verifier.py` pins the invariant: a run that consumes
    the full tick budget reports elapsed exactly equal to the budget and is not failed for
    exceeding it.
+
+12. **Went to source on our own headline statistic and found it did not hold.** The
+    "99.1% autonomous vs 78% manual walk-around" figure, and the claim that FAA and EASA
+    Part 145 approve drone inspection, both traced back to a single maintenance-software
+    vendor's auto-generated marketing pages, with no author, no study and no citation
+    behind them. Part 145 also approves repair station organisations rather than
+    technologies, so the regulatory claim was mis-framed even setting the sourcing aside.
+    We cut both and rebuilt the industry case on OEM primary sources: Airbus and Boeing
+    writing drone inspection into their maintenance manuals, and Airbus's own
+    one-day-to-three-hours figure. The evidence reads weaker on a slide and is far
+    stronger under questioning, which is the trade we wanted.
 
 What we would say to a judge about the shape of that change: the first version put an
 agent inside a build loop, which is a thing Devin already does well. The version we

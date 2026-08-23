@@ -30,10 +30,11 @@ by a person walking around it with a torch.
 
 - Global aviation MRO demand was **$136 billion in 2025** and is expected to approach
   **$193 billion by 2030** (Oliver Wyman, Global Fleet and MRO Market Forecast 2026-2036).
-- Manual walk-around inspection averages **78% surface coverage**. Autonomous drone
-  inspection reaches **99.1%**.
-- Typical manual miss rate is around **15%**. Automation raises detection by about
-  **27 percentage points**.
+- **Airbus** wrote a drone inspection task into the A320-family maintenance manual.
+  **Boeing** added drone inspection to the 737 manual. The practice is approved and
+  running today.
+- Airbus's own figure: an inspection that took **up to a full day now takes about three
+  hours**, of which roughly **thirty minutes** is the drone actually flying.
 - Nacelle inspection is the awkward case. The fan cowl latches sit low on the underside,
   a zone the Aviation Safety Network timeline describes as one that "can only be
   inspected by crawling under it." Over three decades there are **45 or more** documented
@@ -61,10 +62,10 @@ announces itself. Flight software already works that way.
   already trusts it.
 - The verdict is numeric and adversarial: waypoint coverage, collision count, elapsed
   time, on seeded randomized winds. A controller cannot pass by memorising one scenario.
-- Regulators already accept the practice. FAA Part 145 and EASA Part 145 approve drone
-  General and Detailed Visual Inspection. Airbus approved it for the A320 family, Boeing
-  added it to the 737 maintenance manual. AAR, Austrian Airlines, KLM and LATAM run it
-  through providers such as Donecle and Mainblades.
+- The industry already accepts the practice, and the bar that matters is the OEM
+  maintenance manual rather than a blanket technology approval. Airbus wrote drone
+  inspection into the A320-family manual, Boeing added it to the 737 manual, and AAR,
+  KLM and Jet Aviation run it through providers such as Donecle and Mainblades.
 
 So the question "should drones inspect aircraft" is settled. Our question is narrower:
 can an AI engineer build, verify and then actually run that mission on its own.
@@ -416,9 +417,9 @@ that puts Devin inside the mission loop, and we can tell you exactly which parts
 
 AeroLoop is Devin for autonomous physical inspection.
 
-Aircraft inspection has a real problem: a manual walk around covers about 78% of the
-surface, autonomous drone inspection covers 99.1%, and a panel that was never covered is
-not clean, it is unseen. That is a $136 billion MRO market today.
+Aircraft inspection has a real problem, and it is not accuracy. The failure mode is not
+a bad reading, it is no reading: a panel that was never covered at the right distance and
+angle is not clean, it is unseen. That is a $136 billion MRO market today.
 
 We started by having Devin write the flight controller for a nacelle inspection drone,
 against a verifier that existed before it wrote a line. Thirty out of thirty, 100%
@@ -439,9 +440,10 @@ Everything is simulated and no drone has flown. Every number I just gave you is 
 ## 3 minute script
 
 **The problem, 30 seconds.** An aircraft on the ground earns nothing, and the inspection
-keeping it there is a person walking around it with a torch. Manual walk around coverage
-averages 78%. Autonomous drone inspection reaches 99.1%. The miss rate on manual is around
-15%. And the failure mode is not a bad reading, it is no reading: a nacelle panel that was
+keeping it there is a person walking around it with a torch. Airbus and Boeing have both
+written drone inspection into their maintenance manuals, and Airbus's own number is an
+inspection dropping from up to a day to about three hours. But the failure mode is not a
+bad reading, it is no reading: a nacelle panel that was
 never covered at the right distance and angle is not clean, it is unseen. That is where
 things like the Southwest 1380 fan blade crack and forty five A320 fan cowl door losses
 live. Global MRO demand was $136 billion in 2025, heading for $193 billion by 2030.

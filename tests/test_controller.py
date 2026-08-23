@@ -11,6 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from controller import Controller  # noqa: E402
+from sim.jobs import DEFAULT_JOB, get_job  # noqa: E402
 from sim.run_verifier import verify  # noqa: E402
 
 
@@ -27,10 +28,14 @@ def _env_int(name, default):
 def test_controller_passes_verification():
     scenarios = _env_int("AEROLOOP_SCENARIOS", 30)
     base_seed = _env_int("AEROLOOP_BASE_SEED", 1000)
+    job = get_job(os.environ.get("AEROLOOP_JOB", DEFAULT_JOB))
+    print(f"job: {job.name}\n  {job.summary}")
     ok, results = verify(
         Controller,
         count=scenarios,
         base_seed=base_seed,
+        nacelle=job.nacelle,
+        limits=job.limits,
         verbose=True,
     )
     n_pass = sum(r.passed for r in results)
@@ -39,7 +44,7 @@ def test_controller_passes_verification():
     assert ok, (
         f"verification FAILED: {n_pass}/{len(results)} scenarios passed, "
         f"mean coverage {mean_cov * 100:.1f}%, total collisions {collisions}, "
-        f"scenarios={scenarios}, base_seed={base_seed}. "
+        f"job={job.name}, scenarios={scenarios}, base_seed={base_seed}. "
         "Every scenario needs coverage >= 95%, zero collisions, and completion "
         "inside the time budget."
     )

@@ -87,10 +87,11 @@ Nothing on screen but a clean terminal.
 
 Say:
 
-> Aircraft engine inspection by drone is already approved and already running: FAA and
-> EASA Part 145, Airbus on the A320 family, Boeing in the 737 manual, airlines like KLM
-> and Austrian. The published bar is 99.1 percent coverage autonomous against 78 percent
-> for a manual walk-around. So the industry question is settled. Ours is sharper: can an
+> Aircraft engine inspection by drone is already approved and already running. Airbus
+> wrote it into the A320-family maintenance manual, Boeing into the 737 manual, and
+> airlines like KLM and AAR run it today. Airbus's own number: an inspection that took up
+> to a day now takes about three hours. So the industry question is settled. Ours is
+> sharper: can an
 > AI engineer build, verify and then actually fly that software on its own?
 >
 > Two loops. Devin writes the flight controller and a hidden adversarial verifier grades

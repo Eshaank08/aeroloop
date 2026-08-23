@@ -15,6 +15,9 @@ get complete, usable capture geometry without hitting the engine, floor or movin
 safety radius and inside its time budget. The original batch verifier remains unchanged
 for an apples-to-apples controller score.
 
+Simulator - https://aeroloop-production.up.railway.app/mission_view.html (Takes time to load)
+Dashboard - https://aeroloop-production.up.railway.app/dashboard/
+
 ## The two loops
 
 **1. The engineering loop (Devin writes the software).** `scripts/trigger_devin.py`

@@ -57,14 +57,23 @@ def same_origin(address):
 def test_root_health_and_security_headers_are_cloud_ready(http_server):
     status, headers, _ = request(http_server, "GET", "/")
     assert status == 302
-    assert headers["Location"] == "/mission_view.html"
+    assert headers["Location"] == "/dashboard/"
+
+    status, _, body = request(http_server, "GET", "/dashboard/")
+    assert status == 200
+    assert b'<div id="root"></div>' in body
+
+    status, _, body = request(http_server, "GET", "/mission_view.html?embedded=1")
+    assert status == 200
+    assert b"aeroloop-dashboard" in body
 
     status, headers, body = request(http_server, "GET", "/health")
     assert status == 200
     assert json.loads(body) == {"status": "ok", "service": "aeroloop"}
     assert headers["X-Content-Type-Options"] == "nosniff"
-    assert headers["X-Frame-Options"] == "DENY"
-    assert "frame-ancestors 'none'" in headers["Content-Security-Policy"]
+    assert headers["X-Frame-Options"] == "SAMEORIGIN"
+    assert "frame-ancestors 'self'" in headers["Content-Security-Policy"]
+    assert "frame-src 'self'" in headers["Content-Security-Policy"]
     assert "connect-src 'self' blob:" in headers["Content-Security-Policy"]
     assert "worker-src 'self' blob:" in headers["Content-Security-Policy"]
     assert "Access-Control-Allow-Origin" not in headers
@@ -262,3 +271,4 @@ def test_railway_config_has_explicit_start_and_healthcheck():
     assert config["build"]["builder"] == "RAILPACK"
     assert config["deploy"]["startCommand"] == "python -m viz.server"
     assert config["deploy"]["healthcheckPath"] == "/health"
+    assert Path("viz/dashboard/index.html").is_file()

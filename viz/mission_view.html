@@ -119,9 +119,21 @@
     #scrub { width:120px; }
     #controls { gap:5px; }
   }
+  body.embedded #sidebar,
+  body.embedded #menu-toggle,
+  body.embedded #decisions { display:none !important; }
+  body.embedded #controls { width:calc(100vw - 24px); max-width:680px; min-width:0; bottom:12px; }
+  body.embedded #status { display:block; top:12px; bottom:auto; max-width:calc(100vw - 32px);
+    padding:7px 10px; border:1px solid var(--line); border-radius:7px; background:var(--panel); }
+  @media (max-width: 480px) {
+    body.embedded .playback-label,
+    body.embedded .zoom-group { display:none; }
+    body.embedded #scrub { width:82px; }
+  }
 </style>
 </head>
 <body>
+<script>if (new URLSearchParams(location.search).get('embedded') === '1') document.body.classList.add('embedded');</script>
 <div id="scene"></div>
 <button id="menu-toggle" aria-controls="sidebar" aria-expanded="false">Mission menu</button>
 <aside id="sidebar" aria-label="Mission menu">
@@ -234,6 +246,10 @@ const KEEP_OUT_RADIUS = 2.1;
 const GROUND_Z_M = -4.5;
 
 const el = (id) => document.getElementById(id);
+const notifyDashboard = (type, payload = {}) => {
+  if (window.parent === window) return;
+  window.parent.postMessage({ source: 'aeroloop-simulator', type, ...payload }, window.location.origin);
+};
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xd8e3ed);
 scene.fog = new THREE.Fog(0xd8e3ed, 25, 75);
@@ -529,6 +545,11 @@ function renderJobProgress(job) {
     (step.decision || {}).decision === 'rejected').length;
   el('m-actions').textContent = `${accepted} accepted / ${blocked} blocked`;
   el('status').textContent = job.message;
+  notifyDashboard('progress', {
+    message: job.message,
+    stage: job.stage,
+    planner: el('planner').value,
+  });
 }
 
 function resetMissionForStart(planner, text) {
@@ -760,6 +781,11 @@ async function runMission() {
   setMissionMenuOpen(false);
   resetMissionForStart(planner, text);
   el('status').textContent = 'Submitting the mission to the backend…';
+  notifyDashboard('starting', {
+    message: `Submitting “${text}” to the AeroLoop backend.`,
+    stage: 'submitting',
+    planner,
+  });
   try {
     const headers = { 'Content-Type': 'application/json' };
     if (planner === 'devin' && devinAccessToken) {
@@ -776,14 +802,29 @@ async function runMission() {
       throw new Error(started.reply || 'The backend refused the mission.');
     }
     el('status').textContent = started.reply;
+    notifyDashboard('accepted', {
+      message: started.reply,
+      stage: 'accepted',
+      planner,
+    });
     const data = await waitForMission(started.job_id);
     follow = true;
     el('cam').classList.add('on');
     el('cam').textContent = 'Follow';
     applyMission(data, { autoplay: true });
+    const verification = data.artifact.verification;
+    notifyDashboard('complete', {
+      message: data.reply,
+      disposition: data.artifact.final_disposition,
+      inspectedCount: verification.inspected_count,
+      waypointCount: verification.waypoint_count,
+      planner: data.artifact.planner,
+    });
   } catch (error) {
-    el('status').textContent = `Mission request failed: ${error.message || error}`;
+    const message = `Mission request failed: ${error.message || error}`;
+    el('status').textContent = message;
     el('m-verdict').innerHTML = '<span class="aborted">FAILED</span>';
+    notifyDashboard('failed', { message, stage: 'failed', planner });
   } finally {
     button.disabled = false;
   }
@@ -795,6 +836,20 @@ function syncMissionReady() {
   el('run').disabled = !el('order').value.trim();
 }
 el('order').addEventListener('input', syncMissionReady);
+addEventListener('message', (event) => {
+  if (
+    event.origin !== window.location.origin
+    || event.source !== window.parent
+    || event.data?.source !== 'aeroloop-dashboard'
+    || event.data?.type !== 'run-mission'
+  ) return;
+  const command = String(event.data.command || '').trim();
+  if (!command) return;
+  el('order').value = command;
+  el('planner').value = event.data.planner === 'baseline' ? 'baseline' : 'devin';
+  syncMissionReady();
+  runMission();
+});
 document.querySelectorAll('.ex').forEach((chip) => {
   chip.onclick = () => {
     el('order').value = chip.textContent;
@@ -901,6 +956,10 @@ fetch('/api/capabilities').then((r) => r.json()).then((caps) => {
     option.textContent = devinRequiresAccessCode
       ? 'Devin (live API, access code required)'
       : 'Devin (live public demo)';
+    notifyDashboard('ready', {
+      message: 'Simulator connected. Choose Devin or the local test pilot, then send a mission.',
+      devinAvailable: true,
+    });
     return;
   }
   const option = el('planner').querySelector('option[value="devin"]');
@@ -908,7 +967,13 @@ fetch('/api/capabilities').then((r) => r.json()).then((caps) => {
   option.disabled = true;
   el('planner').value = 'baseline';
   el('status').textContent = caps.reason;
-}).catch(() => {});
+  notifyDashboard('ready', {
+    message: 'Simulator connected. Local test pilot available; live Devin is disabled here.',
+    devinAvailable: false,
+  });
+}).catch(() => {
+  notifyDashboard('failed', { message: 'The simulator capability check failed.' });
+});
 
 // Load the last recorded mission if one is on disk, so the view is never empty.
 fetch('/data3/mission_trace.json').then((r) => r.ok ? r.json() : null).then((trace) => {

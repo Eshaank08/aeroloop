@@ -1,0 +1,388 @@
+@import "tailwindcss";
+
+:root {
+  --aero-blue: #00508F;
+  --aero-brown: #4F3815;
+  --aero-amber: #8F5601;
+  --aero-navy: #14293A;
+  --aero-sun: #FFCD82;
+  --aero-sky: #ADDBFF;
+  --aero-paper: #FFF8ED;
+  --aero-mist: #EAF4F5;
+  --aero-ink: #14293A;
+  --aero-muted: #64717A;
+  --aero-danger: #B85B3F;
+  --aero-cyan: #6CB8D9;
+  --aero-copper: #C88D43;
+  --aero-line: rgba(20, 41, 58, .24);
+  --aero-dark-line: rgba(255, 248, 237, .24);
+
+  --background: var(--aero-paper);
+  --foreground: var(--aero-ink);
+  --primary: var(--aero-blue);
+  --primary-foreground: var(--aero-paper);
+  --secondary: var(--aero-sun);
+  --secondary-foreground: var(--aero-navy);
+  --muted: var(--aero-mist);
+  --muted-foreground: var(--aero-muted);
+  --accent: var(--aero-sun);
+  --accent-foreground: var(--aero-navy);
+  --destructive: var(--aero-danger);
+  --border: var(--aero-line);
+  --input: var(--aero-line);
+  --ring: var(--aero-sun);
+  --radius: 0px;
+}
+
+@theme inline {
+  --color-aero-blue: var(--aero-blue);
+  --color-aero-brown: var(--aero-brown);
+  --color-aero-amber: var(--aero-amber);
+  --color-aero-navy: var(--aero-navy);
+  --color-aero-sun: var(--aero-sun);
+  --color-aero-sky: var(--aero-sky);
+  --color-aero-paper: var(--aero-paper);
+  --color-aero-mist: var(--aero-mist);
+  --color-aero-ink: var(--aero-ink);
+  --color-aero-muted: var(--aero-muted);
+  --color-aero-danger: var(--aero-danger);
+  --color-aero-cyan: var(--aero-cyan);
+  --color-aero-copper: var(--aero-copper);
+  --font-display: 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+  --font-sans: 'Avenir Next', Inter, system-ui, sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  *, ::before, ::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    background: var(--aero-paper);
+  }
+
+  body {
+    min-width: 320px;
+    margin: 0;
+    background: var(--aero-paper);
+    color: var(--aero-ink);
+    font-family: 'Avenir Next', Inter, system-ui, sans-serif;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button,
+  textarea,
+  input {
+    font: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  ::selection {
+    background: var(--aero-sun);
+    color: var(--aero-navy);
+  }
+}
+
+@layer components {
+  .aero-app {
+    min-height: 100vh;
+    overflow-x: clip;
+    color: var(--aero-ink);
+    background: var(--aero-paper);
+  }
+
+  .aero-display {
+    font-family: 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+  }
+
+  .aero-mono {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .index-rail {
+    background: var(--aero-navy);
+    color: var(--aero-paper);
+  }
+
+  .rail-link {
+    border-left: 2px solid transparent;
+    color: rgba(255, 248, 237, .72);
+    text-decoration: none;
+    transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+  }
+
+  .rail-link:hover,
+  .rail-link:focus-visible {
+    background: rgba(255, 205, 130, .14);
+    color: var(--aero-paper);
+    outline: none;
+  }
+
+  .rail-link[aria-current='true'] {
+    border-left-color: var(--aero-blue);
+    background: var(--aero-sun);
+    color: var(--aero-navy);
+  }
+
+  .rail-link[aria-current='true'] .rail-index {
+    color: var(--aero-navy);
+  }
+
+  .rail-name {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+
+  .hero-surface {
+    background: var(--aero-sky);
+  }
+
+  .hero-grid {
+    background-image: linear-gradient(rgba(0, 80, 143, .1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 80, 143, .1) 1px, transparent 1px);
+    background-size: 38px 38px;
+  }
+
+  .hero-image {
+    filter: saturate(1.08) contrast(1.12) brightness(1.01);
+    mix-blend-mode: multiply;
+  }
+
+  .hero-wash {
+    background: linear-gradient(180deg, rgba(173, 219, 255, .02) 0%, rgba(255, 248, 237, .02) 45%, rgba(255, 248, 237, .18) 100%);
+  }
+
+  .registration-cross {
+    stroke: var(--aero-blue);
+    stroke-width: 1.5;
+    opacity: .7;
+  }
+
+  .route-line {
+    stroke: var(--aero-blue);
+    stroke-dasharray: 9 9;
+    animation: route-dash 2.2s linear infinite;
+  }
+
+  .route-line.route-hot {
+    stroke: var(--aero-sun);
+    stroke-width: 3;
+    stroke-dasharray: 5 8;
+  }
+
+  .cloud-shelf {
+    clip-path: polygon(0 38%, 9% 30%, 16% 36%, 25% 22%, 34% 37%, 44% 25%, 52% 40%, 62% 23%, 71% 36%, 80% 27%, 89% 40%, 100% 28%, 100% 100%, 0 100%);
+    background: var(--aero-paper);
+  }
+
+  .craft-stage,
+  .craft-wrap {
+    transform-style: preserve-3d;
+  }
+
+  .craft-stage {
+    perspective: 900px;
+  }
+
+  .craft-wrap {
+    transform-origin: 50% 50%;
+    will-change: transform;
+    filter: drop-shadow(18px 18px 0 rgba(20, 41, 58, .14));
+  }
+
+  .craft-svg {
+    overflow: visible;
+    transform: rotateX(54deg) rotateY(-12deg) rotateZ(-4deg);
+    transform-origin: 50% 50%;
+  }
+
+  .craft-top { fill: var(--aero-paper); stroke: var(--aero-navy); stroke-width: 2.2; }
+  .craft-side { fill: var(--aero-blue); stroke: var(--aero-navy); stroke-width: 2.2; }
+  .craft-shadow { fill: var(--aero-brown); opacity: .9; }
+  .craft-hot { fill: var(--aero-amber); stroke: var(--aero-navy); stroke-width: 1.8; }
+  .craft-light { fill: var(--aero-sun); }
+  .craft-window { fill: var(--aero-navy); stroke: var(--aero-blue); stroke-width: 1.6; }
+  .craft-label { fill: var(--aero-navy); font-family: 'SFMono-Regular', Consolas, monospace; font-size: 9px; letter-spacing: .12em; }
+
+  .chamfer {
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  }
+
+  .stage-row {
+    border-left: 2px solid rgba(0, 80, 143, .2);
+    transition: background-color .2s ease, border-color .2s ease;
+  }
+
+  .stage-row:hover,
+  .stage-row:focus-visible {
+    background: rgba(255, 205, 130, .12);
+    outline: none;
+  }
+
+  .stage-row.stage-current {
+    border-left-color: var(--aero-amber);
+    background: rgba(255, 205, 130, .24);
+  }
+
+  .stage-row.stage-complete .stage-dot { background: var(--aero-blue); }
+  .stage-row.stage-current .stage-dot { background: var(--aero-amber); box-shadow: 0 0 0 4px var(--aero-paper), 0 0 0 5px var(--aero-amber); }
+  .stage-row.stage-queued .stage-dot { border: 1px solid rgba(0, 80, 143, .5); background: var(--aero-paper); }
+
+  .engine-field {
+    color: var(--aero-paper);
+    background-color: #0B3D5F;
+    background-image: linear-gradient(rgba(173, 219, 255, .1) 1px, transparent 1px), linear-gradient(90deg, rgba(173, 219, 255, .1) 1px, transparent 1px);
+    background-size: 42px 42px;
+  }
+
+  .engine-outer { fill: rgba(20, 41, 58, .82); stroke: var(--aero-paper); stroke-width: 3.5; }
+  .engine-shell { fill: rgba(255, 248, 237, .12); stroke: var(--aero-paper); stroke-width: 2; }
+  .engine-shell-float { fill: rgba(255, 248, 237, .18); stroke: var(--aero-paper); stroke-width: 2.2; }
+  .engine-panel { fill: rgba(0, 80, 143, .46); stroke: var(--aero-sky); stroke-width: 1.6; }
+  .engine-core { fill: rgba(20, 41, 58, .94); stroke: var(--aero-sun); stroke-width: 2; }
+  .engine-ring { fill: none; stroke: rgba(173, 219, 255, .68); stroke-width: 1.3; }
+  .engine-shaft { stroke: var(--aero-sun); stroke-width: 3.2; stroke-dasharray: 14 8; }
+  .engine-line { stroke: rgba(255, 248, 237, .58); stroke-width: 1.2; stroke-dasharray: 4 7; }
+  .engine-rotor { fill: var(--aero-paper); stroke: var(--aero-sky); stroke-width: 1.15; }
+  .engine-stator { fill: var(--aero-sky); stroke: var(--aero-paper); stroke-width: .9; opacity: .76; }
+  .engine-hot-blade { fill: var(--aero-sun); stroke: var(--aero-paper); stroke-width: 1; opacity: .9; }
+  .engine-section-cut { fill: url(#engine-section-hatch); stroke: var(--aero-paper); stroke-width: 1.2; opacity: .72; }
+  .engine-nozzle { fill: var(--aero-mist); stroke: var(--aero-paper); stroke-width: 2; }
+  .engine-nozzle-flap { fill: var(--aero-mist); stroke: var(--aero-paper); stroke-width: 1.5; }
+  .engine-datum { stroke: rgba(173, 219, 255, .46); stroke-width: 1; stroke-dasharray: 2 8; }
+  .engine-alert-zone { fill: rgba(255, 205, 130, .12); stroke: var(--aero-sun); stroke-width: 1.8; stroke-dasharray: 4 4; }
+  .engine-alert-mark { fill: var(--aero-sun); stroke: var(--aero-navy); stroke-width: 1.5; }
+  .engine-route { stroke: var(--aero-sun); stroke-width: 4; fill: none; stroke-linecap: square; stroke-dasharray: 12 9; opacity: .86; }
+  .engine-bracket { stroke: var(--aero-sun); stroke-width: 2; fill: none; }
+  .engine-callout { fill: none; stroke: var(--aero-sun); stroke-width: 1.4; stroke-dasharray: 3 4; opacity: .9; }
+  .engine-dot { fill: var(--aero-sun); stroke: var(--aero-navy); stroke-width: 1.5; }
+  .engine-caption { fill: var(--aero-paper); font-family: 'SFMono-Regular', Consolas, monospace; font-size: 10px; letter-spacing: .1em; }
+  .engine-caption-hot { fill: var(--aero-sun); font-family: 'SFMono-Regular', Consolas, monospace; font-size: 10px; letter-spacing: .1em; }
+  .engine-flow-core { fill: none; stroke: var(--aero-sun); stroke-width: 2.4; stroke-dasharray: 9 7; marker-end: url(#engine-flow-arrow); opacity: .95; }
+  .engine-flow-bypass { fill: none; stroke: var(--aero-sky); stroke-width: 2; stroke-dasharray: 7 8; marker-end: url(#engine-flow-arrow); opacity: .82; }
+
+  .telemetry-surface {
+    color: var(--aero-paper);
+    background: var(--aero-navy);
+  }
+
+  .telemetry-grid {
+    background-image: linear-gradient(rgba(255, 248, 237, .09) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 248, 237, .09) 1px, transparent 1px);
+    background-size: 46px 32px;
+  }
+
+  .trace-path { fill: none; stroke-width: 3; stroke-linecap: round; }
+  .threshold-line { stroke: var(--aero-danger); stroke-dasharray: 5 7; stroke-width: 1.5; }
+
+  .evidence-sheet {
+    border: 1px solid rgba(0, 80, 143, .28);
+    background: var(--aero-mist);
+    box-shadow: 9px 10px 0 rgba(20, 41, 58, .13);
+  }
+
+  .evidence-alert { border-top: 4px solid var(--aero-amber); }
+
+  .command-drawer {
+    border-left: 2px solid var(--aero-brown);
+    color: var(--aero-paper);
+    background: var(--aero-navy);
+  }
+
+  .command-log {
+    scrollbar-color: var(--aero-blue) var(--aero-navy);
+    scrollbar-width: thin;
+  }
+
+  .command-entry { border-left: 2px solid var(--aero-blue); }
+  .command-entry.command-alert { border-left-color: var(--aero-sun); }
+  .command-submit.is-ready { background: var(--aero-sun); color: var(--aero-navy); }
+  .command-submit.is-running { background: var(--aero-danger); color: var(--aero-paper); }
+  .context-attached { color: var(--aero-sun); }
+
+  .command-flightbox { min-height: 74px; }
+  .command-flightbox:focus-within { border-color: var(--aero-sun); }
+  .command-drone {
+    left: 10px;
+    top: 50%;
+    width: 58px;
+    height: 28px;
+    margin-top: -14px;
+    will-change: transform;
+  }
+  .command-drone svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .command-drone-shell { fill: var(--aero-navy); stroke: var(--aero-sun); stroke-width: 1.4; }
+  .command-drone-panel { fill: var(--aero-sun); stroke: var(--aero-paper); stroke-width: 1; }
+  .command-drone-arm { fill: none; stroke: var(--aero-paper); stroke-width: 1.2; stroke-linecap: round; }
+  .command-drone-rotor { fill: var(--aero-navy); stroke: var(--aero-sun); stroke-width: 1.2; }
+  .command-drone-rotor-ring { fill: none; stroke: var(--aero-paper); stroke-width: .8; opacity: .9; }
+  .command-drone-window { fill: var(--aero-blue); stroke: var(--aero-sky); stroke-width: 1; }
+  .command-drone-lens { fill: var(--aero-amber); stroke: var(--aero-sun); stroke-width: 1; }
+  .command-drone-signal { fill: none; stroke: var(--aero-sky); stroke-width: .9; stroke-dasharray: 2 2; }
+
+  .motion-paused .route-line,
+  .motion-paused .command-progress.is-running { animation-play-state: paused !important; }
+
+  .section-heading-rule { border-color: rgba(0, 80, 143, .25); }
+  .dark-heading-rule { border-color: rgba(255, 248, 237, .25); }
+
+  @keyframes route-dash { to { stroke-dashoffset: -36; } }
+  @keyframes command-progress { 0% { width: 10%; } 100% { width: 100%; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .route-line { animation: none !important; }
+    .craft-wrap { transform: none !important; }
+    .command-progress.is-running { animation: none !important; width: 54% !important; }
+  }
+
+  @media (max-width: 980px) {
+    .record-main { margin-left: 56px !important; margin-right: 0 !important; }
+    .index-rail { width: 56px !important; }
+    .rail-name { display: none; }
+    .command-drawer { position: relative !important; inset: auto !important; width: auto !important; min-height: 640px; height: auto !important; }
+    .hero-copy { max-width: 72% !important; }
+  }
+
+  @media (max-width: 640px) {
+    .inspection-layout, .finding-layout { grid-template-columns: 1fr !important; }
+    .hero-copy { bottom: 128px !important; left: 20px !important; max-width: calc(100% - 40px) !important; }
+    .hero-copy h1 { font-size: 54px !important; }
+    .hero-plate { right: 20px; left: 20px; width: auto !important; }
+    .record-main section { padding-right: 20px !important; padding-left: 20px !important; }
+    .mission-metrics { overflow-x: auto; }
+    .mission-metric { min-width: 145px; }
+    .telemetry-layout { grid-template-columns: 1fr !important; }
+    .telemetry-health { border-right: 0 !important; border-bottom: 1px solid var(--aero-dark-line); padding-right: 0 !important; padding-bottom: 20px; }
+    .event-labels { flex-direction: column; gap: 10px; }
+  }
+}

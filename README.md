@@ -63,7 +63,7 @@ Full narrative and numbers in [docs/RESULTS.md](docs/RESULTS.md).
 
 ```bash
 python -m pip install -r requirements.txt
-python -m pytest -q                                   # 148 passed
+python -m pytest -q                                   # 151 passed
 ```
 
 Verifier for simulator v1, the point mass sweep:
@@ -100,16 +100,18 @@ python -m viz.server
 # then open http://127.0.0.1:8765/mission_view.html
 ```
 
-The page auto loads the last recorded mission from `viz/data3/` so it is never empty,
-and **Start mission** runs a fresh mission from the plain-English request and chosen
-planner. The mission view is the judge-facing explanation; `/backend_view.html` is the
-auditable protocol and API record.
+The mission page auto loads the last recorded mission from `viz/data3/` so it is never
+empty, and **Start mission** runs a fresh mission from the plain-English request and
+chosen planner. The deployed root opens the React command center in `viz/dashboard/`;
+it embeds the working mission view and relays commands and genuine backend progress
+through a same-origin message bridge. `/mission_view.html` remains the full-screen
+simulator and `/backend_view.html` is the auditable protocol and API record.
 
 ### Deploy on Railway
 
 `railway.json` runs the same frontend and Python mission API as one service. Railway
 supplies `PORT`; the server binds publicly only when that variable is present, exposes
-`/health`, and sends `/` to the judge-facing mission view. Baseline missions and the
+`/health`, and sends `/` to the integrated command center. Baseline missions and the
 recorded Devin run work without credentials.
 
 Live Devin missions require these server-side variables:
@@ -172,7 +174,7 @@ handful of live runs, not a soak test. Treat it as demonstrated, not battle test
 
 | What | Result | Command |
 | ---- | ------ | ------- |
-| Test suite | 148 passed | `python -m pytest -q` |
+| Test suite | 151 passed | `python -m pytest -q` |
 | Sim v1 batch | 30/30 PASS, 100.0% mean coverage, 0 collisions | `python -m sim.run_verifier --scenarios 30 --seed 1000` |
 | Sim v2 batch | 30/30 PASS, 99.9% mean coverage, 719/720 waypoints | `python -m sim2.run_verifier --scenarios 30 --seed 1000` |
 | Mission loop, baseline agent, seeds 1000 to 1029 | 29/30 PASS, 98.6% mean coverage | `python scripts/run_autonomous_mission.py --seed <n> --planner baseline` |
@@ -308,7 +310,8 @@ docs/                     GOAL, IDEA, PRD, DEMO, RESULTS, SIM2_SPEC, the roadmap
 Further reading: [Real-world multimodal inspection roadmap](docs/REAL_WORLD_ROADMAP.md)
 for the path beyond simulation, [Devin autonomy deployment roadmap](docs/DEVIN_AUTONOMY_ROADMAP.md)
 for how the runtime loop is meant to deploy, [Adaptive evidence loop](docs/ADAPTIVE_EVIDENCE_BUILD.md)
-for the evidence scoring build, and [Simulator v2 spec](docs/SIM2_SPEC.md) for the
+for the evidence scoring build, [Judge Q&A](docs/JUDGE_QA.md) for the 20-question defense
+and competitor comparison, and [Simulator v2 spec](docs/SIM2_SPEC.md) for the
 quadrotor and camera contract.
 
 ## Human in the loop
